@@ -1,0 +1,15 @@
+# Исследовательские репозитории (не часть проекта)
+awesome-selfhosted/
+public-apis/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
