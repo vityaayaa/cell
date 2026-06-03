@@ -77,23 +77,32 @@
 
 | Сессия | Скиллы |
 |--------|--------|
-| I-01 Setup + Domain | `superpowers:test-driven-development` (перед domain-функциями) · `superpowers:verification-before-completion` (в конце) |
-| I-02 Backend | `superpowers:verification-before-completion` (SQL/RLS критичны) |
-| I-03 Auth + Shell | `ui-ux-pro-max` (перед UI-компонентами) · `superpowers:verification-before-completion` |
-| I-04 Shelf Builder | `ui-ux-pro-max` · `frontend-design` (самый сложный компонент) · `superpowers:verification-before-completion` |
-| I-05 Sweep + Order | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
-| I-06 Checklist + Sessions | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
-| I-07 Catalog + Admin | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
-| I-08 Deploy | `superpowers:verification-before-completion` |
+| I-01 Setup + Domain | `superpowers:test-driven-development` · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-02 Backend | `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-03 Auth + Shell | `ui-ux-pro-max` · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-04 Shelf Builder | `superpowers:brainstorming`¹ · `ui-ux-pro-max` · `frontend-design` · `superpowers:subagent-driven-development`² · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-05 Sweep + Order | `ui-ux-pro-max` · `superpowers:subagent-driven-development`² · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-06 Checklist + Sessions | `ui-ux-pro-max` · `superpowers:subagent-driven-development`² · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-07 Catalog + Admin | `ui-ux-pro-max` · `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+| I-08 Deploy | `superpowers:finishing-a-development-branch` · `superpowers:verification-before-completion` |
+
+**Везде, условно:** `superpowers:systematic-debugging` — вызвать если баг не решается за 2 попытки.
+
+¹ `brainstorming` — только если есть реальная архитектурная неопределённость (как именно реализовать, а не что делает компонент — это в спеках).
+² `subagent-driven-development` — только если сессия тяжёлая и части явно независимы.
 
 ### Что делает каждый скилл
 
 | Скилл | Когда полезен |
 |-------|--------------|
-| `ui-ux-pro-max` | Знает shadcn/ui, Tailwind, мобильные UX-паттерны. Вызывать перед написанием UI-компонентов. |
-| `frontend-design` | React-архитектура компонентов, composition patterns. Дополняет ui-ux-pro-max для сложных компонентов. |
+| `ui-ux-pro-max` | Знает shadcn/ui, Tailwind, мобильные UX-паттерны, touch targets. Вызывать перед написанием UI-компонентов. |
+| `frontend-design` | React-архитектура компонентов, composition patterns. Только для сложных компонентов (ShelfGrid). |
+| `superpowers:brainstorming` | Перед архитектурными решениями с неопределённостью реализации. НЕ для того что уже описано в спеке. |
 | `superpowers:test-driven-development` | Тест сначала, потом код. Обязателен для критичной логики (формулы, синхронизация). |
-| `superpowers:verification-before-completion` | Принудительная проверка перед "готово". В каждой сессии. |
+| `superpowers:systematic-debugging` | Условный. Вызвать когда баг не решается за 2 самостоятельных попытки. |
+| `superpowers:subagent-driven-development` | Параллельная реализация независимых частей в одной сессии. Для тяжёлых сессий (I-04, I-05, I-06). |
+| `superpowers:finishing-a-development-branch` | Чистое завершение сессии: проверки, коммит, итог. В конце каждой сессии. |
+| `superpowers:verification-before-completion` | Принудительная проверка "всё ли сделано" перед закрытием. В каждой сессии после `finishing-a-development-branch`. |
 
 ### Как писать в промпте
 
@@ -103,14 +112,23 @@
 **Скиллы для этой сессии:**
 - Перед написанием UI-компонентов: вызови `/ui-ux-pro-max`
   (shadcn/ui, Tailwind, mobile-first, touch targets ≥ 64px из S00)
-- Перед закрытием сессии: вызови `/superpowers:verification-before-completion`
+- Если баг не решается за 2 попытки: вызови `/superpowers:systematic-debugging`
+- В конце сессии: вызови `/superpowers:finishing-a-development-branch`, затем `/superpowers:verification-before-completion`
 ```
 
-Для сессий без UI:
+Для сессий без UI (I-01, I-02):
 ```markdown
 **Скиллы для этой сессии:**
-- Перед реализацией [критичной логики]: вызови `/superpowers:test-driven-development`
-- Перед закрытием сессии: вызови `/superpowers:verification-before-completion`
+- Перед реализацией критичной логики: вызови `/superpowers:test-driven-development`
+- Если баг не решается за 2 попытки: вызови `/superpowers:systematic-debugging`
+- В конце: `/superpowers:finishing-a-development-branch`, затем `/superpowers:verification-before-completion`
+```
+
+Для I-04 (дополнительно):
+```markdown
+- Перед архитектурой ShelfGrid компонента: вызови `/superpowers:brainstorming`
+  (только для решения "как реализовать" — не для "что делает", это в S11)
+- Если сессия длинная и части независимы: вызови `/superpowers:subagent-driven-development`
 ```
 
 ---

@@ -22,7 +22,8 @@
 
 **Скиллы для этой сессии:**
 - Перед реализацией domain-функций (capacity, bsp, request): вызови `/superpowers:test-driven-development` — сначала тест, потом код. Формулы вместимости и дефицита критичны, ошибка даёт неверную заявку.
-- Перед закрытием сессии: вызови `/superpowers:verification-before-completion`
+- Если баг не решается за 2 попытки: вызови `/superpowers:systematic-debugging`
+- В конце сессии: вызови `/superpowers:finishing-a-development-branch`, затем `/superpowers:verification-before-completion`
 
 ## Цель сессии
 
