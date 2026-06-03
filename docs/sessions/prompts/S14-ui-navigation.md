@@ -4,6 +4,7 @@
 
 ```
 CLAUDE.md
+docs/specs/S00-design-system.md
 docs/specs/S01-catalog.md
 docs/specs/S02-shelf-model.md
 docs/specs/S03-capacity.md
@@ -18,6 +19,13 @@ docs/specs/S11-ui-shelf-builder.md
 docs/specs/S12-ui-stock-entry.md
 docs/specs/S13-ui-request-checklist.md
 ```
+
+---
+
+## Уже закрыто — не переобсуждать
+
+- **Визуальный стиль и цвета** — зафиксированы в `docs/specs/S00-design-system.md`. Шрифт Inter, три темы (светлая/тёмная/OLED), синий акцент, четыре статусных цвета для остатков. Пункт 3 в «Критике» ниже — неактуален, вопрос закрыт.
+- **Стек UI:** Tailwind + shadcn/ui + Motion v12 (S10). Навигационные компоненты — из этого стека.
 
 ---
 
