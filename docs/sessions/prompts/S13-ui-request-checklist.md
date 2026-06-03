@@ -4,6 +4,7 @@
 
 ```
 CLAUDE.md
+docs/guides/ui-ux-and-prompts.md
 docs/specs/S00-design-system.md
 docs/specs/S01-catalog.md
 docs/specs/S02-shelf-model.md
