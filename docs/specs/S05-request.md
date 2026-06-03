@@ -42,11 +42,21 @@ sweeping ↔ ordering → fulfilling → completed
 
 При переходе из `sweeping` в `ordering` система автоматически формирует черновик по всем ячейкам текущего обхода.
 
-**Формула (из S01):**
+**Формула по типу товара:**
+
+Для `unit` и `round`:
 ```
-deficit_units = capacity - current_stock
+deficit_units = capacity_units - current_stock_units
 full_packs    = floor(deficit_units / pack_size)
 ```
+
+Для `bulk` (capacity и stock уже в пачках — деление на pack_size не применяется):
+```
+deficit_packs = capacity_packs - current_stock_packs
+full_packs    = deficit_packs
+```
+
+**Почему агрегация, а не поячеечный расчёт:** суммирование `floor(deficit_i / pack_size)` по ячейкам теряет дробные остатки. Пример: дефицит 7 и 6 шт при pack_size=10 — поячеечно даёт 0+0=0 пачек; агрегация даёт `floor(13/10)=1` пачку (верно). Агрегация всегда ≥ поячеечного результата — никогда не занижает заявку.
 
 **Правила включения в заявку:**
 
@@ -182,11 +192,9 @@ full_packs    = floor(deficit_units / pack_size)
 
 ---
 
-## Связь с S04 (Sweep)
+## Связь с S04 (StockEntry)
 
-Sweep из S04 продолжает существовать как отдельная таблица — она фиксирует обход ячеек. Session является "оберткой" над Sweep: одна Session = один Sweep.
-
-Статус `sweeping` в Session соответствует статусам `in_progress` / `review` в Sweep (S04). При финализации заявки Sweep переходит в `completed`.
+Таблица Sweep упразднена. `StockEntry` (S04) ссылается напрямую на `session_id`. Текущий остаток ячейки в рамках сессии — последняя запись `StockEntry` с данным `session_id` и `cell_id` по `created_at`.
 
 ---
 
@@ -205,4 +213,4 @@ Sweep из S04 продолжает существовать как отдель
 
 - **Округление**: `floor(deficit / pack_size)`, дробный остаток не заказывается — из S01
 - **Пограничные позиции**: дефицит < pack_size → отдельный блок, активируются переключателем — из S01
-- **Один обход одновременно (sweep-фаза)** — из S04
+- **Один обход одновременно (sweeping-фаза)** — из S04; таблица Sweep упразднена, группировка через `session_id`
