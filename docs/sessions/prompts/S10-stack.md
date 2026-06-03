@@ -17,6 +17,20 @@ docs/specs/S09-offline-sync.md
 
 ---
 
+## Уже закрыто в S07–S09 — не поднимать
+
+- **Бэкенд: Supabase** — выбран в S07. Supabase Auth (email+password), облачная БД, Supabase Realtime.
+- **Архитектура синхронизации: online-first** — решено в S09. Supabase — источник правды. IndexedDB — локальный кэш.
+- **Локальное хранилище: Dexie.js** — выбран в S09. IndexedDB wrapper для кэша и офлайн-очереди.
+- **PWA: vite-plugin-pwa** — выбран в S09. Service Worker с CacheFirst для статики, NetworkFirst для app shell.
+- **Realtime-синхронизация: Supabase Realtime** — WebSocket подписки, изменения прилетают мгновенно.
+- **Конфликты: Last-Write-Wins** по `updated_at` — решено в S09. CRDT не нужен.
+- **Офлайн-очередь** — пишется в IndexedDB, уходит на Supabase при восстановлении связи. Background Sync не используется (нет iOS-поддержки).
+- **"Нужен ли бэкенд вообще"** — закрыто в S07.
+- **Supabase offline sync limitations** — изучены в S09, ограничения учтены в архитектуре.
+
+---
+
 ## Исследование (выполни сам ДО разговора с пользователем)
 
 **Все факты о технологиях — проверять через Context7/Exa. Никаких утверждений из памяти.**
@@ -82,7 +96,7 @@ docs/specs/S09-offline-sync.md
 
 ---
 
-## Обсуждение (один за раз)
+## Обсуждение 
 
 1. Представь финальную рекомендацию стека. Объясни каждый элемент + главный trade-off.
 
