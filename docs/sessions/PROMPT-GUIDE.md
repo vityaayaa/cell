@@ -68,6 +68,53 @@
 
 ---
 
+## Скиллы и плагины
+
+Каждый промпт должен явно указывать какие скиллы вызывать и когда.
+Не добавляй скилл "на всякий случай" — только если уверен что он даёт ценность.
+
+### Таблица по сессиям
+
+| Сессия | Скиллы |
+|--------|--------|
+| I-01 Setup + Domain | `superpowers:test-driven-development` (перед domain-функциями) · `superpowers:verification-before-completion` (в конце) |
+| I-02 Backend | `superpowers:verification-before-completion` (SQL/RLS критичны) |
+| I-03 Auth + Shell | `ui-ux-pro-max` (перед UI-компонентами) · `superpowers:verification-before-completion` |
+| I-04 Shelf Builder | `ui-ux-pro-max` · `frontend-design` (самый сложный компонент) · `superpowers:verification-before-completion` |
+| I-05 Sweep + Order | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
+| I-06 Checklist + Sessions | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
+| I-07 Catalog + Admin | `ui-ux-pro-max` · `superpowers:verification-before-completion` |
+| I-08 Deploy | `superpowers:verification-before-completion` |
+
+### Что делает каждый скилл
+
+| Скилл | Когда полезен |
+|-------|--------------|
+| `ui-ux-pro-max` | Знает shadcn/ui, Tailwind, мобильные UX-паттерны. Вызывать перед написанием UI-компонентов. |
+| `frontend-design` | React-архитектура компонентов, composition patterns. Дополняет ui-ux-pro-max для сложных компонентов. |
+| `superpowers:test-driven-development` | Тест сначала, потом код. Обязателен для критичной логики (формулы, синхронизация). |
+| `superpowers:verification-before-completion` | Принудительная проверка перед "готово". В каждой сессии. |
+
+### Как писать в промпте
+
+Добавить в конец раздела "Прочитай перед началом":
+
+```markdown
+**Скиллы для этой сессии:**
+- Перед написанием UI-компонентов: вызови `/ui-ux-pro-max`
+  (shadcn/ui, Tailwind, mobile-first, touch targets ≥ 64px из S00)
+- Перед закрытием сессии: вызови `/superpowers:verification-before-completion`
+```
+
+Для сессий без UI:
+```markdown
+**Скиллы для этой сессии:**
+- Перед реализацией [критичной логики]: вызови `/superpowers:test-driven-development`
+- Перед закрытием сессии: вызови `/superpowers:verification-before-completion`
+```
+
+---
+
 ## Правила для раздела «Прочитай перед началом»
 
 **Спеки:** только те файлы, которые реально нужны. Не "читай всё" — это трата контекста.
