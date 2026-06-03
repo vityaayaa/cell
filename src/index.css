@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* ───────── Theme tokens ───────── */
+
+:root,
+[data-theme="light"] {
+  --background: #F8FAFC;
+  --card: #FFFFFF;
+  --foreground: #0F172A;
+  --muted-foreground: #64748B;
+  --muted: #F1F5F9;
+  --border: #E2E8F0;
+  --primary: #F97316;
+  --primary-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --ring: #F97316;
+  /* status colors — same across all themes */
+  --color-progress: #10B981;
+  --color-warning: #F59E0B;
+}
+
+[data-theme="dark"] {
+  --background: #0F172A;
+  --card: #1E293B;
+  --foreground: #F8FAFC;
+  --muted-foreground: #94A3B8;
+  --muted: #1E293B;
+  --border: #334155;
+  --primary: #FB923C;
+  --primary-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --ring: #FB923C;
+}
+
+[data-theme="oled"] {
+  --background: #000000;
+  --card: #0A0A0A;
+  --foreground: #F8FAFC;
+  --muted-foreground: #94A3B8;
+  --muted: #111111;
+  --border: #1A1A1A;
+  --primary: #FB923C;
+  --primary-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --ring: #FB923C;
+}
+
+/* ───────── Base styles ───────── */
+
+html {
+  font-family: 'Inter Variable', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus */
+input,
+textarea,
+select {
+  font-size: 16px;
+}

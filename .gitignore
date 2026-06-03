@@ -16,3 +16,15 @@ Thumbs.db
 # Env
 .env
 .env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Logs
+*.log
+pnpm-debug.log*
