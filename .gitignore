@@ -2,6 +2,9 @@
 awesome-selfhosted/
 public-apis/
 
+# Локальный индекс codegraph (инструмент, не часть проекта)
+.codegraph/
+
 # OS
 .DS_Store
 Thumbs.db
