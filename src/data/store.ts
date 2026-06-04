@@ -11,6 +11,8 @@ interface AppStore {
   activeSessionId: string | null
   isSessionMode: boolean
 
+  priorityMaterialId: string | null
+
   setOnline: (v: boolean) => void
   setSyncing: (v: boolean) => void
   setSyncQueueLength: (n: number) => void
@@ -18,6 +20,7 @@ interface AppStore {
   clearUser: () => void
   setActiveSession: (id: string | null) => void
   setSessionMode: (v: boolean) => void
+  setPriorityMaterialId: (id: string | null) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -31,6 +34,8 @@ export const useAppStore = create<AppStore>((set) => ({
   activeSessionId: null,
   isSessionMode: false,
 
+  priorityMaterialId: null,
+
   setOnline: (v) => set({ isOnline: v }),
   setSyncing: (v) => set({ isSyncing: v }),
   setSyncQueueLength: (n) => set({ syncQueueLength: n }),
@@ -38,4 +43,5 @@ export const useAppStore = create<AppStore>((set) => ({
   clearUser: () => set({ userId: null, userRole: null, activeSessionId: null, isSessionMode: false }),
   setActiveSession: (id) => set({ activeSessionId: id }),
   setSessionMode: (v) => set({ isSessionMode: v }),
+  setPriorityMaterialId: (id) => set({ priorityMaterialId: id }),
 }))

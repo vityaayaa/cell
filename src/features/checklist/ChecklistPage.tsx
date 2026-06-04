@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronLeft, Printer } from 'lucide-react'
 import { db } from '@/data/db'
-import type { ChecklistEntry, OrderLine } from '@/data/db'
+import type { ChecklistEntry, OrderLine, Product, Material } from '@/data/db'
+import { useAppStore } from '@/data/store'
+import { sortOrderLines } from '@/features/order/orderSort'
 import { saveChecklistEntry } from './saveChecklistEntry'
 import { ChecklistRow } from './ChecklistRow'
 import { ChecklistActionSheet } from './ChecklistActionSheet'
@@ -12,7 +14,7 @@ import './checklist-print.css'
 
 type EntryWithLine = { entry: ChecklistEntry; line: OrderLine }
 
-function sortPairs(pairs: EntryWithLine[]): EntryWithLine[] {
+function sortPairsAlpha(pairs: EntryWithLine[]): EntryWithLine[] {
   return [...pairs].sort((a, b) =>
     a.line.product_name.localeCompare(b.line.product_name, 'ru'),
   )
@@ -21,9 +23,22 @@ function sortPairs(pairs: EntryWithLine[]): EntryWithLine[] {
 export default function ChecklistPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
+  const priorityMaterialId = useAppStore((s) => s.priorityMaterialId)
 
   const [sheetEntry, setSheetEntry] = useState<ChecklistEntry | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  const products = useLiveQuery<Product[]>(() => db.products.toArray(), [])
+  const materials = useLiveQuery<Material[]>(() => db.materials.toArray(), [])
+
+  const productMap = useMemo(
+    () => new Map((products ?? []).map((p) => [p.id, p])),
+    [products],
+  )
+  const materialMap = useMemo(
+    () => new Map((materials ?? []).map((m) => [m.id, m])),
+    [materials],
+  )
 
   const order = useLiveQuery(
     () =>
@@ -53,8 +68,15 @@ export default function ChecklistPage() {
     .filter((e) => lineMap.has(e.order_line_id))
     .map((e) => ({ entry: e, line: lineMap.get(e.order_line_id)! }))
 
-  const pending = sortPairs(allPairs.filter((p) => p.entry.status === 'pending'))
-  const resolved = sortPairs(allPairs.filter((p) => p.entry.status !== 'pending'))
+  const pendingLines = (allPairs.filter((p) => p.entry.status === 'pending')).map((p) => p.line)
+  const sortedPendingLines = sortOrderLines(pendingLines, productMap, materialMap, priorityMaterialId)
+  const sortedPendingIds = new Map(sortedPendingLines.map((l, i) => [l.id, i]))
+
+  const pending = allPairs
+    .filter((p) => p.entry.status === 'pending')
+    .sort((a, b) => (sortedPendingIds.get(a.line.id) ?? 0) - (sortedPendingIds.get(b.line.id) ?? 0))
+
+  const resolved = sortPairsAlpha(allPairs.filter((p) => p.entry.status !== 'pending'))
 
   const total = allPairs.length
   const completedCount = resolved.length
