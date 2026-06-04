@@ -214,6 +214,7 @@ export type Database = {
           is_manual: boolean
           order_id: string
           product_id: string
+          product_name: string
           quantity_packs: number
           quantity_units: number
           updated_at: string
@@ -226,6 +227,7 @@ export type Database = {
           is_manual?: boolean
           order_id: string
           product_id: string
+          product_name?: string
           quantity_packs: number
           quantity_units: number
           updated_at?: string
@@ -238,6 +240,7 @@ export type Database = {
           is_manual?: boolean
           order_id?: string
           product_id?: string
+          product_name?: string
           quantity_packs?: number
           quantity_units?: number
           updated_at?: string

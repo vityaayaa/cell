@@ -9,6 +9,7 @@ interface AppStore {
   userRole: 'admin' | 'employee' | null
 
   activeSessionId: string | null
+  isSessionMode: boolean
 
   setOnline: (v: boolean) => void
   setSyncing: (v: boolean) => void
@@ -16,6 +17,7 @@ interface AppStore {
   setUser: (id: string, role: 'admin' | 'employee') => void
   clearUser: () => void
   setActiveSession: (id: string | null) => void
+  setSessionMode: (v: boolean) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -27,11 +29,13 @@ export const useAppStore = create<AppStore>((set) => ({
   userRole: null,
 
   activeSessionId: null,
+  isSessionMode: false,
 
   setOnline: (v) => set({ isOnline: v }),
   setSyncing: (v) => set({ isSyncing: v }),
   setSyncQueueLength: (n) => set({ syncQueueLength: n }),
   setUser: (id, role) => set({ userId: id, userRole: role }),
-  clearUser: () => set({ userId: null, userRole: null, activeSessionId: null }),
+  clearUser: () => set({ userId: null, userRole: null, activeSessionId: null, isSessionMode: false }),
   setActiveSession: (id) => set({ activeSessionId: id }),
+  setSessionMode: (v) => set({ isSessionMode: v }),
 }))

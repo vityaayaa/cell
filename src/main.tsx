@@ -1,10 +1,15 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Toaster } from 'sonner'
+import { ThemeProvider } from './app/ThemeProvider'
+import { AppRouter } from './app/router'
 import './index.css'
-import App from './App'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <AppRouter />
+      <Toaster position="top-center" richColors />
+    </ThemeProvider>
   </StrictMode>,
 )
