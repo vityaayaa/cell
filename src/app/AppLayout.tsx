@@ -4,6 +4,7 @@ import { Settings } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { OfflineIndicator } from './OfflineIndicator'
 import { SettingsBottomSheet } from './SettingsBottomSheet'
+import { PageTransition } from './PageTransition'
 import { useAppStore } from '@/data/store'
 
 export function AppLayout() {
@@ -59,8 +60,10 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
+      <main className="flex-1 overflow-y-auto" style={{ position: 'relative' }}>
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
 
       <BottomNav />

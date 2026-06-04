@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { ChevronLeft } from 'lucide-react'
+import { toastSuccess } from '@/lib/toast'
 import { db } from '@/data/db'
 import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -55,30 +56,6 @@ function getCapacity(cell: Cell, product: Product): number {
   )
 }
 
-interface ToastProgressProps {
-  message: string
-  duration?: number
-}
-
-function ToastProgress({ message, duration = 2000 }: ToastProgressProps) {
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg px-4 py-3 w-full"
-      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-    >
-      <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-        {message}
-      </p>
-      <motion.div
-        className="absolute bottom-0 left-0 h-0.5"
-        style={{ background: '#10B981' }}
-        initial={{ width: '100%' }}
-        animate={{ width: '0%' }}
-        transition={{ duration: duration / 1000, ease: 'linear' }}
-      />
-    </div>
-  )
-}
 
 export default function StockEntryPage() {
   const { cellId } = useParams<{ cellId: string }>()
@@ -189,9 +166,7 @@ export default function StockEntryPage() {
       ? `✓ Внесено: ≈ ${value} из ${capacity} пачек (${sliderPercent}%)`
       : `✓ Внесено: ${value} из ${capacity} шт`
 
-    toast.custom(() => <ToastProgress message={toastMsg} duration={2000} />, {
-      duration: 2000,
-    })
+    toastSuccess(toastMsg)
     navigate(-1)
   }
 
@@ -268,18 +243,19 @@ export default function StockEntryPage() {
 
       {/* Save button */}
       <div className="px-5 pb-6 flex-shrink-0">
-        <button
+        <motion.button
           className="w-full rounded-md font-semibold text-base disabled:opacity-40"
           style={{
             height: '56px',
             background: canSave ? 'var(--primary)' : 'var(--muted)',
             color: canSave ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
           }}
+          whileTap={canSave && !saving ? { scale: 0.97 } : undefined}
           onClick={handleSave}
           disabled={!canSave || saving}
         >
           {saving ? '…' : 'Сохранить'}
-        </button>
+        </motion.button>
       </div>
     </div>
   )

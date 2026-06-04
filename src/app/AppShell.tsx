@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Outlet } from 'react-router'
 import { useAuth } from './useAuth'
-import { initialLoad } from '@/data/sync'
+import { initialLoad, flushQueue, checkOnline } from '@/data/sync'
 import { useAppStore } from '@/data/store'
 
 export function AppShell() {
@@ -10,10 +10,17 @@ export function AppShell() {
 
   useEffect(() => {
     initialLoad()
+    navigator.storage?.persist?.()
   }, [])
 
   useEffect(() => {
-    const handleOnline = () => setOnline(true)
+    const handleOnline = async () => {
+      setOnline(true)
+      if (await checkOnline()) {
+        await flushQueue()
+        await initialLoad()
+      }
+    }
     const handleOffline = () => setOnline(false)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)

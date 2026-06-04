@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { motion } from 'motion/react'
 import { RefreshCw, FileText, ClipboardList } from 'lucide-react'
 import { db } from '@/data/db'
 import type { Session, UserProfile } from '@/data/db'
@@ -113,7 +114,10 @@ export function SessionCard({ session, profiles, userId, userRole }: SessionCard
 
   return (
     <>
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
         className="rounded-lg p-4"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
@@ -183,7 +187,7 @@ export function SessionCard({ session, profiles, userId, userRole }: SessionCard
             Завершить ×
           </button>
         )}
-      </div>
+      </motion.div>
 
       <Dialog open={confirmAbandon} onOpenChange={setConfirmAbandon}>
         <DialogContent>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { motion } from 'motion/react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -62,6 +63,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
   const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [shakeKey, setShakeKey] = useState(0)
 
   useEffect(() => {
     if (open) {
@@ -90,7 +92,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
   async function handleSave() {
     const err = validate(form)
-    if (err) { setError(err); return }
+    if (err) { setError(err); setShakeKey((k) => k + 1); return }
 
     setSaving(true)
     const isNew = !product
@@ -323,9 +325,15 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
           {/* Error */}
           {error && (
-            <p className="text-sm" style={{ color: '#EF4444' }}>
+            <motion.p
+              key={shakeKey}
+              className="text-sm"
+              style={{ color: '#EF4444' }}
+              animate={{ x: [0, -8, 8, -6, 6, 0] }}
+              transition={{ duration: 0.3 }}
+            >
               {error}
-            </p>
+            </motion.p>
           )}
 
           {/* Save */}
