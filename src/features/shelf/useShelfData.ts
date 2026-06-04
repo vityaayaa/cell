@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/data/db'
 
 export function useShelfData() {
-  const shelf = useLiveQuery(() => db.shelves.toArray().then(s => s[0]))
+  const shelf = useLiveQuery(() => db.shelves.toArray().then(s => s[0] ?? null))
 
   const cells = useLiveQuery(
     () => (shelf ? db.cells.where('shelf_id').equals(shelf.id).toArray() : []),
