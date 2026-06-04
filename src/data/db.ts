@@ -55,3 +55,7 @@ db.version(1).stores({
 db.version(2).stores({
   audit_log: '&id, actor_id, entity_type, event_type, created_at',
 })
+
+db.version(3).stores({
+  sessions: '&id, user_id, status, updated_at, started_at',
+})
