@@ -1,0 +1,288 @@
+import { useState } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { db } from '@/data/db'
+import type { Material } from '@/data/db'
+import { supabase } from '@/data/supabase'
+import { useAppStore } from '@/data/store'
+
+interface MaterialFormSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  material?: Material | null
+}
+
+function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetProps) {
+  const [name, setName] = useState(material?.name ?? '')
+  const [color, setColor] = useState(material?.color ?? '#888888')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const actorId = useAppStore((s) => s.userId)
+
+  // Reset on open
+  useState(() => {
+    setName(material?.name ?? '')
+    setColor(material?.color ?? '#888888')
+    setError('')
+  })
+
+  async function handleSave() {
+    if (!name.trim()) { setError('Введите название'); return }
+    setSaving(true)
+    const isNew = !material
+    const id = material?.id ?? crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const record: Material = {
+      id,
+      name: name.trim(),
+      color,
+      is_custom: true,
+      created_at: material?.created_at ?? now,
+      updated_at: now,
+    }
+
+    await db.materials.put(record)
+    const { error: sbErr } = await supabase.from('materials').upsert(record)
+    if (sbErr) {
+      await db.materials.delete(id)
+      toast.error('Не сохранилось — нет связи')
+      setSaving(false)
+      return
+    }
+
+    if (actorId) {
+      const logEntry = {
+        id: crypto.randomUUID(),
+        actor_id: actorId,
+        event_type: isNew ? 'material_created' : 'material_updated',
+        entity_type: 'material',
+        entity_id: id,
+        old_value: material ? { name: material.name } : null,
+        new_value: { name: record.name, color: record.color },
+        created_at: now,
+      }
+      await db.audit_log.add(logEntry)
+      await supabase.from('audit_log').insert(logEntry)
+    }
+
+    toast.success(isNew ? 'Материал добавлен' : 'Материал обновлён')
+    setSaving(false)
+    onOpenChange(false)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="rounded-t-xl" showCloseButton>
+        <SheetHeader className="pb-2">
+          <SheetTitle>{material ? 'Редактировать материал' : 'Новый материал'}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-4 px-4 pb-6">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Название <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError('') }}
+              placeholder="Дерево, Пластик, Металл..."
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 48,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Цвет
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="rounded-md border"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderColor: 'var(--border)',
+                  cursor: 'pointer',
+                  padding: 2,
+                }}
+              />
+              <span className="text-sm font-mono" style={{ color: 'var(--muted-foreground)' }}>
+                {color.toUpperCase()}
+              </span>
+            </div>
+          </div>
+          {error && <p className="text-sm" style={{ color: '#EF4444' }}>{error}</p>}
+          <button
+            className="w-full rounded-md font-semibold text-base"
+            style={{
+              height: 56,
+              background: 'var(--primary)',
+              color: 'var(--primary-foreground)',
+              opacity: saving ? 0.7 : 1,
+            }}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? '…' : material ? 'Сохранить' : 'Добавить'}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+interface MaterialsSectionProps {
+  materials: Material[]
+}
+
+export function MaterialsSection({ materials }: MaterialsSectionProps) {
+  const actorId = useAppStore((s) => s.userId)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Material | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  function openNew() {
+    setEditTarget(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(m: Material) {
+    setEditTarget(m)
+    setFormOpen(true)
+  }
+
+  async function handleDelete(m: Material) {
+    if (!m.is_custom) return
+    setDeletingId(m.id)
+    await db.materials.delete(m.id)
+    const { error } = await supabase.from('materials').delete().eq('id', m.id)
+    if (error) {
+      await db.materials.put(m)
+      toast.error('Не удалилось — нет связи')
+      setDeletingId(null)
+      return
+    }
+
+    if (actorId) {
+      const logEntry = {
+        id: crypto.randomUUID(),
+        actor_id: actorId,
+        event_type: 'material_deleted',
+        entity_type: 'material',
+        entity_id: m.id,
+        old_value: { name: m.name },
+        new_value: null,
+        created_at: new Date().toISOString(),
+      }
+      await db.audit_log.add(logEntry)
+      await supabase.from('audit_log').insert(logEntry)
+    }
+
+    toast.success('Материал удалён')
+    setDeletingId(null)
+  }
+
+  return (
+    <>
+      <div
+        className="mx-4 mt-6 mb-2 rounded-lg border overflow-hidden"
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b"
+          style={{ borderColor: 'var(--border)', background: 'var(--muted)' }}
+        >
+          <span
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--muted-foreground)' }}
+          >
+            Материалы
+          </span>
+          <button
+            className="flex items-center gap-1 text-sm font-medium rounded-md px-2"
+            style={{ height: 32, color: 'var(--primary)' }}
+            onClick={openNew}
+            aria-label="Добавить материал"
+          >
+            <Plus size={16} strokeWidth={1.5} />
+            Добавить
+          </button>
+        </div>
+
+        {materials.map((m, i) => (
+          <div
+            key={m.id}
+            className="flex items-center gap-3 px-4"
+            style={{
+              height: 52,
+              borderBottom: i < materials.length - 1 ? '1px solid var(--border)' : undefined,
+            }}
+          >
+            {/* Color dot */}
+            <div
+              className="rounded-full flex-shrink-0"
+              style={{ width: 14, height: 14, background: m.color }}
+              aria-hidden
+            />
+            <span
+              className="flex-1 text-sm font-medium"
+              style={{ color: 'var(--foreground)' }}
+            >
+              {m.name}
+            </span>
+            <span
+              className="text-xs font-mono"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              {m.color.toUpperCase()}
+            </span>
+            {/* Edit */}
+            <button
+              className="flex items-center justify-center rounded-md"
+              style={{ width: 36, height: 36, color: 'var(--muted-foreground)' }}
+              onClick={() => openEdit(m)}
+              aria-label={`Редактировать ${m.name}`}
+            >
+              <Pencil size={16} strokeWidth={1.5} />
+            </button>
+            {/* Delete — only custom */}
+            {m.is_custom && (
+              <button
+                className="flex items-center justify-center rounded-md"
+                style={{ width: 36, height: 36, color: '#EF4444', opacity: deletingId === m.id ? 0.5 : 1 }}
+                onClick={() => handleDelete(m)}
+                disabled={deletingId === m.id}
+                aria-label={`Удалить ${m.name}`}
+              >
+                <Trash2 size={16} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {materials.length === 0 && (
+          <div className="px-4 py-4 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Нет материалов
+          </div>
+        )}
+      </div>
+
+      <MaterialFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        material={editTarget}
+      />
+    </>
+  )
+}

@@ -15,6 +15,7 @@ import CatalogPage from '@/features/catalog/CatalogPage'
 import SettingsPage from '@/features/admin/SettingsPage'
 import UsersPage from '@/features/admin/UsersPage'
 import AuditPage from '@/features/admin/AuditPage'
+import AggregatesPage from '@/features/admin/AggregatesPage'
 import StockEntryPage from '@/features/stock/StockEntryPage'
 import { useAppStore } from '@/data/store'
 
@@ -103,6 +104,14 @@ const router = createBrowserRouter([
         element: (
           <AdminGuard>
             <AuditPage />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: 'admin/aggregates',
+        element: (
+          <AdminGuard>
+            <AggregatesPage />
           </AdminGuard>
         ),
       },

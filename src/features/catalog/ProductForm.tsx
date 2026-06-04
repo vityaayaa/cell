@@ -1,0 +1,349 @@
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { db } from '@/data/db'
+import type { Product, Material } from '@/data/db'
+import { supabase } from '@/data/supabase'
+
+type ProductType = 'unit' | 'round' | 'bulk'
+
+interface ProductFormProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  product?: Product | null
+  materials: Material[]
+  actorId: string | null
+}
+
+interface FormState {
+  name: string
+  type: ProductType
+  material_id: string
+  pack_size: string
+  width_mm: string
+  height_mm: string
+  length_mm: string
+  diameter_mm: string
+}
+
+const EMPTY: FormState = {
+  name: '',
+  type: 'unit',
+  material_id: '',
+  pack_size: '',
+  width_mm: '',
+  height_mm: '',
+  length_mm: '',
+  diameter_mm: '',
+}
+
+function toInt(s: string): number | null {
+  const n = parseInt(s, 10)
+  return isNaN(n) || n <= 0 ? null : n
+}
+
+function validate(f: FormState): string | null {
+  if (!f.name.trim()) return 'Введите название'
+  if (!f.material_id) return 'Выберите материал'
+  if (!toInt(f.pack_size)) return 'Укажите размер пачки'
+  if (f.type === 'unit') {
+    if (!toInt(f.width_mm)) return 'Укажите ширину'
+    if (!toInt(f.height_mm)) return 'Укажите высоту'
+    if (!toInt(f.length_mm)) return 'Укажите длину'
+  }
+  if (f.type === 'round') {
+    if (!toInt(f.diameter_mm)) return 'Укажите диаметр'
+    if (!toInt(f.length_mm)) return 'Укажите длину'
+  }
+  return null
+}
+
+export function ProductForm({ open, onOpenChange, product, materials, actorId }: ProductFormProps) {
+  const [form, setForm] = useState<FormState>(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      if (product) {
+        setForm({
+          name: product.name,
+          type: product.type as ProductType,
+          material_id: product.material_id,
+          pack_size: String(product.pack_size),
+          width_mm: product.width_mm != null ? String(product.width_mm) : '',
+          height_mm: product.height_mm != null ? String(product.height_mm) : '',
+          length_mm: product.length_mm != null ? String(product.length_mm) : '',
+          diameter_mm: product.diameter_mm != null ? String(product.diameter_mm) : '',
+        })
+      } else {
+        setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
+      }
+      setError(null)
+    }
+  }, [open, product, materials])
+
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setError(null)
+  }
+
+  async function handleSave() {
+    const err = validate(form)
+    if (err) { setError(err); return }
+
+    setSaving(true)
+    const isNew = !product
+    const id = product?.id ?? crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const record: Product = {
+      id,
+      name: form.name.trim(),
+      type: form.type,
+      material_id: form.material_id,
+      pack_size: toInt(form.pack_size)!,
+      width_mm: form.type === 'unit' ? toInt(form.width_mm) : null,
+      height_mm: form.type === 'unit' ? toInt(form.height_mm) : null,
+      length_mm: (form.type === 'unit' || form.type === 'round') ? toInt(form.length_mm) : null,
+      diameter_mm: form.type === 'round' ? toInt(form.diameter_mm) : null,
+      created_at: product?.created_at ?? now,
+      updated_at: now,
+    }
+
+    await db.products.put(record)
+    const { error: sbErr } = await supabase.from('products').upsert(record)
+    if (sbErr) {
+      await db.products.delete(id)
+      toast.error('Не сохранилось — нет связи')
+      setSaving(false)
+      return
+    }
+
+    // Log to audit
+    if (actorId) {
+      const logEntry = {
+        id: crypto.randomUUID(),
+        actor_id: actorId,
+        event_type: isNew ? 'product_created' : 'product_updated',
+        entity_type: 'product',
+        entity_id: id,
+        old_value: product ? { name: product.name } : null,
+        new_value: { name: record.name },
+        created_at: now,
+      }
+      await db.audit_log.add(logEntry)
+      await supabase.from('audit_log').insert(logEntry)
+    }
+
+    toast.success(isNew ? 'Товар добавлен' : 'Товар обновлён')
+    setSaving(false)
+    onOpenChange(false)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="rounded-t-xl max-h-[90dvh] overflow-y-auto" showCloseButton>
+        <SheetHeader className="pb-2">
+          <SheetTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-col gap-4 px-4 pb-6">
+          {/* Name */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Название <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+              placeholder="Брусок, Труба ПВХ, Штапик..."
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 48,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Type */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Тип <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <div className="flex gap-2">
+              {(['unit', 'round', 'bulk'] as ProductType[]).map((t) => (
+                <button
+                  key={t}
+                  className="flex-1 rounded-md border text-sm font-medium"
+                  style={{
+                    height: 44,
+                    background: form.type === t ? 'var(--primary)' : 'var(--background)',
+                    color: form.type === t ? 'var(--primary-foreground)' : 'var(--foreground)',
+                    borderColor: form.type === t ? 'var(--primary)' : 'var(--border)',
+                  }}
+                  onClick={() => set('type', t)}
+                >
+                  {t === 'unit' ? 'Штучный' : t === 'round' ? 'Круглый' : 'Навалом'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Material */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Материал <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <select
+              value={form.material_id}
+              onChange={(e) => set('material_id', e.target.value)}
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 48,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+                appearance: 'auto',
+              }}
+            >
+              <option value="">Выбрать...</option>
+              {materials.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Pack size */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Размер пачки (шт) <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={form.pack_size}
+              onChange={(e) => set('pack_size', e.target.value)}
+              placeholder="4"
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 48,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Unit fields */}
+          {form.type === 'unit' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+                Размеры сечения и длина
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: 'width_mm', label: 'Ширина, мм' },
+                  { key: 'height_mm', label: 'Высота, мм' },
+                  { key: 'length_mm', label: 'Длина, мм' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                      {label} <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={form[key as keyof FormState]}
+                      onChange={(e) => set(key as keyof FormState, e.target.value)}
+                      placeholder="50"
+                      className="rounded-md border px-2 text-base text-center"
+                      style={{
+                        height: 48,
+                        fontSize: 16,
+                        background: 'var(--background)',
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground)',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Round fields */}
+          {form.type === 'round' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+                Диаметр и длина
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'diameter_mm', label: 'Диаметр, мм' },
+                  { key: 'length_mm', label: 'Длина, мм' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                      {label} <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={form[key as keyof FormState]}
+                      onChange={(e) => set(key as keyof FormState, e.target.value)}
+                      placeholder="110"
+                      className="rounded-md border px-2 text-base text-center"
+                      style={{
+                        height: 48,
+                        fontSize: 16,
+                        background: 'var(--background)',
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground)',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <p className="text-sm" style={{ color: '#EF4444' }}>
+              {error}
+            </p>
+          )}
+
+          {/* Save */}
+          <button
+            className="w-full rounded-md font-semibold text-base"
+            style={{
+              height: 56,
+              background: 'var(--primary)',
+              color: 'var(--primary-foreground)',
+              opacity: saving ? 0.7 : 1,
+            }}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? '…' : product ? 'Сохранить' : 'Добавить'}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}

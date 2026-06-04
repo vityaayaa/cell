@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { db } from '@/data/db'
 import { useAppStore } from '@/data/store'
 import { startSweep } from '@/features/sessions/startSweep'
+import { exportAggregatesExcel } from '@/features/admin/exportExcel'
+import type { ProductAggregate } from '@/features/admin/exportExcel'
 import { SessionCard } from './SessionCard'
 
 const RU_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
@@ -20,12 +22,15 @@ export default function HomePage() {
   const { userId, userRole, setActiveSession, setSessionMode } = useAppStore()
   const [starting, setStarting] = useState(false)
 
+  const [exporting, setExporting] = useState(false)
+
   const sessions = useLiveQuery(() => db.sessions.orderBy('started_at').reverse().toArray())
   const profiles = useLiveQuery(() => db.user_profiles.toArray())
   const orders = useLiveQuery(() => db.orders.toArray())
   const orderLines = useLiveQuery(() => db.order_lines.toArray())
+  const checklistEntries = useLiveQuery(() => db.checklist_entries.toArray())
 
-  if (!sessions || !profiles || !orders || !orderLines) {
+  if (!sessions || !profiles || !orders || !orderLines || !checklistEntries) {
     return (
       <div className="flex items-center justify-center" style={{ height: 120 }}>
         <div
@@ -57,6 +62,55 @@ export default function HomePage() {
   for (const order of orders) {
     const count = orderLineCount.get(order.id) ?? 0
     if (count > 0) sessionLineCount.set(order.session_id, count)
+  }
+
+  async function handleExportExcel() {
+    if (exporting || !sessions || !orders || !orderLines || !checklistEntries) return
+    setExporting(true)
+    try {
+      const completedIds = new Set(
+        sessions.filter((s) => s.status === 'completed').map((s) => s.id),
+      )
+      const relevantOrderIds = new Set(
+        orders.filter((o) => completedIds.has(o.session_id)).map((o) => o.id),
+      )
+      const relevantLines = orderLines.filter((l) => relevantOrderIds.has(l.order_id))
+
+      if (relevantLines.length === 0) {
+        toast.info('Нет данных для экспорта')
+        setExporting(false)
+        return
+      }
+
+      const lineIdToName = new Map(relevantLines.map((l) => [l.id, l.product_name]))
+      const byName = new Map<string, { lines: typeof relevantLines; entries: typeof checklistEntries }>()
+      for (const line of relevantLines) {
+        if (!byName.has(line.product_name)) byName.set(line.product_name, { lines: [], entries: [] })
+        byName.get(line.product_name)!.lines.push(line)
+      }
+      for (const entry of checklistEntries) {
+        const name = lineIdToName.get(entry.order_line_id)
+        if (name && byName.has(name)) byName.get(name)!.entries.push(entry)
+      }
+
+      const aggregates: ProductAggregate[] = []
+      for (const [name, { lines, entries }] of byName) {
+        const timesOrdered = lines.length
+        const avgOrdered = lines.reduce((s, l) => s + l.quantity_packs, 0) / lines.length
+        const done = entries.filter((e) => e.status === 'done' && e.actual_packs != null)
+        const avgTaken = done.length > 0 ? done.reduce((s, e) => s + (e.actual_packs ?? 0), 0) / done.length : 0
+        const timesUnavailable = entries.filter((e) => e.status === 'unavailable').length
+        aggregates.push({ name, timesOrdered, avgOrdered, avgTaken, timesUnavailable })
+      }
+      aggregates.sort((a, b) => b.timesOrdered - a.timesOrdered)
+
+      await exportAggregatesExcel(aggregates)
+      toast.success('Excel скачан')
+    } catch {
+      toast.error('Ошибка при экспорте')
+    } finally {
+      setExporting(false)
+    }
   }
 
   async function handleStartSweep() {
@@ -141,10 +195,15 @@ export default function HomePage() {
               </button>
               <button
                 className="h-10 rounded-md text-sm border text-left px-3"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                onClick={() => toast.info('Экспорт Excel — будет в I-07')}
+                style={{
+                  color: 'var(--foreground)',
+                  borderColor: 'var(--border)',
+                  opacity: exporting ? 0.6 : 1,
+                }}
+                onClick={handleExportExcel}
+                disabled={exporting}
               >
-                Экспорт Excel ↓
+                {exporting ? 'Экспорт…' : 'Экспорт Excel ↓'}
               </button>
             </div>
           )}

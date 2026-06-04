@@ -11,6 +11,7 @@ export type StockEntry = Tables<'stock_entries'>
 export type Order = Tables<'orders'>
 export type OrderLine = Tables<'order_lines'>
 export type ChecklistEntry = Tables<'checklist_entries'>
+export type AuditLog = Tables<'audit_log'>
 
 export interface SyncQueueItem {
   id: string
@@ -34,6 +35,7 @@ export const db = new Dexie('CellDB') as Dexie & {
   order_lines: EntityTable<OrderLine, 'id'>
   checklist_entries: EntityTable<ChecklistEntry, 'id'>
   sync_queue: EntityTable<SyncQueueItem, 'id'>
+  audit_log: EntityTable<AuditLog, 'id'>
 }
 
 db.version(1).stores({
@@ -48,4 +50,8 @@ db.version(1).stores({
   order_lines: '&id, order_id, product_id, updated_at',
   checklist_entries: '&id, order_line_id, updated_at',
   sync_queue: '&id, created_at',
+})
+
+db.version(2).stores({
+  audit_log: '&id, actor_id, entity_type, event_type, created_at',
 })
