@@ -15,11 +15,22 @@ I-01–I-06 завершены: полный flow обхода работает 
 - `docs/specs/S00-design-system.md` — токены цветов, формы, валидация
 
 **Код из предыдущих сессий:**
-- `src/data/db.ts` — `db.products`, `db.materials`, `db.sessions`, `db.orders`, `db.order_lines`, `db.checklist_entries`, `db.audit_log`
+- `src/data/db.ts` — `db.products`, `db.materials`, `db.sessions`, `db.orders`, `db.order_lines`, `db.checklist_entries`  
+  ⚠️ `db.audit_log` в схеме **отсутствует** — нужно добавить в db.ts и Supabase migration
 - `src/data/supabase.ts` — supabase клиент
 - `src/data/store.ts` — `useAppStore()`: `userRole`
-- `src/features/sessions/SessionsPage.tsx` — заглушки агрегатов и Excel уже есть
-- `src/app/router.tsx` — маршруты `/app/catalog`, `/app/settings/audit`
+- `src/features/home/HomePage.tsx` — основной экран (не SessionsPage); кнопки admin уже добавлены (см. «Уже закрыто»)
+- `src/features/home/SessionCard.tsx` — карточка активной сессии
+- `src/features/home/SessionDetailPage.tsx` — детали сессии plan vs fact
+- `src/features/checklist/saveChecklistEntry.ts` — optimistic write + rollback + autocompletion
+- `src/app/router.tsx` — маршруты `/app/catalog`, `/app/settings/audit` (маршрут `/app/admin/aggregates` ещё **не добавлен** — задача 8)
+
+---
+
+## Уже закрыто (не переделывать)
+
+- **`SessionsPage.tsx` не существует.** В I-06 главный экран называется `src/features/home/HomePage.tsx`. Всё, что в I-07 написано про `SessionsPage`, читай как `HomePage`.
+- **Кнопки admin на «Главной» (задача 7) — частично готовы:** кнопка "Агрегаты по товарам →" уже делает `navigate('/app/admin/aggregates')`, кнопка "Экспорт Excel ↓" показывает toast-заглушку. В I-07 нужно только подключить реальный `exportAggregatesExcel` к уже существующей кнопке.
 
 **Скиллы для этой сессии:**
 - Перед написанием компонентов: вызови `/ui-ux-pro-max`
