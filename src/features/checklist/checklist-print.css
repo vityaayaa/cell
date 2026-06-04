@@ -1,0 +1,37 @@
+.checklist-print-table {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .checklist-print-table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+    font-family: sans-serif;
+    font-size: 12pt;
+  }
+
+  .checklist-print-table th,
+  .checklist-print-table td {
+    border: 1px solid #999;
+    padding: 6px 8px;
+  }
+
+  .checklist-print-table th {
+    background: #eee;
+    font-weight: bold;
+  }
+
+  .checklist-row {
+    page-break-inside: avoid;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}

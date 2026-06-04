@@ -88,10 +88,21 @@ export async function generateOrder(sessionId: string): Promise<string> {
   await db.orders.put(order)
   await db.order_lines.bulkPut(lines)
 
-  // Server write (best-effort, no rollback — order can be regenerated)
-  await supabase.from('orders').insert(order)
+  // Server write — rollback Dexie on error so the caller receives the failure
+  const { error: orderError } = await supabase.from('orders').insert(order)
+  if (orderError) {
+    await db.orders.delete(orderId)
+    await db.order_lines.bulkDelete(lines.map((l) => l.id))
+    throw orderError
+  }
+
   if (lines.length > 0) {
-    await supabase.from('order_lines').insert(lines)
+    const { error: linesError } = await supabase.from('order_lines').insert(lines)
+    if (linesError) {
+      await db.orders.delete(orderId)
+      await db.order_lines.bulkDelete(lines.map((l) => l.id))
+      throw linesError
+    }
   }
 
   await updateSessionStatus(sessionId, 'ordering')
