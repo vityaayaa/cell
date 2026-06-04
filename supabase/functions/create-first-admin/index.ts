@@ -16,7 +16,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // Guard: allow only if no users exist yet
     const { data: existingProfiles, error: profilesError } = await supabaseAdmin
       .from('user_profiles')
       .select('id')
@@ -24,18 +23,24 @@ Deno.serve(async (req) => {
 
     if (profilesError) throw profilesError
 
-    if (existingProfiles && existingProfiles.length > 0) {
+    const alreadyExists = !!(existingProfiles && existingProfiles.length > 0)
+
+    // Parse body gracefully — check-only calls send {} with no fields
+    const body = await req.json().catch(() => ({}))
+    const { name, email, password } = body as Record<string, string>
+
+    // Check-only call: missing credentials → just return existence flag
+    if (!name || !email || !password) {
       return new Response(
-        JSON.stringify({ error: 'Admin already exists. Use create-user instead.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ alreadyExists }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
-    const { name, email, password } = await req.json()
-
-    if (!name || !email || !password) {
+    // Create call but admin already exists
+    if (alreadyExists) {
       return new Response(
-        JSON.stringify({ error: 'name, email, and password are required' }),
+        JSON.stringify({ alreadyExists: true, error: 'Admin already exists. Use create-user instead.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
