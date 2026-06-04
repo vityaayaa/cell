@@ -5,8 +5,8 @@ export interface BspNode {
   parent_id: string | null
   split_direction: SplitDirection | null
   is_first_child: boolean | null
-  width_mm?: number
-  height_mm?: number
+  width_mm?: number | null
+  height_mm?: number | null
   computed_width_mm: number
   computed_height_mm: number
 }
