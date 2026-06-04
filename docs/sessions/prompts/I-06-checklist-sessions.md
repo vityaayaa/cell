@@ -220,9 +220,9 @@ const progress = entries.length > 0
 
 Таблица печати: название товара, количество пачек, галочка "взял", крестик "нет на складе", "взял столько: ___".
 
-### 8. Экран «Сессии»: `src/features/sessions/SessionsPage.tsx`
+### 8. Экран «Главная»: `src/features/home/HomePage.tsx`
 
-Заменить заглушку на реальную реализацию.
+Заменить заглушку на реальную реализацию. Это основной экран приложения — менеджер сессий + история. Маршрут: `/app/home`.
 
 Данные:
 ```typescript
@@ -316,7 +316,21 @@ const hasSweepingOrOrdering = activeSessions.some(
 // При нажатии (не заблокирована):
 const sessionId = await startSweep(userId)
 store.setActiveSession(sessionId)
+store.setSessionMode(true)   // ← морфинг таббара в сессионный режим (S14)
 navigate('/app/shelf')
+```
+
+**"Продолжить →" на карточке активной сессии:**
+
+```typescript
+function handleContinue(session: Session) {
+  store.setSessionMode(true)   // ← таббар морфится
+  switch (session.status) {
+    case 'sweeping':   navigate('/app/shelf'); break
+    case 'ordering':   navigate('/app/order'); break
+    case 'fulfilling': navigate(`/app/checklist/${session.id}`); break
+  }
+}
 ```
 
 Сессии в `fulfilling` НЕ блокируют новый обход (S05).

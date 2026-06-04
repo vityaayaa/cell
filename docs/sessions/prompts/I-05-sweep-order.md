@@ -285,8 +285,10 @@ export async function updateSessionStatus(sessionId: string, status: Session['st
 
 Маршрут: `/app/order`
 
+**Кнопки "← К обходу" — НЕТ.** Навигация на стеллаж происходит через вкладку "Стеллаж" в таббаре (S14). Статус сессии при этом не меняется.
+
 ```
-← К обходу                              Заявка
+                               Заявка
 
 ────────────────────────────────────────────
   Брусок 50×50×3000          4 пачки · 16 шт
@@ -317,7 +319,7 @@ const boundaryLines = allLines?.filter(l => l.is_boundary) ?? []
 ```
 
 Сортировка строк: материал-приоритет → длина убывает → имя А→Я (S05).
-Кнопка "← К обходу" в header: `updateSessionStatus(sessionId, 'sweeping')` → `navigate('/app/shelf')`.
+Навигация назад на стеллаж — через вкладку "Стеллаж" в таббаре (S14). Статус остаётся `ordering`.
 
 ### 9. Bottom sheet строки заявки: `src/features/order/OrderLineSheet.tsx`
 
