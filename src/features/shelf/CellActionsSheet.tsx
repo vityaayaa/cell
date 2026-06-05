@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import type { Cell, Product, Material } from '@/data/db'
 import { db } from '@/data/db'
@@ -202,15 +206,15 @@ export function CellActionsSheet({
     onClose()
   }
 
-  // Non-leaf (split cell) — only drill-down + base sizes
+  // Non-leaf (split cell)
   if (!leaf) {
     return (
-      <Sheet open={open} onOpenChange={v => !v && onClose()}>
-        <SheetContent side="bottom" className="pb-safe">
-          <SheetHeader>
-            <SheetTitle>{address}</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-3 mt-4">
+      <Dialog open={open} onOpenChange={v => !v && onClose()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{address}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
             <Button
               variant="outline"
               className="h-14 justify-start text-base"
@@ -228,20 +232,20 @@ export function CellActionsSheet({
               </Button>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     )
   }
 
   // Leaf cell
   return (
     <>
-      <Sheet open={open} onOpenChange={v => !v && onClose()}>
-        <SheetContent side="bottom" className="pb-safe">
-          <SheetHeader>
-            <SheetTitle>{address}</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-3 mt-4">
+      <Dialog open={open} onOpenChange={v => !v && onClose()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{address}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
             {currentProduct ? (
               <>
                 <Button
@@ -312,8 +316,8 @@ export function CellActionsSheet({
               Настройки ячейки
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Merge confirmation */}
       <Dialog open={confirmMerge} onOpenChange={v => !v && setConfirmMerge(false)}>
@@ -342,11 +346,11 @@ export function CellActionsSheet({
 
       {/* Product picker */}
       <Dialog open={showProductList} onOpenChange={v => !v && setShowProductList(false)}>
-        <DialogContent className="max-h-[80dvh] flex flex-col">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Выбрать товар</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 flex flex-col gap-2 mt-2">
+          <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto">
             {products.map(p => (
               <Button
                 key={p.id}

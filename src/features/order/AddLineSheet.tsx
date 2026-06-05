@@ -5,7 +5,12 @@ import { db } from '@/data/db'
 import type { OrderLine, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { getProductDisplayName } from '@/features/shelf/cellUtils'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -75,19 +80,15 @@ export function AddLineSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-xl flex flex-col"
-        style={{ maxHeight: '85dvh' }}
-      >
-        <SheetHeader className="pb-2 flex-shrink-0">
-          <SheetTitle>Добавить позицию</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Добавить позицию</DialogTitle>
+        </DialogHeader>
 
         {selected ? (
-          /* Step 2: pack count for selected product */
-          <div className="flex flex-col gap-4 px-1 pb-4">
+          /* Step 2: pack count */
+          <div className="flex flex-col gap-4">
             <div>
               <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                 {getProductDisplayName(selected)}
@@ -144,12 +145,12 @@ export function AddLineSheet({
             </button>
           </div>
         ) : (
-          /* Step 1: product search + list */
-          <>
-            <div className="relative flex-shrink-0 px-1 pb-2">
+          /* Step 1: search + list */
+          <div className="flex flex-col gap-3">
+            <div className="relative">
               <Search
                 size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2"
+                className="absolute left-3 top-1/2 -translate-y-1/2"
                 style={{ color: 'var(--muted-foreground)' }}
               />
               <input
@@ -170,7 +171,7 @@ export function AddLineSheet({
               />
             </div>
 
-            <div className="overflow-y-auto flex-1 -mx-4 px-4">
+            <div className="flex flex-col max-h-[45dvh] overflow-y-auto">
               {filtered.length === 0 ? (
                 <p
                   className="text-sm py-6 text-center"
@@ -195,11 +196,10 @@ export function AddLineSheet({
                   </button>
                 ))
               )}
-              <div style={{ height: 24 }} />
             </div>
-          </>
+          </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

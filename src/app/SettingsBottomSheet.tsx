@@ -2,11 +2,11 @@ import { supabase } from '@/data/supabase'
 import { useAppStore } from '@/data/store'
 import { useTheme } from './ThemeProvider'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
@@ -34,13 +34,13 @@ export function SettingsBottomSheet({ open, onClose }: Props) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="bottom" className="rounded-t-xl pb-safe">
-        <SheetHeader>
-          <SheetTitle style={{ color: 'var(--foreground)' }}>Настройки</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle style={{ color: 'var(--foreground)' }}>Настройки</DialogTitle>
+        </DialogHeader>
 
-        <div className="px-4 py-4 space-y-4">
+        <div className="space-y-4">
           <div>
             <p className="text-sm font-medium mb-2" style={{ color: 'var(--muted-foreground)' }}>
               Тема
@@ -52,11 +52,11 @@ export function SettingsBottomSheet({ open, onClose }: Props) {
                   onClick={() => setTheme(t.value)}
                   style={{
                     minHeight: 44,
+                    flex: 1,
                     borderRadius: 6,
                     border: `1.5px solid ${theme === t.value ? 'var(--primary)' : 'var(--border)'}`,
                     background: theme === t.value ? 'var(--primary)' : 'transparent',
                     color: theme === t.value ? 'var(--primary-foreground)' : 'var(--foreground)',
-                    padding: '0 12px',
                     fontSize: 14,
                     fontWeight: theme === t.value ? 600 : 400,
                     transition: 'all 150ms',
@@ -79,7 +79,7 @@ export function SettingsBottomSheet({ open, onClose }: Props) {
             Выйти из аккаунта
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

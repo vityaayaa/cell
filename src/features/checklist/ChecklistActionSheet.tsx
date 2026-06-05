@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { ChecklistEntry, OrderLine } from '@/data/db'
@@ -77,14 +77,14 @@ export function ChecklistActionSheet({
 
   return (
     <>
-      {/* Main action sheet */}
-      <Sheet open={open && !lessOpen} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-xl" showCloseButton={false}>
-          <SheetHeader className="pb-2">
-            <SheetTitle className="text-base">{title}</SheetTitle>
-          </SheetHeader>
+      {/* Main action dialog */}
+      <Dialog open={open && !lessOpen} onOpenChange={onOpenChange}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-base">{title}</DialogTitle>
+          </DialogHeader>
 
-          <div className="flex flex-col gap-2 pb-4">
+          <div className="flex flex-col gap-2">
             <button
               className="w-full rounded-md font-semibold text-base text-white"
               style={{ height: 56, background: '#10B981' }}
@@ -119,26 +119,24 @@ export function ChecklistActionSheet({
               Нет на складе
             </button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      {/* Nested "Взял меньше" sheet */}
-      <Sheet
+      {/* "Взял меньше" dialog */}
+      <Dialog
         open={lessOpen}
-        onOpenChange={(o) => {
-          if (!o) setLessOpen(false)
-        }}
+        onOpenChange={(o) => { if (!o) setLessOpen(false) }}
       >
-        <SheetContent side="bottom" className="rounded-t-xl" showCloseButton={false}>
-          <SheetHeader className="pb-2">
-            <SheetTitle className="text-base">{line.product_name}</SheetTitle>
-          </SheetHeader>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-base">{line.product_name}</DialogTitle>
+          </DialogHeader>
 
-          <p className="text-sm px-4 mb-4" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
             Сколько взял?
           </p>
 
-          <div className="flex items-center gap-3 px-4 mb-6">
+          <div className="flex items-center gap-3">
             <button
               className="flex items-center justify-center rounded-md border text-lg font-medium"
               style={{ width: 44, height: 44, borderColor: 'var(--border)', flexShrink: 0 }}
@@ -170,18 +168,16 @@ export function ChecklistActionSheet({
             </button>
           </div>
 
-          <div className="px-4 pb-4">
-            <Button
-              className="w-full"
-              style={{ height: 56 }}
-              onClick={handleConfirmLess}
-              disabled={saving}
-            >
-              {saving ? '…' : 'Подтвердить'}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+          <Button
+            className="w-full"
+            style={{ height: 56 }}
+            onClick={handleConfirmLess}
+            disabled={saving}
+          >
+            {saving ? '…' : 'Подтвердить'}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

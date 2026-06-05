@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -86,7 +91,6 @@ export function CellSettingsSheet({
       updated_at: now,
     }
 
-    // If root and dimensions changed: update and recompute descendants
     if (isRoot) {
       const newWidth = parseInt(widthInput)
       const newHeight = parseInt(heightInput)
@@ -155,13 +159,13 @@ export function CellSettingsSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={v => !v && onClose()}>
-      <SheetContent side="bottom" className="pb-safe max-h-[85dvh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Настройки {address}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Настройки {address}</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex flex-col gap-5 mt-4">
+        <div className="flex flex-col gap-5 max-h-[60dvh] overflow-y-auto pr-1">
           {/* Capacity */}
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
@@ -196,9 +200,7 @@ export function CellSettingsSheet({
               >
                 <div
                   className="relative w-12 h-6 rounded-full transition-colors"
-                  style={{
-                    background: rotationAllowed ? 'var(--primary)' : 'var(--muted)',
-                  }}
+                  style={{ background: rotationAllowed ? 'var(--primary)' : 'var(--muted)' }}
                 >
                   <div
                     className="absolute top-0.5 w-5 h-5 rounded-full transition-transform"
@@ -257,7 +259,7 @@ export function CellSettingsSheet({
             {saving ? 'Сохранение...' : 'Сохранить'}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

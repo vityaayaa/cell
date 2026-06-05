@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -122,7 +127,6 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       return
     }
 
-    // Log to audit
     if (actorId) {
       const logEntry = {
         id: crypto.randomUUID(),
@@ -144,13 +148,13 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl max-h-[90dvh] overflow-y-auto" showCloseButton>
-        <SheetHeader className="pb-2">
-          <SheetTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton>
+        <DialogHeader>
+          <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex flex-col gap-4 px-4 pb-6">
+        <div className="flex flex-col gap-4 max-h-[65dvh] overflow-y-auto pr-1">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
@@ -351,7 +355,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
             {saving ? '…' : product ? 'Сохранить' : 'Добавить'}
           </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { MoreHorizontal, Plus, ArrowUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -8,12 +8,6 @@ import { useAppStore } from '@/data/store'
 import { supabase } from '@/data/supabase'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import {
   Dialog,
   DialogContent,
@@ -40,12 +34,12 @@ interface ProductActionsSheetProps {
 function ProductActionsSheet({ product, open, onOpenChange, onEdit, onDelete }: ProductActionsSheetProps) {
   if (!product) return null
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl" showCloseButton={false}>
-        <SheetHeader className="pb-2">
-          <SheetTitle className="text-base">{getProductDisplayName(product)}</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-2 px-4 pb-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle className="text-base">{getProductDisplayName(product)}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-2">
           <button
             className="w-full rounded-md font-medium text-base border"
             style={{
@@ -66,8 +60,8 @@ function ProductActionsSheet({ product, open, onOpenChange, onEdit, onDelete }: 
             Удалить товар
           </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -78,6 +72,7 @@ export default function CatalogPage() {
   const materials = useLiveQuery(() => db.materials.orderBy('name').toArray())
 
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<'material' | 'length' | 'alpha'>('material')
   const [formOpen, setFormOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -99,9 +94,30 @@ export default function CatalogPage() {
 
   const materialMap = new Map(materials.map((m) => [m.id, m]))
 
-  const filteredProducts = selectedMaterialId
-    ? products.filter((p) => p.material_id === selectedMaterialId)
-    : products
+  const filteredProducts = useMemo(() => {
+    const base = selectedMaterialId
+      ? products.filter((p) => p.material_id === selectedMaterialId)
+      : products
+
+    return [...base].sort((a, b) => {
+      if (sortMode === 'length') {
+        const lenA = a.length_mm ?? a.diameter_mm ?? 0
+        const lenB = b.length_mm ?? b.diameter_mm ?? 0
+        return lenA - lenB
+      }
+      if (sortMode === 'alpha') {
+        const matA = materialMap.get(a.material_id)?.name ?? ''
+        const matB = materialMap.get(b.material_id)?.name ?? ''
+        if (matA !== matB) return matA.localeCompare(matB, 'ru')
+        return a.name.localeCompare(b.name, 'ru')
+      }
+      // 'material': group by material name, then alpha within
+      const matA = materialMap.get(a.material_id)?.name ?? ''
+      const matB = materialMap.get(b.material_id)?.name ?? ''
+      if (matA !== matB) return matA.localeCompare(matB, 'ru')
+      return a.name.localeCompare(b.name, 'ru')
+    })
+  }, [products, selectedMaterialId, sortMode, materialMap])
 
   function openAdd() {
     setEditProduct(null)
@@ -223,6 +239,26 @@ export default function CatalogPage() {
               aria-hidden
             />
             {m.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Sort buttons */}
+      <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+        <ArrowUpDown size={14} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        {(['material', 'length', 'alpha'] as const).map((mode) => (
+          <button
+            key={mode}
+            className="rounded-full px-3 text-xs font-medium border flex-shrink-0"
+            style={{
+              height: 28,
+              background: sortMode === mode ? 'var(--primary)' : 'transparent',
+              color: sortMode === mode ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+              borderColor: sortMode === mode ? 'var(--primary)' : 'var(--border)',
+            }}
+            onClick={() => setSortMode(mode)}
+          >
+            {mode === 'material' ? 'По материалу' : mode === 'length' ? 'По длине' : 'По алфавиту'}
           </button>
         ))}
       </div>

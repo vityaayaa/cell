@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Settings } from 'lucide-react'
 import { toast } from 'sonner'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -131,19 +135,25 @@ export default function ShelfConfigPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Page header */}
-      <div
-        className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-        style={{ borderColor: 'var(--border)' }}
+    <div className="flex flex-col h-full" style={{ position: 'relative' }}>
+      {/* Floating manage button */}
+      <button
+        onClick={() => setShelfActionsOpen(true)}
+        className="absolute z-10 flex items-center gap-1.5 rounded-full px-3 shadow-md"
+        style={{
+          bottom: 12,
+          right: 12,
+          height: 36,
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          color: 'var(--foreground)',
+          fontSize: 13,
+          fontWeight: 500,
+        }}
       >
-        <span className="font-semibold" style={{ color: 'var(--foreground)' }}>
-          Стеллаж
-        </span>
-        <button onClick={() => setShelfActionsOpen(true)}>
-          <Settings size={20} style={{ color: 'var(--muted-foreground)' }} />
-        </button>
-      </div>
+        <Settings size={16} strokeWidth={1.5} />
+        Управление
+      </button>
 
       <ShelfGrid
         mode="edit"
@@ -188,13 +198,13 @@ export default function ShelfConfigPage() {
         onOpenSettings={cell => setSettingsCell(cell)}
       />
 
-      {/* Shelf actions sheet */}
-      <Sheet open={shelfActionsOpen} onOpenChange={v => !v && setShelfActionsOpen(false)}>
-        <SheetContent side="bottom" className="pb-safe">
-          <SheetHeader>
-            <SheetTitle>Управление стеллажом</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-3 mt-4">
+      {/* Shelf actions dialog */}
+      <Dialog open={shelfActionsOpen} onOpenChange={v => !v && setShelfActionsOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Управление стеллажом</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
             <Button
               variant="outline"
               className="h-14 justify-start text-base"
@@ -211,17 +221,9 @@ export default function ShelfConfigPage() {
             >
               {addingCol ? 'Добавляем...' : '+ Добавить столбец справа'}
             </Button>
-            <Separator />
-            <Button
-              variant="outline"
-              className="h-14 justify-start text-base"
-              onClick={() => setShelfActionsOpen(false)}
-            >
-              Переименовать стеллаж
-            </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

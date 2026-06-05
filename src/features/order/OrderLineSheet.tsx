@@ -3,11 +3,11 @@ import { db } from '@/data/db'
 import type { OrderLine } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -22,7 +22,6 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
   const [packCount, setPackCount] = useState<number>(line?.quantity_packs ?? 1)
   const [saving, setSaving] = useState(false)
 
-  // Reset when line changes
   if (line && packCount !== line.quantity_packs && !saving) {
     setPackCount(line.quantity_packs)
   }
@@ -61,19 +60,19 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="text-base">{line.product_name}</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-base">{line.product_name}</DialogTitle>
           {line.deficit_units != null && (
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
               Дефицит: {line.deficit_units} шт · расчётное {line.quantity_packs} пачек
             </p>
           )}
-        </SheetHeader>
+        </DialogHeader>
 
         {/* Pack counter */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3">
           <button
             className="w-10 h-10 rounded-md border text-lg font-medium flex items-center justify-center"
             style={{ borderColor: 'var(--border)' }}
@@ -106,7 +105,7 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
           {saving ? '…' : 'Сохранить'}
         </Button>
 
-        <Separator className="my-3" />
+        <Separator />
 
         <button
           className="w-full py-3 text-sm font-medium text-center disabled:opacity-40"
@@ -116,12 +115,12 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
         >
           Удалить из заявки
         </button>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-// ---- Boundary line sheet ----
+// ---- Boundary line dialog ----
 
 interface BoundaryLineSheetProps {
   line: OrderLine | null
@@ -169,26 +168,26 @@ export function BoundaryLineSheet({
     line.deficit_units != null ? `(${line.deficit_units} шт)` : ''
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="text-base">{line.product_name}</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-base">{line.product_name}</DialogTitle>
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
             дефицит{' '}
             {line.deficit_units != null ? `${line.deficit_units} шт` : ''} —{' '}
             меньше одной пачки {packSizeDisplay}
           </p>
-        </SheetHeader>
+        </DialogHeader>
 
         <Button className="w-full h-14" onClick={handleInclude} disabled={saving}>
           {saving ? '…' : 'Включить в заявку'}
         </Button>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-// ---- Finalize sheet ----
+// ---- Finalize dialog ----
 
 interface FinalizeSheetProps {
   open: boolean
@@ -218,15 +217,15 @@ export function FinalizeSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl">
-        <SheetHeader className="mb-4">
-          <SheetTitle>Готово к финализации</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Готово к финализации</DialogTitle>
           <p className="text-base font-medium" style={{ color: 'var(--foreground)' }}>
             {totalPositions} позиций · {totalPacks} пачек
           </p>
-        </SheetHeader>
-        <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
+        </DialogHeader>
+        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
           Это нельзя отменить. Заявка будет зафиксирована.
         </p>
         <div className="flex gap-3">
@@ -246,7 +245,7 @@ export function FinalizeSheet({
             {loading ? '…' : 'Финализировать →'}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
