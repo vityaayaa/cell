@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { db } from '@/data/db'
 import type { Material } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -73,12 +78,12 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-xl" showCloseButton>
-        <SheetHeader className="pb-2">
-          <SheetTitle>{material ? 'Редактировать материал' : 'Новый материал'}</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 px-4 pb-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton>
+        <DialogHeader>
+          <DialogTitle>{material ? 'Редактировать материал' : 'Новый материал'}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
               Название <span style={{ color: '#EF4444' }}>*</span>
@@ -137,8 +142,8 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
             {saving ? '…' : material ? 'Сохранить' : 'Добавить'}
           </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 

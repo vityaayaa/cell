@@ -81,20 +81,13 @@ export default function CatalogPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  if (!products || !materials) {
-    return (
-      <div className="flex items-center justify-center" style={{ height: 200 }}>
-        <div
-          className="w-5 h-5 rounded-full border-2 animate-spin"
-          style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }}
-        />
-      </div>
-    )
-  }
-
-  const materialMap = new Map(materials.map((m) => [m.id, m]))
+  const materialMap = useMemo(
+    () => new Map((materials ?? []).map((m) => [m.id, m])),
+    [materials],
+  )
 
   const filteredProducts = useMemo(() => {
+    if (!products || !materials) return []
     const base = selectedMaterialId
       ? products.filter((p) => p.material_id === selectedMaterialId)
       : products
@@ -111,13 +104,23 @@ export default function CatalogPage() {
         if (matA !== matB) return matA.localeCompare(matB, 'ru')
         return a.name.localeCompare(b.name, 'ru')
       }
-      // 'material': group by material name, then alpha within
       const matA = materialMap.get(a.material_id)?.name ?? ''
       const matB = materialMap.get(b.material_id)?.name ?? ''
       if (matA !== matB) return matA.localeCompare(matB, 'ru')
       return a.name.localeCompare(b.name, 'ru')
     })
-  }, [products, selectedMaterialId, sortMode, materialMap])
+  }, [products, materials, selectedMaterialId, sortMode, materialMap])
+
+  if (!products || !materials) {
+    return (
+      <div className="flex items-center justify-center" style={{ height: 200 }}>
+        <div
+          className="w-5 h-5 rounded-full border-2 animate-spin"
+          style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }}
+        />
+      </div>
+    )
+  }
 
   function openAdd() {
     setEditProduct(null)
