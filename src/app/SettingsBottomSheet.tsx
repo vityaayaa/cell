@@ -1,4 +1,6 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { supabase } from '@/data/supabase'
+import { db } from '@/data/db'
 import { useAppStore } from '@/data/store'
 import { useTheme } from './ThemeProvider'
 import {
@@ -7,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
 type Theme = 'light' | 'dark' | 'oled'
@@ -25,7 +26,12 @@ interface Props {
 
 export function SettingsBottomSheet({ open, onClose }: Props) {
   const { theme, setTheme } = useTheme()
+  const userId = useAppStore((s) => s.userId)
   const clearUser = useAppStore((s) => s.clearUser)
+  const profile = useLiveQuery(
+    () => (userId ? db.user_profiles.get(userId) : undefined),
+    [userId],
+  )
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -70,14 +76,31 @@ export function SettingsBottomSheet({ open, onClose }: Props) {
 
           <Separator />
 
-          <Button
-            variant="destructive"
-            className="w-full"
-            style={{ height: 48 }}
-            onClick={handleLogout}
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ border: '1px solid var(--border)' }}
           >
-            Выйти из аккаунта
-          </Button>
+            {profile && (
+              <div
+                className="px-4 py-3"
+                style={{ background: 'var(--muted)', borderBottom: '1px solid var(--border)' }}
+              >
+                <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                  {profile.name}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                  {profile.role === 'admin' ? 'Администратор' : 'Сотрудник'}
+                </p>
+              </div>
+            )}
+            <button
+              className="w-full flex items-center justify-center font-semibold text-sm"
+              style={{ height: 48, background: 'var(--card)', color: 'var(--destructive)' }}
+              onClick={handleLogout}
+            >
+              Выйти из аккаунта
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

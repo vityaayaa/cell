@@ -4,23 +4,22 @@ import { toast } from 'sonner'
 import { supabase } from '@/data/supabase'
 import { useAppStore } from '@/data/store'
 import { useTheme } from '@/app/ThemeProvider'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/data/db'
 
 type Theme = 'light' | 'dark' | 'oled'
 
-const THEMES: { value: Theme; label: string }[] = [
-  { value: 'light', label: 'Светлая' },
-  { value: 'dark', label: 'Тёмная' },
-  { value: 'oled', label: 'OLED' },
+const THEMES: { value: Theme; label: string; emoji: string }[] = [
+  { value: 'light', label: 'Светлая', emoji: '☀️' },
+  { value: 'dark', label: 'Тёмная', emoji: '🌙' },
+  { value: 'oled', label: 'OLED', emoji: '⬛' },
 ]
 
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
-  const { userId, clearUser } = useAppStore()
+  const userId = useAppStore((s) => s.userId)
+  const clearUser = useAppStore((s) => s.clearUser)
   const profile = useLiveQuery(
     () => (userId ? db.user_profiles.get(userId) : undefined),
     [userId],
@@ -38,7 +37,7 @@ export default function SettingsPage() {
       style={{ background: 'var(--background)' }}
     >
       <header
-        className="flex items-center px-2"
+        className="flex items-center px-2 flex-shrink-0"
         style={{
           height: 56,
           background: 'var(--card)',
@@ -62,7 +61,8 @@ export default function SettingsPage() {
         </h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        {/* Navigation items */}
         <nav className="mt-2">
           <button
             onClick={() => navigate('/app/settings/users')}
@@ -83,6 +83,7 @@ export default function SettingsPage() {
             style={{
               height: 56,
               background: 'var(--card)',
+              borderBottom: '1px solid var(--border)',
               color: 'var(--foreground)',
             }}
           >
@@ -91,10 +92,9 @@ export default function SettingsPage() {
           </button>
         </nav>
 
-        <Separator className="my-4" />
-
-        <div className="px-4">
-          <p className="text-sm font-medium mb-3" style={{ color: 'var(--muted-foreground)' }}>
+        {/* Theme */}
+        <div className="px-4 mt-6 mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted-foreground)' }}>
             Тема
           </p>
           <div className="flex gap-2">
@@ -102,40 +102,53 @@ export default function SettingsPage() {
               <button
                 key={t.value}
                 onClick={() => setTheme(t.value)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl"
                 style={{
-                  minHeight: 44,
-                  borderRadius: 6,
-                  border: `1.5px solid ${theme === t.value ? 'var(--primary)' : 'var(--border)'}`,
-                  background: theme === t.value ? 'var(--primary)' : 'transparent',
+                  height: 72,
+                  border: `2px solid ${theme === t.value ? 'var(--primary)' : 'var(--border)'}`,
+                  background: theme === t.value ? 'var(--primary)' : 'var(--card)',
                   color: theme === t.value ? 'var(--primary-foreground)' : 'var(--foreground)',
-                  padding: '0 16px',
-                  fontSize: 14,
-                  fontWeight: theme === t.value ? 600 : 400,
                   transition: 'all 150ms',
                 }}
               >
-                {t.label}
+                <span className="text-xl">{t.emoji}</span>
+                <span className="text-xs font-medium">{t.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <Separator className="my-4" />
+        <div className="flex-1" />
 
-        <div className="px-4 pb-6 space-y-3">
+        {/* Profile + logout — always at bottom */}
+        <div
+          className="mx-4 mb-6 rounded-xl overflow-hidden"
+          style={{ border: '1px solid var(--border)' }}
+        >
           {profile && (
-            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-              {profile.name} · {profile.role === 'admin' ? 'администратор' : 'сотрудник'}
-            </p>
+            <div
+              className="px-4 py-4"
+              style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
+            >
+              <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                {profile.name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                {profile.role === 'admin' ? 'Администратор' : 'Сотрудник'}
+              </p>
+            </div>
           )}
-          <Button
-            variant="destructive"
-            className="w-full"
-            style={{ height: 48 }}
+          <button
+            className="w-full flex items-center justify-center font-semibold text-sm"
+            style={{
+              height: 52,
+              background: 'var(--card)',
+              color: 'var(--destructive)',
+            }}
             onClick={handleLogout}
           >
             Выйти из аккаунта
-          </Button>
+          </button>
         </div>
       </div>
     </div>

@@ -23,12 +23,10 @@ import { Button } from '@/components/ui/button'
 
 export default function ShelfPage() {
   const navigate = useNavigate()
-  const { activeSessionId, userId, setActiveSession, setSessionMode } = useAppStore((s) => ({
-    activeSessionId: s.activeSessionId,
-    userId: s.userId,
-    setActiveSession: s.setActiveSession,
-    setSessionMode: s.setSessionMode,
-  }))
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const userId = useAppStore((s) => s.userId)
+  const setActiveSession = useAppStore((s) => s.setActiveSession)
+  const setSessionMode = useAppStore((s) => s.setSessionMode)
   const { shelf, cells, products, materials } = useShelfData()
   const { visited, total, visitedCellIds } = useSweepProgress(activeSessionId)
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false)
@@ -163,6 +161,7 @@ export default function ShelfPage() {
           materials={materials}
           sessionId={activeSessionId ?? undefined}
           visitedCellIds={visitedCellIds}
+          subheaderHeight={48}
           onLeafTap={handleLeafTap}
         />
       </div>

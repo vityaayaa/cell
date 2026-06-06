@@ -60,10 +60,8 @@ function getCapacity(cell: Cell, product: Product): number {
 export default function StockEntryPage() {
   const { cellId } = useParams<{ cellId: string }>()
   const navigate = useNavigate()
-  const { activeSessionId, userId } = useAppStore((s) => ({
-    activeSessionId: s.activeSessionId,
-    userId: s.userId,
-  }))
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const userId = useAppStore((s) => s.userId)
 
   const data = useLiveQuery(async () => {
     if (!cellId) return null

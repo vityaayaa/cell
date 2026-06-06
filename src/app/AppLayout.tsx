@@ -5,12 +5,14 @@ import { BottomNav } from './BottomNav'
 import { OfflineIndicator } from './OfflineIndicator'
 import { SettingsBottomSheet } from './SettingsBottomSheet'
 import { PageTransition } from './PageTransition'
+import { HeaderActionProvider, useHeaderAction } from './HeaderActionContext'
 import { useAppStore } from '@/data/store'
 
-export function AppLayout() {
+function AppLayoutInner() {
   const navigate = useNavigate()
   const userRole = useAppStore((s) => s.userRole)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const { action: headerAction } = useHeaderAction()
 
   function handleSettings() {
     if (userRole === 'admin') {
@@ -44,8 +46,19 @@ export function AppLayout() {
         >
           CELL
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <OfflineIndicator />
+          {headerAction && (
+            <button
+              onClick={headerAction.onClick}
+              className="flex items-center gap-1.5 rounded-md px-2"
+              style={{ minHeight: 44, color: 'var(--foreground)', fontSize: 13, fontWeight: 500 }}
+              aria-label={headerAction.label}
+            >
+              <headerAction.icon size={16} strokeWidth={1.5} />
+              <span>{headerAction.label}</span>
+            </button>
+          )}
           <button
             onClick={handleSettings}
             className="flex items-center justify-center rounded-md"
@@ -73,5 +86,13 @@ export function AppLayout() {
         <SettingsBottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
       )}
     </div>
+  )
+}
+
+export function AppLayout() {
+  return (
+    <HeaderActionProvider>
+      <AppLayoutInner />
+    </HeaderActionProvider>
   )
 }

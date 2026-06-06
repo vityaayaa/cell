@@ -14,6 +14,8 @@ export interface ShelfGridProps {
   materials: Material[]
   sessionId?: string
   visitedCellIds?: Set<string>
+  /** Extra px taken up by subheaders above the grid (progress bar, sweep bar, etc.) */
+  subheaderHeight?: number
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
@@ -32,6 +34,7 @@ export function ShelfGrid({
   materials,
   sessionId,
   visitedCellIds = new Set(),
+  subheaderHeight = 0,
   onLeafTap,
   onEditTap,
   onFlagTap,
@@ -70,11 +73,17 @@ export function ShelfGrid({
       return (a.col_index ?? 0) - (b.col_index ?? 0)
     })
 
+  // 2.5 columns visible (half column signals scrollability)
+  // 3.5 rows visible in the available viewport space
+  const overhead = 120 + subheaderHeight // header(56) + bottomnav(64) + any subheader
+  const cellWidth = 'calc(40vw)'
+  const cellHeight = `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5)`
+
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: `repeat(${shelf.cols_count}, minmax(64px, 1fr))`,
-    gridTemplateRows: `repeat(${shelf.rows_count}, 72px)`,
-    gap: '4px',
+    gridTemplateColumns: `repeat(${shelf.cols_count}, ${cellWidth})`,
+    gridTemplateRows: `repeat(${shelf.rows_count}, ${cellHeight})`,
+    gap: '3px',
   }
 
   const headerLabel = currentDrill
@@ -102,7 +111,7 @@ export function ShelfGrid({
 
       {/* Grid level */}
       {!currentDrill ? (
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto">
           <div style={gridStyle}>
             {rootCells.map(cell => (
               <CellCard

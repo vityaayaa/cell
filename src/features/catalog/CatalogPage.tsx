@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { MoreHorizontal, Plus, ArrowUpDown } from 'lucide-react'
+import { MoreHorizontal, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -71,8 +71,8 @@ export default function CatalogPage() {
   const products = useLiveQuery(() => db.products.toArray())
   const materials = useLiveQuery(() => db.materials.orderBy('name').toArray())
 
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null)
-  const [sortMode, setSortMode] = useState<'material' | 'length' | 'alpha'>('material')
+  const [materialCycleIdx, setMaterialCycleIdx] = useState(0)
+  const [sortMode, setSortMode] = useState<'length-desc' | 'length-asc' | 'alpha-asc' | 'alpha-desc'>('alpha-asc')
   const [formOpen, setFormOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -86,30 +86,31 @@ export default function CatalogPage() {
     [materials],
   )
 
+  const selectedMaterial = useMemo(() => {
+    if (!materials || materialCycleIdx === 0) return null
+    return materials[materialCycleIdx - 1] ?? null
+  }, [materials, materialCycleIdx])
+
   const filteredProducts = useMemo(() => {
     if (!products || !materials) return []
-    const base = selectedMaterialId
-      ? products.filter((p) => p.material_id === selectedMaterialId)
+    const base = selectedMaterial
+      ? products.filter((p) => p.material_id === selectedMaterial.id)
       : products
 
     return [...base].sort((a, b) => {
-      if (sortMode === 'length') {
+      if (sortMode === 'length-desc' || sortMode === 'length-asc') {
         const lenA = a.length_mm ?? a.diameter_mm ?? 0
         const lenB = b.length_mm ?? b.diameter_mm ?? 0
-        return lenA - lenB
-      }
-      if (sortMode === 'alpha') {
-        const matA = materialMap.get(a.material_id)?.name ?? ''
-        const matB = materialMap.get(b.material_id)?.name ?? ''
-        if (matA !== matB) return matA.localeCompare(matB, 'ru')
-        return a.name.localeCompare(b.name, 'ru')
+        return sortMode === 'length-desc' ? lenB - lenA : lenA - lenB
       }
       const matA = materialMap.get(a.material_id)?.name ?? ''
       const matB = materialMap.get(b.material_id)?.name ?? ''
-      if (matA !== matB) return matA.localeCompare(matB, 'ru')
-      return a.name.localeCompare(b.name, 'ru')
+      const matCmp = matA.localeCompare(matB, 'ru')
+      if (matCmp !== 0) return sortMode === 'alpha-asc' ? matCmp : -matCmp
+      const nameCmp = a.name.localeCompare(b.name, 'ru')
+      return sortMode === 'alpha-asc' ? nameCmp : -nameCmp
     })
-  }, [products, materials, selectedMaterialId, sortMode, materialMap])
+  }, [products, materials, selectedMaterial, sortMode, materialMap])
 
   if (!products || !materials) {
     return (
@@ -207,63 +208,66 @@ export default function CatalogPage() {
 
   return (
     <div className="flex flex-col pb-6">
-      {/* Material filter pills */}
-      <div
-        className="flex gap-2 px-4 py-3 overflow-x-auto"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
+      {/* Sort bar */}
+      <div className="flex px-4 py-2" style={{ borderBottom: '1px solid var(--border)', gap: 0 }}>
+        {/* Material cycle button */}
         <button
-          className="flex-shrink-0 rounded-full px-4 text-sm font-medium border"
+          onClick={() => setMaterialCycleIdx((i) => (materials ? (i + 1) % (materials.length + 1) : 0))}
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-medium truncate"
           style={{
             height: 36,
-            background: selectedMaterialId === null ? 'var(--primary)' : 'var(--background)',
-            color: selectedMaterialId === null ? 'var(--primary-foreground)' : 'var(--foreground)',
-            borderColor: selectedMaterialId === null ? 'var(--primary)' : 'var(--border)',
+            borderRadius: '6px 0 0 6px',
+            border: `1px solid ${selectedMaterial ? 'var(--primary)' : 'var(--border)'}`,
+            borderRight: 0,
+            background: selectedMaterial ? 'var(--primary)' : 'transparent',
+            color: selectedMaterial ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
           }}
-          onClick={() => setSelectedMaterialId(null)}
         >
-          Все
-        </button>
-        {materials.map((m) => (
-          <button
-            key={m.id}
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-full px-4 text-sm font-medium border"
-            style={{
-              height: 36,
-              background: selectedMaterialId === m.id ? m.color + '22' : 'var(--background)',
-              color: selectedMaterialId === m.id ? m.color : 'var(--foreground)',
-              borderColor: selectedMaterialId === m.id ? m.color : 'var(--border)',
-            }}
-            onClick={() => setSelectedMaterialId(m.id === selectedMaterialId ? null : m.id)}
-          >
+          {selectedMaterial && (
             <span
               className="rounded-full flex-shrink-0"
-              style={{ width: 8, height: 8, background: m.color }}
+              style={{ width: 8, height: 8, background: selectedMaterial.color }}
               aria-hidden
             />
-            {m.name}
-          </button>
-        ))}
-      </div>
+          )}
+          <span className="truncate">{selectedMaterial ? selectedMaterial.name : 'Материал'}</span>
+        </button>
 
-      {/* Sort buttons */}
-      <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-        <ArrowUpDown size={14} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-        {(['material', 'length', 'alpha'] as const).map((mode) => (
-          <button
-            key={mode}
-            className="rounded-full px-3 text-xs font-medium border flex-shrink-0"
-            style={{
-              height: 28,
-              background: sortMode === mode ? 'var(--primary)' : 'transparent',
-              color: sortMode === mode ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-              borderColor: sortMode === mode ? 'var(--primary)' : 'var(--border)',
-            }}
-            onClick={() => setSortMode(mode)}
-          >
-            {mode === 'material' ? 'По материалу' : mode === 'length' ? 'По длине' : 'По алфавиту'}
-          </button>
-        ))}
+        {/* Length sort button */}
+        <button
+          onClick={() => setSortMode((m) =>
+            m === 'length-desc' ? 'length-asc' : m === 'length-asc' ? 'length-desc' : 'length-desc',
+          )}
+          className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs font-medium"
+          style={{
+            height: 36,
+            borderRadius: 0,
+            border: `1px solid ${sortMode.startsWith('length') ? 'var(--primary)' : 'var(--border)'}`,
+            borderRight: 0,
+            background: sortMode.startsWith('length') ? 'var(--primary)' : 'transparent',
+            color: sortMode.startsWith('length') ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+          }}
+        >
+          <span>{sortMode === 'length-asc' ? '↑' : '↓'}</span>
+          <span className="truncate">Длина</span>
+        </button>
+
+        {/* Alpha sort button */}
+        <button
+          onClick={() => setSortMode((m) =>
+            m === 'alpha-asc' ? 'alpha-desc' : m === 'alpha-desc' ? 'alpha-asc' : 'alpha-asc',
+          )}
+          className="flex-1 min-w-0 flex items-center justify-center text-xs font-medium truncate"
+          style={{
+            height: 36,
+            borderRadius: '0 6px 6px 0',
+            border: `1px solid ${sortMode.startsWith('alpha') ? 'var(--primary)' : 'var(--border)'}`,
+            background: sortMode.startsWith('alpha') ? 'var(--primary)' : 'transparent',
+            color: sortMode.startsWith('alpha') ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+          }}
+        >
+          {sortMode === 'alpha-desc' ? 'Я-А' : 'А-Я'}
+        </button>
       </div>
 
       {/* Add button */}
@@ -287,7 +291,7 @@ export default function CatalogPage() {
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 px-8 py-12">
           <p className="text-base text-center" style={{ color: 'var(--muted-foreground)' }}>
-            {selectedMaterialId ? 'Нет товаров с этим материалом' : 'Каталог пуст'}
+            {selectedMaterial ? 'Нет товаров с этим материалом' : 'Каталог пуст'}
           </p>
         </div>
       ) : (

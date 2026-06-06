@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Settings } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -12,6 +12,7 @@ import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
+import { useRegisterHeaderAction } from '@/app/HeaderActionContext'
 import { useShelfData } from './useShelfData'
 import { ShelfSetupPage } from './ShelfSetupPage'
 import { ShelfGrid } from './ShelfGrid'
@@ -28,6 +29,8 @@ export default function ShelfConfigPage() {
   const [shelfActionsOpen, setShelfActionsOpen] = useState(false)
   const [addingRow, setAddingRow] = useState(false)
   const [addingCol, setAddingCol] = useState(false)
+
+  useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true) })
 
   useEffect(() => {
     const channel = subscribeToTable('cells', async (payload) => {
@@ -135,26 +138,7 @@ export default function ShelfConfigPage() {
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ position: 'relative' }}>
-      {/* Floating manage button */}
-      <button
-        onClick={() => setShelfActionsOpen(true)}
-        className="absolute z-10 flex items-center gap-1.5 rounded-full px-3 shadow-md"
-        style={{
-          bottom: 12,
-          right: 12,
-          height: 36,
-          background: 'var(--card)',
-          border: '1px solid var(--border)',
-          color: 'var(--foreground)',
-          fontSize: 13,
-          fontWeight: 500,
-        }}
-      >
-        <Settings size={16} strokeWidth={1.5} />
-        Управление
-      </button>
-
+    <div className="flex flex-col h-full">
       <ShelfGrid
         mode="edit"
         shelf={shelf}
