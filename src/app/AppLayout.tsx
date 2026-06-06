@@ -9,7 +9,7 @@ import { useAppStore } from '@/data/store'
 
 export function AppLayout() {
   const navigate = useNavigate()
-  const { userRole } = useAppStore()
+  const userRole = useAppStore((s) => s.userRole)
   const [sheetOpen, setSheetOpen] = useState(false)
 
   function handleSettings() {
@@ -24,7 +24,8 @@ export function AppLayout() {
     <div
       className="flex flex-col"
       style={{
-        minHeight: '100dvh',
+        height: '100dvh',
+        overflow: 'hidden',
         background: 'var(--background)',
       }}
     >

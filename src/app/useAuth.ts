@@ -14,7 +14,8 @@ export function useAuth(): {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const store = useAppStore()
+  const setUser = useAppStore((s) => s.setUser)
+  const clearUser = useAppStore((s) => s.clearUser)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -31,7 +32,7 @@ export function useAuth(): {
       if (s) {
         loadProfile(s.user.id)
       } else {
-        store.clearUser()
+        clearUser()
         setUserProfile(null)
         setIsLoading(false)
       }
@@ -50,7 +51,7 @@ export function useAuth(): {
 
     if (data) {
       await db.user_profiles.put(data)
-      store.setUser(data.id, data.role)
+      setUser(data.id, data.role)
       setUserProfile(data)
     }
     setIsLoading(false)

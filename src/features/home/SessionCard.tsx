@@ -63,7 +63,8 @@ function continueRoute(session: Session): string {
 
 export function SessionCard({ session, profiles, userId, userRole }: SessionCardProps) {
   const navigate = useNavigate()
-  const { setActiveSession, setSessionMode } = useAppStore()
+  const setActiveSession = useAppStore((s) => s.setActiveSession)
+  const setSessionMode = useAppStore((s) => s.setSessionMode)
   const [confirmAbandon, setConfirmAbandon] = useState(false)
   const [abandoning, setAbandoning] = useState(false)
 

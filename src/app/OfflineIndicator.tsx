@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '@/data/store'
 
 export function OfflineIndicator() {
-  const { isOnline, isSyncing, syncQueueLength } = useAppStore()
+  const isOnline = useAppStore((s) => s.isOnline)
+  const isSyncing = useAppStore((s) => s.isSyncing)
+  const syncQueueLength = useAppStore((s) => s.syncQueueLength)
   const [showReconnected, setShowReconnected] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
 

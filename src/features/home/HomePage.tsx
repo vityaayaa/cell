@@ -27,12 +27,10 @@ function formatDate(iso: string): string {
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { userId, userRole, setActiveSession, setSessionMode } = useAppStore((s) => ({
-    userId: s.userId,
-    userRole: s.userRole,
-    setActiveSession: s.setActiveSession,
-    setSessionMode: s.setSessionMode,
-  }))
+  const userId = useAppStore((s) => s.userId)
+  const userRole = useAppStore((s) => s.userRole)
+  const setActiveSession = useAppStore((s) => s.setActiveSession)
+  const setSessionMode = useAppStore((s) => s.setSessionMode)
   const [starting, setStarting] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)

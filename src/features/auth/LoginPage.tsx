@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
+import { Eye, EyeOff } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -33,6 +34,7 @@ function mapError(msg: string): string {
 export default function LoginPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -114,17 +116,30 @@ export default function LoginPage() {
             <Label htmlFor="password" style={{ color: 'var(--foreground)' }}>
               Пароль
             </Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              {...register('password')}
-              style={{
-                height: 48,
-                borderColor: errors.password ? 'var(--destructive)' : undefined,
-              }}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                {...register('password')}
+                style={{
+                  height: 48,
+                  paddingRight: 48,
+                  borderColor: errors.password ? 'var(--destructive)' : undefined,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-0 top-0 flex items-center justify-center"
+                style={{ width: 48, height: 48, color: 'var(--muted-foreground)' }}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+              >
+                {showPassword ? <EyeOff size={18} strokeWidth={1.5} /> : <Eye size={18} strokeWidth={1.5} />}
+              </button>
+            </div>
             {errors.password && (
               <p className="text-xs" style={{ color: 'var(--destructive)' }}>
                 {errors.password.message}

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate, useLocation } from 'react-router'
 import {
   Home,
@@ -39,8 +39,7 @@ function getNavItems(
     ]
   }
 
-  const orderDisabled =
-    status === 'sweeping' || status === 'fulfilling'
+  const orderDisabled = status === 'sweeping' || status === 'fulfilling'
   const checklistDisabled = status !== 'fulfilling'
 
   return [
@@ -61,12 +60,13 @@ function getNavItems(
   ]
 }
 
-const spring = { type: 'spring' as const, stiffness: 400, damping: 30 }
-
 export function BottomNav() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { userRole, isSessionMode, activeSessionId, setSessionMode } = useAppStore()
+  const userRole = useAppStore((s) => s.userRole)
+  const isSessionMode = useAppStore((s) => s.isSessionMode)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const setSessionMode = useAppStore((s) => s.setSessionMode)
 
   const activeSession = useLiveQuery(
     () => (activeSessionId ? db.sessions.get(activeSessionId) : undefined),
@@ -101,64 +101,64 @@ export function BottomNav() {
         background: 'var(--card)',
         borderColor: 'var(--border)',
         paddingBottom: 'env(safe-area-inset-bottom)',
+        flexShrink: 0,
       }}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={mode}
-          className="flex w-full justify-around items-center"
-          initial={{ x: mode === 'session' ? 40 : -40, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: mode === 'session' ? -40 : 40, opacity: 0 }}
-          transition={spring}
-        >
-          {items.map((item) => {
-            const Icon = item.icon
-            const isActive =
-              location.pathname === item.to ||
-              location.pathname.startsWith(item.to + '/')
-            const isDisabled = item.disabled
+      <AnimatePresence initial={false}>
+        {items.map((item, i) => {
+          const Icon = item.icon
+          const isActive =
+            location.pathname === item.to ||
+            location.pathname.startsWith(item.to + '/')
+          const isDisabled = item.disabled
 
-            return (
-              <button
-                key={item.label}
-                onClick={() => handleTap(item)}
-                disabled={isDisabled}
-                style={{ minHeight: 48, minWidth: 48 }}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-opacity"
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
+          return (
+            <motion.button
+              key={`${mode}-${item.label}`}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{
+                duration: 0.18,
+                delay: i * 0.05,
+                ease: [0.34, 1.56, 0.64, 1],
+              }}
+              onClick={() => handleTap(item)}
+              disabled={isDisabled}
+              style={{ minHeight: 48, minWidth: 48 }}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-opacity"
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon
+                size={22}
+                strokeWidth={1.5}
+                style={{
+                  color: isDisabled
+                    ? 'var(--muted-foreground)'
+                    : isActive
+                      ? 'var(--primary)'
+                      : 'var(--muted-foreground)',
+                  opacity: isDisabled ? 0.38 : 1,
+                }}
+              />
+              <span
+                className="text-[11px] leading-none"
+                style={{
+                  color: isDisabled
+                    ? 'var(--muted-foreground)'
+                    : isActive
+                      ? 'var(--primary)'
+                      : 'var(--muted-foreground)',
+                  opacity: isDisabled ? 0.38 : 1,
+                  fontWeight: isActive ? 600 : 400,
+                }}
               >
-                <Icon
-                  size={22}
-                  strokeWidth={1.5}
-                  style={{
-                    color: isDisabled
-                      ? 'var(--muted-foreground)'
-                      : isActive
-                        ? 'var(--primary)'
-                        : 'var(--muted-foreground)',
-                    opacity: isDisabled ? 0.38 : 1,
-                  }}
-                />
-                <span
-                  className="text-[11px] leading-none"
-                  style={{
-                    color: isDisabled
-                      ? 'var(--muted-foreground)'
-                      : isActive
-                        ? 'var(--primary)'
-                        : 'var(--muted-foreground)',
-                    opacity: isDisabled ? 0.38 : 1,
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                >
-                  {item.label}
-                </span>
-              </button>
-            )
-          })}
-        </motion.div>
+                {item.label}
+              </span>
+            </motion.button>
+          )
+        })}
       </AnimatePresence>
     </nav>
   )

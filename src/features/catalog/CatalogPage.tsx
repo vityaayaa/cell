@@ -66,7 +66,7 @@ function ProductActionsSheet({ product, open, onOpenChange, onEdit, onDelete }: 
 }
 
 export default function CatalogPage() {
-  const { userId } = useAppStore()
+  const userId = useAppStore((s) => s.userId)
 
   const products = useLiveQuery(() => db.products.toArray())
   const materials = useLiveQuery(() => db.materials.orderBy('name').toArray())
