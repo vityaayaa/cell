@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, ChevronDown, Download, BarChart2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import { useAppStore } from '@/data/store'
@@ -9,6 +9,14 @@ import { startSweep } from '@/features/sessions/startSweep'
 import { exportAggregatesExcel } from '@/features/admin/exportExcel'
 import type { ProductAggregate } from '@/features/admin/exportExcel'
 import { SessionCard } from './SessionCard'
+import { supabase } from '@/data/supabase'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 const RU_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
 
@@ -19,16 +27,26 @@ function formatDate(iso: string): string {
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { userId, userRole, setActiveSession, setSessionMode } = useAppStore()
+  const { userId, userRole, setActiveSession, setSessionMode } = useAppStore((s) => ({
+    userId: s.userId,
+    userRole: s.userRole,
+    setActiveSession: s.setActiveSession,
+    setSessionMode: s.setSessionMode,
+  }))
   const [starting, setStarting] = useState(false)
-
   const [exporting, setExporting] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const sessions = useLiveQuery(() => db.sessions.orderBy('started_at').reverse().toArray())
-  const profiles = useLiveQuery(() => db.user_profiles.toArray())
-  const orders = useLiveQuery(() => db.orders.toArray())
-  const orderLines = useLiveQuery(() => db.order_lines.toArray())
-  const checklistEntries = useLiveQuery(() => db.checklist_entries.toArray())
+  const sessions = useLiveQuery(
+    () => db.sessions.orderBy('started_at').reverse().toArray(),
+    [],
+  )
+  const profiles = useLiveQuery(() => db.user_profiles.toArray(), [])
+  const orders = useLiveQuery(() => db.orders.toArray(), [])
+  const orderLines = useLiveQuery(() => db.order_lines.toArray(), [])
+  const checklistEntries = useLiveQuery(() => db.checklist_entries.toArray(), [])
 
   if (!sessions || !profiles || !orders || !orderLines || !checklistEntries) {
     return (
@@ -52,12 +70,10 @@ export default function HomePage() {
     (s) => s.status === 'sweeping' || s.status === 'ordering',
   )
 
-  // Build a map: orderId → lineCount
   const orderLineCount = new Map<string, number>()
   for (const line of orderLines) {
     orderLineCount.set(line.order_id, (orderLineCount.get(line.order_id) ?? 0) + 1)
   }
-  // Build: sessionId → lineCount
   const sessionLineCount = new Map<string, number>()
   for (const order of orders) {
     const count = orderLineCount.get(order.id) ?? 0
@@ -78,12 +94,11 @@ export default function HomePage() {
 
       if (relevantLines.length === 0) {
         toast.info('Нет данных для экспорта')
-        setExporting(false)
         return
       }
 
       const lineIdToName = new Map(relevantLines.map((l) => [l.id, l.product_name]))
-      const byName = new Map<string, { lines: typeof relevantLines; entries: typeof checklistEntries }>()
+      const byName = new Map<string, { lines: typeof relevantLines; entries: NonNullable<typeof checklistEntries> }>()
       for (const line of relevantLines) {
         if (!byName.has(line.product_name)) byName.set(line.product_name, { lines: [], entries: [] })
         byName.get(line.product_name)!.lines.push(line)
@@ -127,6 +142,21 @@ export default function HomePage() {
     }
   }
 
+  async function handleDeleteSession() {
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    try {
+      await db.sessions.delete(deleteTarget)
+      await supabase.from('sessions').delete().eq('id', deleteTarget)
+      toast.success('Обход удалён')
+    } catch {
+      toast.error('Не удалось удалить')
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
+
   if (sessions.length === 0) {
     return (
       <div
@@ -149,125 +179,185 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-4">
       {/* Active sessions */}
-      {(activeSessions.length > 0 || true) && (
-        <div className="px-4 pt-4 flex flex-col gap-3">
-          {activeSessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              profiles={profiles}
-              userId={userId!}
-              userRole={userRole!}
-            />
-          ))}
+      <div className="px-4 pt-4 flex flex-col gap-3">
+        {activeSessions.map((session) => (
+          <SessionCard
+            key={session.id}
+            session={session}
+            profiles={profiles}
+            userId={userId!}
+            userRole={userRole!}
+          />
+        ))}
 
-          {/* Start new sweep button */}
+        <button
+          className="h-12 rounded-md font-semibold text-sm border"
+          style={{
+            color: hasSweepingOrOrdering ? 'var(--muted-foreground)' : 'var(--primary)',
+            borderColor: hasSweepingOrOrdering ? 'var(--border)' : 'var(--primary)',
+            background: 'transparent',
+            cursor: hasSweepingOrOrdering ? 'not-allowed' : 'pointer',
+            opacity: hasSweepingOrOrdering ? 0.5 : 1,
+          }}
+          onClick={hasSweepingOrOrdering ? undefined : handleStartSweep}
+          disabled={starting || hasSweepingOrOrdering}
+        >
+          {hasSweepingOrOrdering
+            ? 'Сначала завершите текущий обход'
+            : starting
+              ? '…'
+              : '+ Начать новый обход'}
+        </button>
+      </div>
+
+      {/* Admin action buttons */}
+      {userRole === 'admin' && (
+        <div
+          className="flex gap-3 px-4 mt-4"
+        >
           <button
-            className="h-12 rounded-md font-semibold text-sm border"
+            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl border py-3"
             style={{
-              color: hasSweepingOrOrdering ? 'var(--muted-foreground)' : 'var(--primary)',
-              borderColor: hasSweepingOrOrdering ? 'var(--border)' : 'var(--primary)',
-              background: 'transparent',
-              cursor: hasSweepingOrOrdering ? 'not-allowed' : 'pointer',
-              opacity: hasSweepingOrOrdering ? 0.5 : 1,
+              borderColor: 'var(--border)',
+              background: 'var(--card)',
+              color: 'var(--foreground)',
+              opacity: exporting ? 0.6 : 1,
             }}
-            onClick={hasSweepingOrOrdering ? undefined : handleStartSweep}
-            disabled={starting || hasSweepingOrOrdering}
+            onClick={handleExportExcel}
+            disabled={exporting}
           >
-            {hasSweepingOrOrdering
-              ? 'Сначала завершите текущий обход'
-              : starting
-                ? '…'
-                : '+ Начать новый обход'}
+            <Download size={20} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
+            <span className="text-xs font-medium">{exporting ? 'Экспорт…' : 'Экспорт'}</span>
+          </button>
+          <button
+            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl border py-3"
+            style={{
+              borderColor: 'var(--border)',
+              background: 'var(--card)',
+              color: 'var(--foreground)',
+            }}
+            onClick={() => navigate('/app/admin/aggregates')}
+          >
+            <BarChart2 size={20} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
+            <span className="text-xs font-medium">Статистика</span>
+          </button>
+        </div>
+      )}
+
+      {/* History section */}
+      {historySessions.length > 0 && (
+        <div className="mt-4">
+          <button
+            className="w-full flex items-center justify-between px-4 py-2"
+            style={{
+              background: 'var(--muted)',
+              borderTop: '1px solid var(--border)',
+              borderBottom: historyOpen ? 'none' : '1px solid var(--border)',
+            }}
+            onClick={() => setHistoryOpen((v) => !v)}
+          >
+            <span
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              История · {historySessions.length}
+            </span>
+            <ChevronDown
+              size={16}
+              strokeWidth={1.5}
+              style={{
+                color: 'var(--muted-foreground)',
+                transform: historyOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 200ms',
+              }}
+            />
           </button>
 
-          {/* Admin-only actions */}
-          {userRole === 'admin' && (
-            <div className="flex flex-col gap-2">
-              <button
-                className="h-10 rounded-md text-sm border text-left px-3"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                onClick={() => navigate('/app/admin/aggregates')}
-              >
-                Агрегаты по товарам →
-              </button>
-              <button
-                className="h-10 rounded-md text-sm border text-left px-3"
-                style={{
-                  color: 'var(--foreground)',
-                  borderColor: 'var(--border)',
-                  opacity: exporting ? 0.6 : 1,
-                }}
-                onClick={handleExportExcel}
-                disabled={exporting}
-              >
-                {exporting ? 'Экспорт…' : 'Экспорт Excel ↓'}
-              </button>
+          {historyOpen && (
+            <div style={{ borderBottom: '1px solid var(--border)' }}>
+              {historySessions.map((session) => {
+                const isCompleted = session.status === 'completed'
+                const lineCount = sessionLineCount.get(session.id)
+                return (
+                  <div
+                    key={session.id}
+                    className="flex items-center gap-3 px-4 border-b"
+                    style={{ borderColor: 'var(--border)', minHeight: 56 }}
+                  >
+                    <button
+                      className="flex items-center gap-3 flex-1 py-3 text-left min-w-0"
+                      onClick={() => navigate(`/app/session/${session.id}`)}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2
+                          size={16}
+                          strokeWidth={1.5}
+                          style={{ color: '#10B981', flexShrink: 0 }}
+                        />
+                      ) : (
+                        <XCircle
+                          size={16}
+                          strokeWidth={1.5}
+                          style={{ color: 'var(--muted-foreground)', flexShrink: 0 }}
+                        />
+                      )}
+                      <span
+                        className="flex-1 text-sm font-medium truncate"
+                        style={{ color: 'var(--foreground)' }}
+                      >
+                        {formatDate(session.started_at)} · {isCompleted ? 'Завершён' : 'Брошен'}
+                      </span>
+                      <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>
+                        {lineCount != null ? `${lineCount} поз.` : '—'}
+                      </span>
+                    </button>
+                    <button
+                      className="flex items-center justify-center flex-shrink-0 rounded-md"
+                      style={{ width: 36, height: 36, color: 'var(--destructive)' }}
+                      onClick={() => setDeleteTarget(session.id)}
+                      aria-label="Удалить обход"
+                    >
+                      <Trash2 size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* History */}
-      {historySessions.length > 0 && (
-        <div className="mt-4">
-          <div
-            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide"
-            style={{
-              color: 'var(--muted-foreground)',
-              background: 'var(--muted)',
-              borderTop: '1px solid var(--border)',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            История
-          </div>
-          {historySessions.map((session) => {
-            const isCompleted = session.status === 'completed'
-            const lineCount = sessionLineCount.get(session.id)
-            return (
-              <button
-                key={session.id}
-                className="w-full flex items-center gap-3 px-4 py-3 border-b text-left"
-                style={{ borderColor: 'var(--border)' }}
-                onClick={() => navigate(`/app/session/${session.id}`)}
-              >
-                {isCompleted ? (
-                  <CheckCircle2
-                    size={16}
-                    strokeWidth={1.5}
-                    style={{ color: '#10B981', flexShrink: 0 }}
-                    aria-hidden
-                  />
-                ) : (
-                  <XCircle
-                    size={16}
-                    strokeWidth={1.5}
-                    style={{ color: 'var(--muted-foreground)', flexShrink: 0 }}
-                    aria-hidden
-                  />
-                )}
-                <span
-                  className="flex-1 text-sm font-medium"
-                  style={{ color: 'var(--foreground)' }}
-                >
-                  {formatDate(session.started_at)} · {isCompleted ? 'Завершена' : 'Брошена'}
-                </span>
-                <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                  {lineCount != null ? `${lineCount} позиций` : '—'}
-                </span>
-                <span className="text-sm ml-1" style={{ color: 'var(--muted-foreground)' }}>
-                  ›
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      <div style={{ height: 32 }} />
+      {/* Delete confirmation */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Удалить обход?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Обход и все связанные данные будут удалены безвозвратно.
+          </p>
+          <DialogFooter className="flex-col gap-2">
+            <button
+              className="w-full rounded-md font-semibold text-base text-white"
+              style={{ height: 52, background: 'var(--destructive)', opacity: deleting ? 0.7 : 1 }}
+              onClick={handleDeleteSession}
+              disabled={deleting}
+            >
+              {deleting ? '…' : 'Удалить'}
+            </button>
+            <button
+              className="w-full rounded-md font-medium text-base border"
+              style={{ height: 52, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Отмена
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
