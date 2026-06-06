@@ -8,23 +8,25 @@ import { db } from '@/data/db'
 import type { Cell } from '@/data/db'
 
 export function ShelfSetupPage() {
-  const [rows, setRows] = useState(4)
-  const [cols, setCols] = useState(6)
+  const [rows, setRows] = useState('4')
+  const [cols, setCols] = useState('6')
   const [loading, setLoading] = useState(false)
 
   async function handleCreate() {
-    if (rows < 1 || cols < 1) return
+    const rowsNum = parseInt(rows)
+    const colsNum = parseInt(cols)
+    if (!rowsNum || rowsNum < 1 || !colsNum || colsNum < 1) return
     setLoading(true)
 
     try {
       const shelfId = crypto.randomUUID()
       const now = new Date().toISOString()
 
-      const shelf = { id: shelfId, name: 'Стеллаж', rows_count: rows, cols_count: cols, created_at: now, updated_at: now }
+      const shelf = { id: shelfId, name: 'Стеллаж', rows_count: rowsNum, cols_count: colsNum, created_at: now, updated_at: now }
 
       const cells: Cell[] = []
-      for (let r = 1; r <= rows; r++) {
-        for (let c = 1; c <= cols; c++) {
+      for (let r = 1; r <= rowsNum; r++) {
+        for (let c = 1; c <= colsNum; c++) {
           cells.push({
             id: crypto.randomUUID(),
             shelf_id: shelfId,
@@ -77,11 +79,10 @@ export function ShelfSetupPage() {
           <Label htmlFor="rows">Рядов</Label>
           <Input
             id="rows"
-            type="number"
-            min={1}
-            max={26}
+            type="text"
+            inputMode="numeric"
             value={rows}
-            onChange={e => setRows(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={e => setRows(e.target.value.replace(/[^0-9]/g, ''))}
             className="text-center text-base"
           />
         </div>
@@ -89,11 +90,10 @@ export function ShelfSetupPage() {
           <Label htmlFor="cols">Столбцов</Label>
           <Input
             id="cols"
-            type="number"
-            min={1}
-            max={99}
+            type="text"
+            inputMode="numeric"
             value={cols}
-            onChange={e => setCols(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={e => setCols(e.target.value.replace(/[^0-9]/g, ''))}
             className="text-center text-base"
           />
         </div>

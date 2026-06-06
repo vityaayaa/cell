@@ -51,9 +51,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  preventOutsideClose = false,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  preventOutsideClose?: boolean
 }) {
   return (
     <DialogPortal>
@@ -64,6 +67,7 @@ function DialogContent({
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover supports-backdrop-filter:bg-popover/90 supports-backdrop-filter:backdrop-blur-2xl p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-150 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
+        onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : onInteractOutside}
         {...props}
       >
         {children}
@@ -71,11 +75,10 @@ function DialogContent({
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-2 right-2"
-              size="icon-sm"
+              className="absolute top-1 right-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+              style={{ width: 44, height: 44 }}
             >
-              <XIcon
-              />
+              <XIcon size={22} />
               <span className="sr-only">Close</span>
             </Button>
           </DialogPrimitive.Close>

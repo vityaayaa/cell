@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -228,44 +228,33 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
         {materials.map((m, i) => (
           <div
             key={m.id}
-            className="flex items-center gap-3 px-4"
+            className="flex items-center"
             style={{
-              height: 52,
               borderBottom: i < materials.length - 1 ? '1px solid var(--border)' : undefined,
             }}
           >
-            {/* Color dot */}
-            <div
-              className="rounded-full flex-shrink-0"
-              style={{ width: 14, height: 14, background: m.color }}
-              aria-hidden
-            />
-            <span
-              className="flex-1 text-sm font-medium"
-              style={{ color: 'var(--foreground)' }}
-            >
-              {m.name}
-            </span>
-            <span
-              className="text-xs font-mono"
-              style={{ color: 'var(--muted-foreground)' }}
-            >
-              {m.color.toUpperCase()}
-            </span>
-            {/* Edit */}
             <button
-              className="flex items-center justify-center rounded-md"
-              style={{ width: 36, height: 36, color: 'var(--muted-foreground)' }}
+              className="flex items-center gap-3 flex-1 px-4"
+              style={{ height: 52, textAlign: 'left' }}
               onClick={() => openEdit(m)}
               aria-label={`Редактировать ${m.name}`}
             >
-              <Pencil size={16} strokeWidth={1.5} />
+              <div
+                className="rounded-full flex-shrink-0"
+                style={{ width: 14, height: 14, background: m.color }}
+                aria-hidden
+              />
+              <span className="flex-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                {m.name}
+              </span>
+              <span className="text-xs font-mono" style={{ color: 'var(--muted-foreground)' }}>
+                {m.color.toUpperCase()}
+              </span>
             </button>
-            {/* Delete — only custom */}
             {m.is_custom && (
               <button
-                className="flex items-center justify-center rounded-md"
-                style={{ width: 36, height: 36, color: '#EF4444', opacity: deletingId === m.id ? 0.5 : 1 }}
+                className="flex items-center justify-center rounded-md flex-shrink-0"
+                style={{ width: 44, height: 52, color: '#EF4444', opacity: deletingId === m.id ? 0.5 : 1 }}
                 onClick={() => handleDelete(m)}
                 disabled={deletingId === m.id}
                 aria-label={`Удалить ${m.name}`}

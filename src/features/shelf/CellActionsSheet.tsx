@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Package, Settings } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,12 @@ import {
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import type { Cell, Product, Material } from '@/data/db'
+
+function getProductParts(p: Product): { name: string; dims: string | null } {
+  if (p.type === 'unit') return { name: p.name, dims: `${p.width_mm}×${p.height_mm}×${p.length_mm}` }
+  if (p.type === 'round') return { name: p.name, dims: `⌀${p.diameter_mm}×${p.length_mm}` }
+  return { name: p.name, dims: null }
+}
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { isLeaf } from '@/domain/bsp'
@@ -210,26 +216,27 @@ export function CellActionsSheet({
   if (!leaf) {
     return (
       <Dialog open={open} onOpenChange={v => !v && onClose()}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           <DialogHeader>
             <DialogTitle>{address}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <Button
-              variant="outline"
-              className="h-14 justify-start text-base"
+          <div className="flex flex-col gap-2">
+            <button
+              className="w-full flex items-center rounded-md border text-sm font-medium"
+              style={{ height: 56, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
               onClick={onClose}
             >
               Открыть ячейку →
-            </Button>
+            </button>
             {!cell.parent_id && (
-              <Button
-                variant="outline"
-                className="h-14 justify-start text-base"
+              <button
+                className="w-full flex items-center gap-3 rounded-md border text-sm font-medium"
+                style={{ height: 56, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
                 onClick={() => { onOpenSettings(cell!); onClose() }}
               >
+                <Settings size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
                 Размеры базовой ячейки
-              </Button>
+              </button>
             )}
           </div>
         </DialogContent>
@@ -241,87 +248,89 @@ export function CellActionsSheet({
   return (
     <>
       <Dialog open={open} onOpenChange={v => !v && onClose()}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           <DialogHeader>
             <DialogTitle>{address}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            {currentProduct ? (
-              <>
-                <Button
-                  variant="outline"
-                  className="h-14 justify-start text-base"
-                  onClick={() => setShowProductList(true)}
-                  disabled={!!loadingAction}
-                >
-                  Сменить товар
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-14 justify-start text-base"
-                  onClick={handleRemoveProduct}
-                  disabled={!!loadingAction}
-                  style={{ color: 'var(--destructive)' }}
-                >
-                  Убрать товар
-                </Button>
-                <Separator />
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                className="h-14 justify-start text-base"
-                onClick={() => setShowProductList(true)}
+          <div className="flex flex-col gap-2">
+            {/* Assign / Change product */}
+            <button
+              className="w-full flex items-center gap-3 rounded-md border text-sm font-medium"
+              style={{ height: 56, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setShowProductList(true)}
+              disabled={!!loadingAction}
+            >
+              <Package size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+              {currentProduct ? 'Сменить товар' : 'Назначить товар'}
+            </button>
+
+            {/* Remove product */}
+            {currentProduct && (
+              <button
+                className="w-full flex items-center rounded-md text-sm font-medium"
+                style={{ height: 52, paddingLeft: 16, color: '#EF4444', background: 'var(--muted)' }}
+                onClick={handleRemoveProduct}
                 disabled={!!loadingAction}
               >
-                Назначить товар
-              </Button>
+                Убрать товар
+              </button>
             )}
 
+            {/* Settings */}
+            <button
+              className="w-full flex items-center gap-3 rounded-md border text-sm font-medium"
+              style={{ height: 56, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => { onOpenSettings(cell!); onClose() }}
+            >
+              <Settings size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+              Настройки ячейки
+            </button>
+
+            <Separator />
+
+            {/* Split */}
             <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="h-14 text-base"
-                onClick={() => handleSplit('V')}
-                disabled={!!loadingAction}
-              >
-                {loadingAction === 'split-V' ? '...' : 'Разделить →'}
-              </Button>
-              <Button
-                variant="outline"
-                className="h-14 text-base"
-                onClick={() => handleSplit('H')}
-                disabled={!!loadingAction}
-              >
-                {loadingAction === 'split-H' ? '...' : 'Разделить ↓'}
-              </Button>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="w-full rounded-md border text-sm font-medium"
+                  style={{ height: 52, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+                  onClick={() => handleSplit('V')}
+                  disabled={!!loadingAction}
+                >
+                  {loadingAction === 'split-V' ? '...' : '→ Разделить'}
+                </button>
+                <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>по вертикали</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="w-full rounded-md border text-sm font-medium"
+                  style={{ height: 52, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+                  onClick={() => handleSplit('H')}
+                  disabled={!!loadingAction}
+                >
+                  {loadingAction === 'split-H' ? '...' : '↓ Разделить'}
+                </button>
+                <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>по горизонтали</span>
+              </div>
             </div>
 
             {sibling && (
-              <Button
-                variant="outline"
-                className="h-14 justify-start text-base"
+              <button
+                className="w-full flex items-center rounded-md border text-sm font-medium"
+                style={{ height: 52, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
                 onClick={() => setConfirmMerge(true)}
                 disabled={!!loadingAction}
               >
                 Объединить с {siblingAddress ?? 'соседом'}
-              </Button>
+              </button>
             )}
-
-            <Button
-              variant="outline"
-              className="h-14 justify-start text-base"
-              onClick={() => { onOpenSettings(cell!); onClose() }}
-            >
-              Настройки ячейки
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Merge confirmation */}
       <Dialog open={confirmMerge} onOpenChange={v => !v && setConfirmMerge(false)}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           <DialogHeader>
             <DialogTitle>Объединить ячейки?</DialogTitle>
           </DialogHeader>
@@ -329,39 +338,47 @@ export function CellActionsSheet({
             Товар из {siblingAddress ?? 'соседней ячейки'} будет удалён. Это действие нельзя отменить напрямую.
           </p>
           <div className="flex gap-3 mt-2">
-            <Button variant="outline" className="flex-1 h-12" onClick={() => setConfirmMerge(false)}>
+            <button
+              className="flex-1 rounded-md border text-sm font-medium"
+              style={{ height: 48, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setConfirmMerge(false)}
+            >
               Отмена
-            </Button>
-            <Button
-              className="flex-1 h-12"
+            </button>
+            <button
+              className="flex-1 rounded-md text-sm font-semibold"
+              style={{ height: 48, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
               onClick={handleMergeConfirm}
               disabled={loadingAction === 'merge'}
-              style={{ background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
             >
               {loadingAction === 'merge' ? '...' : 'Объединить'}
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Product picker */}
       <Dialog open={showProductList} onOpenChange={v => !v && setShowProductList(false)}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           <DialogHeader>
             <DialogTitle>Выбрать товар</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto">
-            {products.map(p => (
-              <Button
-                key={p.id}
-                variant="outline"
-                className="h-14 justify-start text-base"
-                onClick={() => handleSelectProduct(p)}
-                disabled={loadingAction === 'assign-product'}
-              >
-                {p.name}
-              </Button>
-            ))}
+            {products.map(p => {
+              const { name, dims } = getProductParts(p)
+              return (
+                <button
+                  key={p.id}
+                  className="w-full flex items-center justify-between rounded-md border px-4 gap-3 text-left"
+                  style={{ minHeight: 56, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+                  onClick={() => handleSelectProduct(p)}
+                  disabled={loadingAction === 'assign-product'}
+                >
+                  <span className="text-sm font-medium">{name}</span>
+                  {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
+                </button>
+              )
+            })}
             {products.length === 0 && (
               <p className="text-sm text-center py-4" style={{ color: 'var(--muted-foreground)' }}>
                 Каталог пуст. Добавьте товары в разделе Каталог.

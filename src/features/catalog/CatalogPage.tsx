@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -217,10 +217,10 @@ export default function CatalogPage() {
           style={{
             height: 36,
             borderRadius: '6px 0 0 6px',
-            border: `1px solid ${selectedMaterial ? 'var(--primary)' : 'var(--border)'}`,
+            border: `1px solid ${selectedMaterial ? selectedMaterial.color : 'var(--border)'}`,
             borderRight: 0,
-            background: selectedMaterial ? 'var(--primary)' : 'transparent',
-            color: selectedMaterial ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+            background: selectedMaterial ? selectedMaterial.color + '33' : 'transparent',
+            color: selectedMaterial ? selectedMaterial.color : 'var(--muted-foreground)',
           }}
         >
           {selectedMaterial && (
@@ -299,16 +299,18 @@ export default function CatalogPage() {
           {filteredProducts.map((p, i) => {
             const mat: Material | undefined = materialMap.get(p.material_id)
             return (
-              <div
+              <button
                 key={p.id}
-                className="flex items-center gap-3 px-4"
+                className="w-full flex items-center gap-3 px-4 text-left"
                 style={{
                   minHeight: 64,
                   borderBottom: i < filteredProducts.length - 1 ? '1px solid var(--border)' : undefined,
                   background: 'var(--card)',
                 }}
+                onClick={() => openActions(p)}
+                aria-label={`Действия с ${p.name}`}
               >
-                {/* Material color bar */}
+                {/* Material color dot */}
                 {mat && (
                   <div
                     className="flex-shrink-0 rounded-full"
@@ -330,15 +332,7 @@ export default function CatalogPage() {
                     {mat?.name ?? '—'} · пачка: {p.pack_size} шт
                   </p>
                 </div>
-                <button
-                  className="flex items-center justify-center flex-shrink-0 rounded-md"
-                  style={{ width: 40, height: 40, color: 'var(--muted-foreground)' }}
-                  onClick={() => openActions(p)}
-                  aria-label={`Действия с ${p.name}`}
-                >
-                  <MoreHorizontal size={18} strokeWidth={1.5} />
-                </button>
-              </div>
+              </button>
             )
           })}
         </div>

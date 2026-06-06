@@ -149,12 +149,12 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton>
+      <DialogContent showCloseButton preventOutsideClose>
         <DialogHeader>
           <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 max-h-[65dvh] overflow-y-auto pr-1">
+        <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: 'calc(65dvh - 100px)' }}>
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
@@ -327,34 +327,35 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
             </div>
           )}
 
-          {/* Error */}
-          {error && (
-            <motion.p
-              key={shakeKey}
-              className="text-sm"
-              style={{ color: '#EF4444' }}
-              animate={{ x: [0, -8, 8, -6, 6, 0] }}
-              transition={{ duration: 0.3 }}
-            >
-              {error}
-            </motion.p>
-          )}
-
-          {/* Save */}
-          <button
-            className="w-full rounded-md font-semibold text-base"
-            style={{
-              height: 56,
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              opacity: saving ? 0.7 : 1,
-            }}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? '…' : product ? 'Сохранить' : 'Добавить'}
-          </button>
         </div>
+
+        {/* Error */}
+        {error && (
+          <motion.p
+            key={shakeKey}
+            className="text-sm"
+            style={{ color: '#EF4444' }}
+            animate={{ x: [0, -8, 8, -6, 6, 0] }}
+            transition={{ duration: 0.3 }}
+          >
+            {error}
+          </motion.p>
+        )}
+
+        {/* Save */}
+        <button
+          className="w-full rounded-md font-semibold text-base"
+          style={{
+            height: 56,
+            background: 'var(--primary)',
+            color: 'var(--primary-foreground)',
+            opacity: saving ? 0.7 : 1,
+          }}
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? '…' : product ? 'Сохранить' : 'Добавить'}
+        </button>
       </DialogContent>
     </Dialog>
   )

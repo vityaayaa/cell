@@ -224,7 +224,6 @@ export default function StockEntryPage() {
                   fontSize: '16px',
                   borderColor: isOverCapacity ? 'var(--destructive)' : undefined,
                 }}
-                autoFocus
               />
               <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
                 шт
