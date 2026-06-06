@@ -19,6 +19,7 @@ export interface ShelfGridProps {
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
+  onEqualize?: (cell: Cell) => void
 }
 
 interface DrillEntry {
@@ -38,6 +39,7 @@ export function ShelfGrid({
   onLeafTap,
   onEditTap,
   onFlagTap,
+  onEqualize,
 }: ShelfGridProps) {
   const [drillStack, setDrillStack] = useState<DrillEntry[]>([])
 
@@ -95,8 +97,8 @@ export function ShelfGrid({
       {/* Header breadcrumb */}
       {currentDrill && (
         <div
-          className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0"
-          style={{ borderColor: 'var(--border)' }}
+          className="flex items-center justify-between px-4 border-b flex-shrink-0"
+          style={{ height: 48, borderColor: 'var(--border)' }}
         >
           <button
             onClick={goBack}
@@ -106,6 +108,15 @@ export function ShelfGrid({
             <ChevronLeft size={20} />
             <span className="text-sm font-medium">{currentDrill.address}</span>
           </button>
+          {onEqualize && mode === 'edit' && (
+            <button
+              onClick={() => onEqualize(currentDrill.cell)}
+              className="text-xs font-medium rounded-md px-3"
+              style={{ height: 32, color: 'var(--primary)', border: '1px solid var(--primary)' }}
+            >
+              Выровнять
+            </button>
+          )}
         </div>
       )}
 

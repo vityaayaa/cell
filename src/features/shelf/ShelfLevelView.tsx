@@ -67,8 +67,8 @@ function LevelGrid({
   })
 
   const gridStyle: React.CSSProperties = isVSplit
-    ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', height: '100%' }
-    : { display: 'grid', gridTemplateRows: 'repeat(2, 1fr)', gap: '4px', height: '100%' }
+    ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: '160px', gap: '8px' }
+    : { display: 'grid', gridTemplateColumns: '1fr', gridAutoRows: '160px', gap: '8px' }
 
   return (
     <div style={gridStyle}>
@@ -150,7 +150,8 @@ export function ShelfLevelView({
   if (children.length === 0) return null
 
   return (
-    <div className="flex-1 p-4" style={{ minHeight: 0 }}>
+    <div className="flex-1 flex flex-col items-center justify-center p-6" style={{ minHeight: 0 }}>
+      <div style={{ width: '100%' }}>
       <LevelGrid
         parentCell={parentCell}
         children={children}
@@ -166,6 +167,7 @@ export function ShelfLevelView({
         onSplitTap={onSplitTap}
         onFlagTap={onFlagTap}
       />
+      </div>
     </div>
   )
 }

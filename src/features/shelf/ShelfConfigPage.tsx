@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
+import { recomputeDescendants } from '@/domain/bsp'
+import type { BspNode } from '@/domain/bsp'
 import { subscribeToTable } from '@/data/sync'
 import { useRegisterHeaderAction } from '@/app/HeaderActionContext'
 import { useShelfData } from './useShelfData'
@@ -137,6 +139,78 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
+  async function handleEqualize(drillCell: Cell) {
+    function countLeaves(cellId: string): number {
+      const ch = cells.filter(c => c.parent_id === cellId)
+      if (ch.length === 0) return 1
+      return ch.reduce((sum, c) => sum + countLeaves(c.id), 0)
+    }
+
+    const overrides = new Map<string, { width_mm?: number; height_mm?: number }>()
+
+    function processNode(cell: Cell, availW: number, availH: number) {
+      const ch = cells.filter(c => c.parent_id === cell.id)
+      if (ch.length < 2) return
+      const first = ch.find(c => c.is_first_child)!
+      const second = ch.find(c => !c.is_first_child)!
+      const firstLeaves = countLeaves(first.id)
+      const total = firstLeaves + countLeaves(second.id)
+      if (cell.split_direction === 'V') {
+        const firstW = Math.floor((firstLeaves / total) * availW)
+        overrides.set(first.id, { width_mm: firstW })
+        processNode(first, firstW, availH)
+        processNode(second, availW - firstW, availH)
+      } else if (cell.split_direction === 'H') {
+        const firstH = Math.floor((firstLeaves / total) * availH)
+        overrides.set(first.id, { height_mm: firstH })
+        processNode(first, availW, firstH)
+        processNode(second, availW, availH - firstH)
+      }
+    }
+
+    processNode(drillCell, drillCell.computed_width_mm, drillCell.computed_height_mm)
+    if (overrides.size === 0) return
+
+    function getDescendants(cellId: string): Cell[] {
+      const ch = cells.filter(c => c.parent_id === cellId)
+      return [...ch, ...ch.flatMap(c => getDescendants(c.id))]
+    }
+
+    const subtreeCells = [drillCell, ...getDescendants(drillCell.id)]
+    const subtreeWithOverrides = subtreeCells.map(c => {
+      const ov = overrides.get(c.id)
+      return ov ? { ...c, ...ov } : c
+    })
+
+    const nodes: BspNode[] = subtreeWithOverrides.map(c => ({
+      id: c.id,
+      parent_id: c.parent_id,
+      split_direction: c.split_direction,
+      is_first_child: c.is_first_child,
+      width_mm: c.width_mm,
+      height_mm: c.height_mm,
+      computed_width_mm: c.computed_width_mm,
+      computed_height_mm: c.computed_height_mm,
+    }))
+
+    const recomputed = recomputeDescendants(nodes)
+    const now = new Date().toISOString()
+    const toSave: Cell[] = recomputed.map(node => {
+      const orig = subtreeCells.find(c => c.id === node.id)!
+      const ov = overrides.get(node.id)
+      return { ...orig, ...(ov ?? {}), computed_width_mm: node.computed_width_mm, computed_height_mm: node.computed_height_mm, updated_at: now }
+    })
+
+    await db.cells.bulkPut(toSave)
+    const { error } = await supabase.from('cells').upsert(toSave)
+    if (error) {
+      await db.cells.bulkPut(subtreeCells)
+      toast.error('Не сохранилось. Попробуйте ещё раз.')
+      return
+    }
+    toast.success('Ячейки выровнены')
+  }
+
   return (
     <div className="flex flex-col h-full">
       <ShelfGrid
@@ -149,6 +223,7 @@ export default function ShelfConfigPage() {
         onFlagTap={cell => {
           if (cell.needs_review) setReviewCell(cell)
         }}
+        onEqualize={handleEqualize}
       />
 
       {/* Cell actions sheet */}

@@ -24,17 +24,25 @@ export interface CellCardProps {
   onFlagTap?: (cell: Cell) => void
 }
 
-function FlagIcon({ cell }: { cell: Cell }) {
-  if (cell.needs_review) {
-    return <AlertTriangle size={16} color="#F59E0B" />
-  }
-  if (!cell.rotation_allowed) {
-    return <RotateCcwSquare size={16} style={{ color: 'var(--muted-foreground)' }} />
-  }
-  if (cell.capacity_override != null) {
-    return <Pencil size={16} style={{ color: 'var(--muted-foreground)' }} />
-  }
-  return null
+function FlagArea({ cell, onFlagTap }: { cell: Cell; onFlagTap?: () => void }) {
+  return (
+    <div className="flex items-center gap-0.5 flex-shrink-0" style={{ minWidth: 18, minHeight: 18 }}>
+      {cell.needs_review && (
+        <button
+          onClick={e => { e.stopPropagation(); onFlagTap?.() }}
+          aria-label="Нужна проверка"
+        >
+          <AlertTriangle size={14} color="#F59E0B" />
+        </button>
+      )}
+      {!cell.rotation_allowed && (
+        <RotateCcwSquare size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+      )}
+      {cell.capacity_override != null && (
+        <Pencil size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+      )}
+    </div>
+  )
 }
 
 function DateLabel({
@@ -94,8 +102,6 @@ export function CellCard({
     ? 'var(--muted)'
     : 'var(--card)'
 
-  const hasFlag = cell.needs_review || !cell.rotation_allowed || cell.capacity_override != null
-
   if (leaf) {
     return (
       <button
@@ -111,17 +117,7 @@ export function CellCard({
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             {displayAddress}
           </span>
-          {hasFlag && (
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                onFlagTap?.(cell)
-              }}
-              className="flex-shrink-0"
-            >
-              <FlagIcon cell={cell} />
-            </button>
-          )}
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
         </div>
 
         <span
@@ -161,17 +157,7 @@ export function CellCard({
         <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
           {displayAddress}
         </span>
-        {hasFlag && (
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              onFlagTap?.(cell)
-            }}
-            className="flex-shrink-0"
-          >
-            <FlagIcon cell={cell} />
-          </button>
-        )}
+        <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
       </div>
 
       <div className="flex flex-col gap-0.5 overflow-hidden">
