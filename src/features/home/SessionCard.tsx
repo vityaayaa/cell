@@ -12,9 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 
 interface SessionCardProps {
   session: Session
@@ -198,22 +196,24 @@ export function SessionCard({ session, profiles, userId, userRole }: SessionCard
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
             Сессия будет отменена. Введённые данные обхода сохранятся.
           </p>
-          <DialogFooter className="gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmAbandon(false)}
-              disabled={abandoning}
-            >
-              Назад
-            </Button>
-            <Button
-              variant="destructive"
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              className="w-full rounded-md font-semibold text-base disabled:opacity-50"
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
               onClick={handleAbandon}
               disabled={abandoning}
             >
               {abandoning ? '…' : 'Отменить сессию'}
-            </Button>
-          </DialogFooter>
+            </button>
+            <button
+              className="w-full py-2 text-sm text-center rounded-md"
+              style={{ color: 'var(--muted-foreground)' }}
+              onClick={() => setConfirmAbandon(false)}
+              disabled={abandoning}
+            >
+              Назад
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Cell, Product } from '@/data/db'
@@ -160,15 +159,18 @@ export function CellSettingsSheet({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent>
+      <DialogContent preventOutsideClose showCloseButton>
         <DialogHeader>
           <DialogTitle>Настройки {address}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-5 max-h-[60dvh] overflow-y-auto pr-1">
-          {/* Capacity */}
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+          {/* Capacity block — вместимость + переопределение в одном визуальном блоке */}
+          <div
+            className="flex flex-col gap-3 rounded-lg p-3"
+            style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}
+          >
+            <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
               Вместимость
             </p>
             {calculatedCapacity != null && (
@@ -176,16 +178,20 @@ export function CellSettingsSheet({
                 Расчётная: {calculatedCapacity} шт
               </p>
             )}
-            <Label htmlFor="override">Переопределение</Label>
-            <Input
-              id="override"
-              type="number"
-              min={1}
-              placeholder="пусто = по формуле"
-              value={overrideInput}
-              onChange={e => setOverrideInput(e.target.value)}
-              className="text-base"
-            />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="override" style={{ color: 'var(--muted-foreground)', fontSize: 12 }}>
+                Переопределение вручную
+              </Label>
+              <Input
+                id="override"
+                type="text"
+                inputMode="numeric"
+                placeholder="пусто = по формуле"
+                value={overrideInput}
+                onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
+                className="text-base"
+              />
+            </div>
           </div>
 
           {/* Rotation */}
@@ -228,10 +234,10 @@ export function CellSettingsSheet({
                   <Label htmlFor="width">Ширина, мм</Label>
                   <Input
                     id="width"
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
                     value={widthInput}
-                    onChange={e => setWidthInput(e.target.value)}
+                    onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
                     className="text-base"
                   />
                 </div>
@@ -239,26 +245,26 @@ export function CellSettingsSheet({
                   <Label htmlFor="height">Высота, мм</Label>
                   <Input
                     id="height"
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
                     value={heightInput}
-                    onChange={e => setHeightInput(e.target.value)}
+                    onChange={e => setHeightInput(e.target.value.replace(/[^0-9]/g, ''))}
                     className="text-base"
                   />
                 </div>
               </div>
             </div>
           )}
-
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="h-14 text-base"
-            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-          >
-            {saving ? 'Сохранение...' : 'Сохранить'}
-          </Button>
         </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
+          style={{ height: 52, background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+        >
+          {saving ? 'Сохранение...' : 'Сохранить'}
+        </button>
       </DialogContent>
     </Dialog>
   )

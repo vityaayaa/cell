@@ -28,3 +28,4 @@ dist-ssr/
 # Logs
 *.log
 pnpm-debug.log*
+.vercel

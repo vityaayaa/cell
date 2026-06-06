@@ -10,18 +10,37 @@ export async function initialLoad(): Promise<void> {
   store.setSyncing(true)
 
   try {
-    const [materialsRes, productsRes, shelvesRes, cellsRes] = await Promise.all([
+    const [
+      materialsRes, productsRes, shelvesRes, cellsRes,
+      sessionsRes, ordersRes, orderLinesRes, checklistRes, stockRes, profilesRes,
+    ] = await Promise.all([
       supabase.from('materials').select('*'),
       supabase.from('products').select('*'),
       supabase.from('shelves').select('*'),
       supabase.from('cells').select('*'),
+      supabase.from('sessions').select('*'),
+      supabase.from('orders').select('*'),
+      supabase.from('order_lines').select('*'),
+      supabase.from('checklist_entries').select('*'),
+      supabase.from('stock_entries').select('*'),
+      supabase.from('user_profiles').select('*'),
     ])
 
-    await db.transaction('rw', [db.materials, db.products, db.shelves, db.cells], async () => {
+    await db.transaction('rw', [
+      db.materials, db.products, db.shelves, db.cells,
+      db.sessions, db.orders, db.order_lines, db.checklist_entries,
+      db.stock_entries, db.user_profiles,
+    ], async () => {
       if (materialsRes.data) await db.materials.bulkPut(materialsRes.data)
       if (productsRes.data) await db.products.bulkPut(productsRes.data)
       if (shelvesRes.data) await db.shelves.bulkPut(shelvesRes.data)
       if (cellsRes.data) await db.cells.bulkPut(cellsRes.data)
+      if (sessionsRes.data) await db.sessions.bulkPut(sessionsRes.data)
+      if (ordersRes.data) await db.orders.bulkPut(ordersRes.data)
+      if (orderLinesRes.data) await db.order_lines.bulkPut(orderLinesRes.data)
+      if (checklistRes.data) await db.checklist_entries.bulkPut(checklistRes.data)
+      if (stockRes.data) await db.stock_entries.bulkPut(stockRes.data)
+      if (profilesRes.data) await db.user_profiles.bulkPut(profilesRes.data)
     })
   } finally {
     store.setSyncing(false)

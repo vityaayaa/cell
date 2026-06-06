@@ -1,6 +1,9 @@
 import { AlertTriangle, RotateCcwSquare, Pencil, ChevronRight } from 'lucide-react'
 import type { Cell, Material, Product } from '@/data/db'
 import { isLeaf } from '@/domain/bsp'
+import { getEffectiveCapacity } from '@/domain/capacity'
+import type { ProductDimensions } from '@/domain/capacity'
+import { toastInfo } from '@/lib/toast'
 import {
   getRootAddress,
   hexToRgba,
@@ -24,7 +27,15 @@ export interface CellCardProps {
   onFlagTap?: (cell: Cell) => void
 }
 
-function FlagArea({ cell, onFlagTap }: { cell: Cell; onFlagTap?: () => void }) {
+function FlagArea({
+  cell,
+  onFlagTap,
+  capacityMissing,
+}: {
+  cell: Cell
+  onFlagTap?: () => void
+  capacityMissing?: boolean
+}) {
   return (
     <div className="flex items-center gap-0.5 flex-shrink-0" style={{ minWidth: 18, minHeight: 18 }}>
       {cell.needs_review && (
@@ -35,11 +46,29 @@ function FlagArea({ cell, onFlagTap }: { cell: Cell; onFlagTap?: () => void }) {
           <AlertTriangle size={14} color="#F59E0B" />
         </button>
       )}
+      {capacityMissing && (
+        <button
+          onClick={e => { e.stopPropagation(); toastInfo('Вместимость не задана. Откройте настройки ячейки и укажите переопределение.') }}
+          aria-label="Вместимость не задана"
+        >
+          <AlertTriangle size={14} color="#EF4444" />
+        </button>
+      )}
       {!cell.rotation_allowed && (
-        <RotateCcwSquare size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        <button
+          onClick={e => { e.stopPropagation(); toastInfo('Поворот товара запрещён для этой ячейки.') }}
+          aria-label="Поворот запрещён"
+        >
+          <RotateCcwSquare size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        </button>
       )}
       {cell.capacity_override != null && (
-        <Pencil size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        <button
+          onClick={e => { e.stopPropagation(); toastInfo(`Вместимость задана вручную: ${cell.capacity_override} шт.`) }}
+          aria-label="Вместимость переопределена"
+        >
+          <Pencil size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        </button>
       )}
     </div>
   )
@@ -96,6 +125,21 @@ export function CellCard({
   const product = leaf ? products.find(p => p.id === cell.product_id) : undefined
   const material = getMaterialForProduct(product, materials)
 
+  const capacityMissing = (() => {
+    if (!product) return false
+    const dims: ProductDimensions =
+      product.type === 'unit'
+        ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
+        : product.type === 'round'
+          ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
+          : { type: 'bulk' }
+    return getEffectiveCapacity(
+      { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
+      dims,
+      { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
+    ) === 0
+  })()
+
   const bgColor = leaf && material
     ? hexToRgba(material.color, 0.1)
     : leaf
@@ -117,7 +161,7 @@ export function CellCard({
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             {displayAddress}
           </span>
-          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} />
         </div>
 
         <span

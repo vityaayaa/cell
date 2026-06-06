@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
+import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from 'react-router'
 import { supabase } from '@/data/supabase'
 import { AppShell } from './AppShell'
 import { AppLayout } from './AppLayout'
@@ -18,6 +18,38 @@ import AuditPage from '@/features/admin/AuditPage'
 import AggregatesPage from '@/features/admin/AggregatesPage'
 import StockEntryPage from '@/features/stock/StockEntryPage'
 import { useAppStore } from '@/data/store'
+
+function RouteErrorBoundary() {
+  const error = useRouteError()
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : JSON.stringify(error)
+  return (
+    <div
+      className="flex flex-col gap-4 p-6 min-h-dvh"
+      style={{ background: 'var(--background)', color: 'var(--foreground)' }}
+    >
+      <p className="font-bold text-base" style={{ color: 'var(--destructive)' }}>
+        Ошибка приложения
+      </p>
+      <pre
+        className="text-xs p-3 rounded-md overflow-auto"
+        style={{ background: 'var(--muted)', color: 'var(--muted-foreground)', whiteSpace: 'pre-wrap' }}
+      >
+        {message}
+      </pre>
+      <button
+        className="h-12 rounded-md font-semibold text-sm"
+        style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+        onClick={() => window.location.href = '/'}
+      >
+        Перезагрузить
+      </button>
+    </div>
+  )
+}
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const userRole = useAppStore((s) => s.userRole)
@@ -75,12 +107,13 @@ function RedirectByAuth() {
 }
 
 const router = createBrowserRouter([
-  { path: '/', element: <RedirectByAuth /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/onboarding', element: <OnboardingPage /> },
+  { path: '/', element: <RedirectByAuth />, errorElement: <RouteErrorBoundary /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
+  { path: '/onboarding', element: <OnboardingPage />, errorElement: <RouteErrorBoundary /> },
   {
     path: '/app',
     element: <AppShell />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       // Admin full-screen routes (no AppLayout header/BottomNav)
       {

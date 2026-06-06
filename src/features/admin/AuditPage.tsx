@@ -185,6 +185,48 @@ export default function AuditPage() {
           </select>
         </div>
 
+        {/* Quick period presets */}
+        <div className="flex gap-2">
+          {[
+            { label: 'Месяц', days: 30 },
+            { label: 'Полгода', days: 182 },
+            { label: 'Год', days: 365 },
+          ].map(({ label, days }) => {
+            const from = new Date(Date.now() - days * 86400_000).toISOString().slice(0, 10)
+            const to = new Date().toISOString().slice(0, 10)
+            const active = filterFrom === from && filterTo === to
+            return (
+              <button
+                key={label}
+                onClick={() => { setFilterFrom(from); setFilterTo(to) }}
+                className="flex-1 rounded-md text-sm font-medium"
+                style={{
+                  height: 36,
+                  background: active ? 'var(--primary)' : 'var(--background)',
+                  color: active ? 'var(--primary-foreground)' : 'var(--foreground)',
+                  border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+          {(filterFrom || filterTo) && (
+            <button
+              onClick={() => { setFilterFrom(''); setFilterTo('') }}
+              className="rounded-md text-sm px-3"
+              style={{
+                height: 36,
+                background: 'var(--background)',
+                color: 'var(--muted-foreground)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              Сброс
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-0.5">
             <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>С:</label>

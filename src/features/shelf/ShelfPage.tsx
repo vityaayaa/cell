@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
@@ -15,14 +14,12 @@ import { updateSessionStatus } from '@/features/order/updateSessionStatus'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { StockEntryDialog } from '@/features/stock/StockEntryDialog'
 
 export default function ShelfPage() {
-  const navigate = useNavigate()
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const userId = useAppStore((s) => s.userId)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
@@ -32,6 +29,7 @@ export default function ShelfPage() {
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false)
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null)
   const [startingNewSweep, setStartingNewSweep] = useState(false)
+  const [stockCellId, setStockCellId] = useState<string | null>(null)
 
   // Restore active session from Dexie on mount
   useEffect(() => {
@@ -61,7 +59,7 @@ export default function ShelfPage() {
   }, [])
 
   function handleLeafTap(cell: Cell) {
-    navigate(`/app/stock-entry/${cell.id}`)
+    setStockCellId(cell.id)
   }
 
   async function handleStartSweep() {
@@ -167,26 +165,36 @@ export default function ShelfPage() {
       </div>
 
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           <DialogHeader>
             <DialogTitle>Незавершённый обход</DialogTitle>
           </DialogHeader>
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
             Уже есть активный обход. Начать новый — старый будет отмечен как брошенный. Введённые данные сохранятся.
           </p>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
-              Продолжить старый
-            </Button>
-            <Button
-              variant="destructive"
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              className="w-full rounded-md font-semibold text-base"
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
               onClick={handleAbandonAndStart}
             >
-              Начать новый
-            </Button>
-          </DialogFooter>
+              Начать новый обход
+            </button>
+            <button
+              className="w-full py-2 text-sm text-center rounded-md"
+              style={{ color: 'var(--muted-foreground)' }}
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              Продолжить старый
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
+
+      <StockEntryDialog
+        cellId={stockCellId}
+        onClose={() => setStockCellId(null)}
+      />
     </>
   )
 }
