@@ -264,18 +264,6 @@ export function CellActionsSheet({
               {currentProduct ? 'Сменить товар' : 'Назначить товар'}
             </button>
 
-            {/* Remove product */}
-            {currentProduct && (
-              <button
-                className="w-full flex items-center rounded-md text-sm font-medium"
-                style={{ height: 52, paddingLeft: 16, color: '#EF4444', background: 'var(--muted)' }}
-                onClick={handleRemoveProduct}
-                disabled={!!loadingAction}
-              >
-                Убрать товар
-              </button>
-            )}
-
             {/* Settings */}
             <button
               className="w-full flex items-center gap-3 rounded-md border text-sm font-medium"
@@ -297,7 +285,7 @@ export function CellActionsSheet({
                   onClick={() => handleSplit('V')}
                   disabled={!!loadingAction}
                 >
-                  {loadingAction === 'split-V' ? '...' : '→ Разделить'}
+                  {loadingAction === 'split-V' ? '...' : '| Разделить'}
                 </button>
                 <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>по вертикали</span>
               </div>
@@ -308,7 +296,7 @@ export function CellActionsSheet({
                   onClick={() => handleSplit('H')}
                   disabled={!!loadingAction}
                 >
-                  {loadingAction === 'split-H' ? '...' : '↓ Разделить'}
+                  {loadingAction === 'split-H' ? '...' : '— Разделить'}
                 </button>
                 <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>по горизонтали</span>
               </div>
@@ -323,6 +311,21 @@ export function CellActionsSheet({
               >
                 Объединить с {siblingAddress ?? 'соседом'}
               </button>
+            )}
+
+            {/* Remove product — always at the very bottom */}
+            {currentProduct && (
+              <>
+                <Separator />
+                <button
+                  className="w-full flex items-center justify-center rounded-md text-sm font-medium"
+                  style={{ height: 52, color: '#EF4444', background: 'var(--muted)' }}
+                  onClick={handleRemoveProduct}
+                  disabled={!!loadingAction}
+                >
+                  Убрать товар
+                </button>
+              </>
             )}
           </div>
         </DialogContent>

@@ -74,6 +74,7 @@ function LevelGrid({
     <div style={gridStyle}>
       {sorted.map(child => {
         const childAddress = getChildAddress(parentCell, child, addressPrefix)
+        const displayAddress = childAddress.slice(addressPrefix.length)
         const grandChildren = allCells.filter(c => c.parent_id === child.id)
         const childIsLeaf = isLeaf(child.id, allCells)
 
@@ -107,7 +108,7 @@ function LevelGrid({
             products={products}
             materials={materials}
             mode={mode}
-            address={childAddress}
+            address={displayAddress}
             sessionId={sessionId}
             visitedCellIds={visitedCellIds}
             onTap={cell => {

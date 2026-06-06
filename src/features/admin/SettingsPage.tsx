@@ -37,7 +37,7 @@ export default function SettingsPage() {
       style={{ background: 'var(--background)' }}
     >
       <header
-        className="flex items-center px-2 flex-shrink-0"
+        className="relative flex items-center px-2 flex-shrink-0"
         style={{
           height: 56,
           background: 'var(--card)',
@@ -54,7 +54,7 @@ export default function SettingsPage() {
           <span className="text-sm font-medium">Назад</span>
         </button>
         <h1
-          className="text-base font-semibold ml-2"
+          className="absolute inset-0 flex items-center justify-center text-base font-semibold pointer-events-none"
           style={{ color: 'var(--foreground)' }}
         >
           Настройки

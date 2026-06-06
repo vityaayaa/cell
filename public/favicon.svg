@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#F97316"/>
+  <!-- 2x3 grid of cells representing a shelf -->
+  <rect x="8"  y="8"  width="22" height="15" rx="3" fill="white" opacity="0.9"/>
+  <rect x="34" y="8"  width="22" height="15" rx="3" fill="white" opacity="0.9"/>
+  <rect x="8"  y="27" width="22" height="15" rx="3" fill="white" opacity="0.6"/>
+  <rect x="34" y="27" width="22" height="15" rx="3" fill="white" opacity="0.9"/>
+  <rect x="8"  y="46" width="22" height="10" rx="3" fill="white" opacity="0.9"/>
+  <rect x="34" y="46" width="22" height="10" rx="3" fill="white" opacity="0.6"/>
+</svg>
