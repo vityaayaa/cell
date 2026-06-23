@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { name, email, role } = await req.json()
+    const { name, email, role, redirectTo } = await req.json()
 
     if (!name || !email || !role) {
       return new Response(
@@ -65,9 +65,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Invite user (sends email with magic link to set password)
+    // Invite user (sends email with a link to set their password). redirectTo
+    // points the link back to the app's /accept-invite screen (must be in the
+    // Supabase Auth "Redirect URLs" allowlist).
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
+      typeof redirectTo === 'string' ? { redirectTo } : undefined,
     )
 
     if (authError) throw authError

@@ -5,6 +5,7 @@ import { AppShell } from './AppShell'
 import { AppLayout } from './AppLayout'
 import LoginPage from '@/features/auth/LoginPage'
 import OnboardingPage from '@/features/auth/OnboardingPage'
+import AcceptInvitePage from '@/features/auth/AcceptInvitePage'
 import HomePage from '@/features/home/HomePage'
 import SessionDetailPage from '@/features/home/SessionDetailPage'
 import ShelfPage from '@/features/shelf/ShelfPage'
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
   { path: '/', element: <RedirectByAuth />, errorElement: <RouteErrorBoundary /> },
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
   { path: '/onboarding', element: <OnboardingPage />, errorElement: <RouteErrorBoundary /> },
+  { path: '/accept-invite', element: <AcceptInvitePage />, errorElement: <RouteErrorBoundary /> },
   {
     path: '/app',
     element: <AppShell />,

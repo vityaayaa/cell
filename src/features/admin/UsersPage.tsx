@@ -46,7 +46,12 @@ export default function UsersPage() {
   async function onAdd(data: FormData) {
     setSubmitting(true)
     const { error } = await supabase.functions.invoke('create-user', {
-      body: { name: data.name, email: data.email, role: data.role },
+      body: {
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        redirectTo: `${window.location.origin}/accept-invite`,
+      },
     })
     setSubmitting(false)
 
