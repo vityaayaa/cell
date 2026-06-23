@@ -34,7 +34,11 @@ export function AddLineSheet({
   const [packCount, setPackCount] = useState(1)
   const [saving, setSaving] = useState(false)
 
-  const products = useLiveQuery(() => db.products.orderBy('name').toArray(), [])
+  // Sort in JS — `name` is not a Dexie index, so .orderBy('name') would throw.
+  const products = useLiveQuery(
+    async () => (await db.products.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [],
+  )
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase()
