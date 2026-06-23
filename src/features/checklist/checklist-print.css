@@ -1,4 +1,5 @@
-.checklist-print-table {
+.checklist-print-table,
+.checklist-print-header {
   display: none;
 }
 
@@ -7,21 +8,55 @@
     display: none !important;
   }
 
+  /* Document header — like an official form */
+  .checklist-print-header {
+    display: block !important;
+    font-family: sans-serif;
+    color: black;
+    margin: 0 0 14px;
+  }
+  .checklist-print-header h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    margin: 0 0 6px;
+  }
+  .checklist-print-header .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10pt;
+    margin-bottom: 10px;
+  }
+  .checklist-print-header .fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-size: 11pt;
+    margin-bottom: 6px;
+  }
+  .checklist-print-header .note {
+    font-size: 10pt;
+    font-style: italic;
+    margin: 4px 0 0;
+  }
+
   html,
   body,
   #root {
     height: auto !important;
     overflow: visible !important;
+    background: #fff !important;
   }
 
   .app-shell {
     height: auto !important;
     overflow: visible !important;
+    background: #fff !important;
   }
 
   main {
     height: auto !important;
     overflow: visible !important;
+    background: #fff !important;
   }
 
   .checklist-print-table {
@@ -59,13 +94,19 @@
 
   .checklist-print-table .blank-line {
     display: inline-block;
-    min-width: 56px;
+    min-width: 48px;
     border-bottom: 1px solid #333;
+    margin-right: 4px;
   }
 
+  /* Bigger empty square to tick by hand — compact (fits the cell). */
   .checklist-print-table .box {
-    font-size: 14pt;
-    margin-right: 4px;
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #333;
+    border-radius: 2px;
+    vertical-align: middle;
   }
 
   .checklist-row {

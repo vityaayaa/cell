@@ -88,6 +88,11 @@ export default function ChecklistPage() {
   const completedCount = resolved.length
   const progress = total > 0 ? (completedCount / total) * 100 : 0
 
+  // Print-form meta
+  const printPairs = [...pending, ...resolved]
+  const printDate = new Date().toLocaleDateString('ru-RU')
+  const totalPacks = printPairs.reduce((s, p) => s + p.line.quantity_packs, 0)
+
   const sheetLine = sheetEntry ? (lineMap.get(sheetEntry.order_line_id) ?? null) : null
 
   function openSheet(entry: ChecklistEntry) {
@@ -155,7 +160,7 @@ export default function ChecklistPage() {
       </div>
 
       {/* List */}
-      <div>
+      <div className="no-print">
         {total === 0 && (
           <div
             className="flex items-center justify-center"
@@ -206,29 +211,40 @@ export default function ChecklistPage() {
         <div style={{ height: 32 }} />
       </div>
 
+      {/* Print-only document header */}
+      <div className="checklist-print-header">
+        <h1>Заявка на склад</h1>
+        <div className="meta">
+          <span>Дата печати: {printDate}</span>
+          <span>Позиций: {total} · всего пачек: {totalPacks}</span>
+        </div>
+        <div className="fields">
+          <span>Кладовщик (ФИО): _____________________________</span>
+          <span>Дата: ______________</span>
+          <span>Подпись: ______________</span>
+        </div>
+        <p className="note">Нужное отметить крестиком (✗)</p>
+      </div>
+
       {/* Print-only table */}
       <table className="checklist-print-table">
         <thead>
           <tr>
             <th className="col-product">Товар</th>
             <th>Пачек</th>
-            <th>Взял</th>
+            <th>Взял всё</th>
+            <th>Взял, шт/уп</th>
             <th>Нет на складе</th>
           </tr>
         </thead>
         <tbody>
-          {[...pending, ...resolved].map(({ line }) => (
+          {printPairs.map(({ line }) => (
             <tr key={line.id} className="checklist-row">
               <td className="col-product">{line.product_name}</td>
               <td className="col-center">{line.quantity_packs}</td>
-              <td>
-                <span className="box">☐</span> всё
-                {'   '}
-                <span className="blank-line" /> шт/уп
-              </td>
-              <td className="col-center">
-                <span className="box">☐</span>
-              </td>
+              <td className="col-center"><span className="box" /></td>
+              <td className="col-center"><span className="blank-line" /> шт/уп</td>
+              <td className="col-center"><span className="box" /></td>
             </tr>
           ))}
         </tbody>
