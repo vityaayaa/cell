@@ -156,6 +156,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
     if (!cellId) {
       setNumericValue('')
       setBulkPercent(0)
+      setSaving(false)
     }
   }, [cellId])
 
@@ -209,19 +210,28 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
       created_at: new Date().toISOString(),
     }
     setSaving(true)
-    await db.stock_entries.put(entry)
-    const { error } = await supabase.from('stock_entries').insert(entry)
-    if (error) {
-      await db.stock_entries.delete(entry.id)
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
+    // Local write first — this is what the sweep progress + order generation read,
+    // so the sweep can proceed even if the cloud write is slow/unreachable.
+    try {
+      await db.stock_entries.put(entry)
+      // Guard against a hung request so the button never freezes on "…".
+      const result = (await Promise.race([
+        supabase.from('stock_entries').insert(entry),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ])) as { error: unknown }
+      if (result.error) throw result.error
+      const msg = isBulk
+        ? `✓ Внесено: ≈${value} из ${capacity} пачек (${bulkPercent}%)`
+        : `✓ Внесено: ${value} из ${capacity} шт`
+      toastSuccess(msg)
+    } catch {
+      // Keep the local entry (don't roll back) so the sweep isn't blocked;
+      // the cloud copy will be reconciled on the next full sync.
+      toast.error('Сохранено локально — синхронизируется позже')
+    } finally {
       setSaving(false)
-      return
+      onClose()
     }
-    const msg = isBulk
-      ? `✓ Внесено: ≈${value} из ${capacity} пачек (${bulkPercent}%)`
-      : `✓ Внесено: ${value} из ${capacity} шт`
-    toastSuccess(msg)
-    onClose()
   }
 
   return (

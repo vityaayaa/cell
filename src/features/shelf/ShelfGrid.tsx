@@ -156,7 +156,7 @@ export function ShelfGrid({
     : null
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full flex-1 min-h-0">
       {/* Header breadcrumb */}
       {currentDrill && (
         <div
@@ -186,7 +186,7 @@ export function ShelfGrid({
       {/* Grid level */}
       {!currentDrill ? (
         <div
-          className="flex-1 overflow-auto"
+          className="flex-1 min-h-0 overflow-auto"
           style={{ touchAction: 'none' }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
