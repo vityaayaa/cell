@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowLeft, Plus, UserX, UserCheck } from 'lucide-react'
+import { ArrowLeft, Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
+import { useAppStore } from '@/data/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,8 +29,11 @@ type FormData = z.infer<typeof schema>
 
 export default function UsersPage() {
   const navigate = useNavigate()
+  const currentUserId = useAppStore((s) => s.userId)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const profiles = useLiveQuery(() => db.user_profiles.toArray(), [])
 
@@ -63,6 +67,30 @@ export default function UsersPage() {
     toast.success(`Приглашение отправлено на ${data.email}`)
     reset()
     setDialogOpen(false)
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const { data, error } = await supabase.functions.invoke('delete-user', {
+      body: { userId: deleteTarget.id },
+    })
+    setDeleting(false)
+    const ok = !error && (data as { ok?: boolean } | null)?.ok
+    if (!ok) {
+      const reason = (data as { reason?: string } | null)?.reason
+      toast.error(
+        reason === 'has_history'
+          ? 'У сотрудника есть история — удалить нельзя. Заблокируйте его.'
+          : reason === 'self'
+            ? 'Нельзя удалить свой аккаунт'
+            : 'Не удалось удалить аккаунт',
+      )
+      return
+    }
+    await db.user_profiles.delete(deleteTarget.id)
+    toast.success('Аккаунт удалён')
+    setDeleteTarget(null)
   }
 
   async function toggleActive(id: string, currentlyActive: boolean) {
@@ -132,18 +160,32 @@ export default function UsersPage() {
                 {!p.is_active && ' · заблокирован'}
               </p>
             </div>
-            <button
-              onClick={() => toggleActive(p.id, p.is_active)}
-              className="flex items-center justify-center rounded-md"
-              style={{ minWidth: 44, minHeight: 44 }}
-              aria-label={p.is_active ? 'Заблокировать' : 'Разблокировать'}
-            >
-              {p.is_active ? (
-                <UserX size={18} strokeWidth={1.5} style={{ color: 'var(--destructive)' }} />
-              ) : (
-                <UserCheck size={18} strokeWidth={1.5} style={{ color: 'var(--color-progress)' }} />
-              )}
-            </button>
+            {p.id === currentUserId ? (
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>вы</span>
+            ) : (
+              <div className="flex items-center">
+                <button
+                  onClick={() => toggleActive(p.id, p.is_active)}
+                  className="flex items-center justify-center rounded-md"
+                  style={{ minWidth: 44, minHeight: 44 }}
+                  aria-label={p.is_active ? 'Заблокировать' : 'Разблокировать'}
+                >
+                  {p.is_active ? (
+                    <UserX size={18} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)' }} />
+                  ) : (
+                    <UserCheck size={18} strokeWidth={1.5} style={{ color: 'var(--color-progress)' }} />
+                  )}
+                </button>
+                <button
+                  onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                  className="flex items-center justify-center rounded-md"
+                  style={{ minWidth: 44, minHeight: 44 }}
+                  aria-label="Удалить аккаунт"
+                >
+                  <Trash2 size={18} strokeWidth={1.5} style={{ color: 'var(--destructive)' }} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
 
@@ -223,6 +265,37 @@ export default function UsersPage() {
               {submitting ? 'Отправка...' : 'Пригласить'}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete account confirmation */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent preventOutsideClose>
+          <DialogHeader>
+            <DialogTitle>Удалить аккаунт «{deleteTarget?.name}»?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Аккаунт и доступ будут удалены безвозвратно. Если у сотрудника уже есть
+            история обходов — удалить нельзя, тогда заблокируйте его.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              className="flex-1 rounded-md font-medium text-base border"
+              style={{ height: 48, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Отмена
+            </button>
+            <button
+              className="flex-1 rounded-md font-semibold text-base"
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? '…' : 'Удалить'}
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
