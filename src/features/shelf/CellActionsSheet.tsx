@@ -172,6 +172,7 @@ export function CellActionsSheet({
   onOpenSettings,
 }: CellActionsSheetProps) {
   const [confirmMerge, setConfirmMerge] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [showProductList, setShowProductList] = useState(false)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
@@ -201,10 +202,11 @@ export function CellActionsSheet({
     onClose()
   }
 
-  async function handleRemoveProduct() {
+  async function handleRemoveProductConfirm() {
     setLoadingAction('remove-product')
     await removeProduct(cell!)
     setLoadingAction(null)
+    setConfirmRemove(false)
     onClose()
   }
 
@@ -324,7 +326,7 @@ export function CellActionsSheet({
                 <button
                   className="w-full flex items-center justify-center rounded-md text-sm font-medium"
                   style={{ height: 52, color: '#EF4444', background: 'var(--muted)' }}
-                  onClick={handleRemoveProduct}
+                  onClick={() => setConfirmRemove(true)}
                   disabled={!!loadingAction}
                 >
                   Убрать товар
@@ -354,11 +356,40 @@ export function CellActionsSheet({
             </button>
             <button
               className="flex-1 rounded-md text-sm font-semibold"
-              style={{ height: 48, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
               onClick={handleMergeConfirm}
               disabled={loadingAction === 'merge'}
             >
               {loadingAction === 'merge' ? '...' : 'Объединить'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove product confirmation */}
+      <Dialog open={confirmRemove} onOpenChange={v => !v && setConfirmRemove(false)}>
+        <DialogContent preventOutsideClose>
+          <DialogHeader>
+            <DialogTitle>Убрать товар из ячейки?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Ячейка станет пустой. Товар можно будет назначить заново.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              className="flex-1 rounded-md border text-sm font-medium"
+              style={{ height: 48, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setConfirmRemove(false)}
+            >
+              Отмена
+            </button>
+            <button
+              className="flex-1 rounded-md text-sm font-semibold"
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
+              onClick={handleRemoveProductConfirm}
+              disabled={loadingAction === 'remove-product'}
+            >
+              {loadingAction === 'remove-product' ? '...' : 'Убрать'}
             </button>
           </div>
         </DialogContent>

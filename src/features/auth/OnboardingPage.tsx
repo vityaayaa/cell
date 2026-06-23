@@ -169,12 +169,10 @@ export default function OnboardingPage() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="btn-primary w-full"
             disabled={state === 'submitting'}
             style={{
               height: 56,
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
               fontSize: 16,
               fontWeight: 600,
             }}

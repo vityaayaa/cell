@@ -133,3 +133,17 @@ select {
   line-height: 1.45;
   color: var(--muted-foreground);
 }
+
+/* Primary action button — outlined orange (matches "Добавить товар"). */
+.btn-primary {
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+.btn-primary:active:not(:disabled) {
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+}

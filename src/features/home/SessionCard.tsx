@@ -151,11 +151,9 @@ export function SessionCard({ session, profiles, userId, userRole }: SessionCard
         {isOwn && (
           <>
             <button
-              className="w-full rounded-md font-semibold text-sm"
+              className="btn-primary w-full rounded-md font-semibold text-sm"
               style={{
-                height: 48,
-                background: 'var(--primary)',
-                color: 'var(--primary-foreground)',
+                height: 52,
               }}
               onClick={handleContinue}
             >

@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { packsWord } from '@/lib/plural'
 
 interface AddLineSheetProps {
   open: boolean
@@ -126,11 +127,11 @@ export function AddLineSheet({
                 +
               </button>
               <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                пачек · {packCount * selected.pack_size} шт
+                {packsWord(packCount)} · {packCount * selected.pack_size} шт
               </span>
             </div>
 
-            <Button className="w-full h-14" onClick={handleAdd} disabled={saving}>
+            <Button className="btn-primary w-full h-14" onClick={handleAdd} disabled={saving}>
               {saving ? '…' : 'Добавить в заявку'}
             </Button>
 

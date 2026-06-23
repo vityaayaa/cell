@@ -141,8 +141,7 @@ export default function ShelfPage() {
               Нет активного обхода
             </span>
             <button
-              className="text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
-              style={{ color: 'var(--primary-foreground)', background: 'var(--primary)' }}
+              className="btn-primary text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
               onClick={handleStartSweep}
               disabled={startingNewSweep}
             >

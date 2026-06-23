@@ -260,10 +260,10 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { key: 'width_mm', label: 'Ширина, мм' },
-                  { key: 'height_mm', label: 'Высота, мм' },
-                  { key: 'length_mm', label: 'Длина, мм' },
-                ].map(({ key, label }) => (
+                  { key: 'width_mm', label: 'Ширина, мм', placeholder: '50' },
+                  { key: 'height_mm', label: 'Высота, мм', placeholder: '50' },
+                  { key: 'length_mm', label: 'Длина, мм', placeholder: '3000' },
+                ].map(({ key, label, placeholder }) => (
                   <div key={key} className="flex flex-col gap-1">
                     <label className="ui-field-label">
                       {label} <span style={{ color: '#EF4444' }}>*</span>
@@ -273,7 +273,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       inputMode="numeric"
                       value={form[key as keyof FormState]}
                       onChange={(e) => set(key as keyof FormState, e.target.value)}
-                      placeholder="50"
+                      placeholder={placeholder}
                       className="rounded-md border px-2 text-base text-center"
                       style={{
                         height: 44,
@@ -298,9 +298,9 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { key: 'diameter_mm', label: 'Диаметр, мм' },
-                  { key: 'length_mm', label: 'Длина, мм' },
-                ].map(({ key, label }) => (
+                  { key: 'diameter_mm', label: 'Диаметр, мм', placeholder: '110' },
+                  { key: 'length_mm', label: 'Длина, мм', placeholder: '2000' },
+                ].map(({ key, label, placeholder }) => (
                   <div key={key} className="flex flex-col gap-1">
                     <label className="ui-field-label">
                       {label} <span style={{ color: '#EF4444' }}>*</span>
@@ -310,7 +310,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       inputMode="numeric"
                       value={form[key as keyof FormState]}
                       onChange={(e) => set(key as keyof FormState, e.target.value)}
-                      placeholder="110"
+                      placeholder={placeholder}
                       className="rounded-md border px-2 text-base text-center"
                       style={{
                         height: 44,
@@ -344,11 +344,9 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
         {/* Save */}
         <button
-          className="w-full rounded-md font-semibold text-base"
+          className="btn-primary w-full rounded-md font-semibold text-base"
           style={{
             height: 56,
-            background: 'var(--primary)',
-            color: 'var(--primary-foreground)',
             opacity: saving ? 0.7 : 1,
           }}
           onClick={handleSave}

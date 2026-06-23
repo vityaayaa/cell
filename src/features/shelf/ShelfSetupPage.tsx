@@ -101,8 +101,7 @@ export function ShelfSetupPage() {
         <Button
           onClick={handleCreate}
           disabled={loading}
-          className="h-14 text-base"
-          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          className="btn-primary h-14 text-base"
         >
           {loading ? 'Создаём...' : 'Создать →'}
         </Button>

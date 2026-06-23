@@ -4,6 +4,7 @@ import { isLeaf } from '@/domain/bsp'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
 import { toastInfo } from '@/lib/toast'
+import { packs } from '@/lib/plural'
 import {
   getRootAddress,
   hexToRgba,
@@ -31,10 +32,12 @@ function FlagArea({
   cell,
   onFlagTap,
   capacityMissing,
+  capacityUnit,
 }: {
   cell: Cell
   onFlagTap?: () => void
   capacityMissing?: boolean
+  capacityUnit?: string
 }) {
   // Each flag is a 32x32 tap target (padding) with a compensating negative
   // margin so the compact cell layout doesn't grow.
@@ -56,7 +59,7 @@ function FlagArea({
         <button
           type="button"
           className={flagBtnClass}
-          onClick={e => { e.stopPropagation(); toastInfo('Вместимость не задана. Откройте настройки ячейки и укажите вручную.') }}
+          onClick={e => { e.stopPropagation(); toastInfo(`Вместимость не задана${capacityUnit ? ` (${capacityUnit})` : ''}. Откройте настройки ячейки и укажите вручную.`) }}
           aria-label="Вместимость не задана"
         >
           <AlertTriangle size={14} color="#EF4444" />
@@ -76,7 +79,7 @@ function FlagArea({
         <button
           type="button"
           className={flagBtnClass}
-          onClick={e => { e.stopPropagation(); toastInfo(`Вместимость задана вручную: ${cell.capacity_override} шт.`) }}
+          onClick={e => { e.stopPropagation(); toastInfo(`Вместимость задана вручную: ${capacityUnit === 'пачки' ? packs(cell.capacity_override!) : `${cell.capacity_override} шт`}.`) }}
           aria-label="Вместимость переопределена"
         >
           <Pencil size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
@@ -152,6 +155,12 @@ export function CellCard({
     ) === 0
   })()
 
+  const capacityUnit = product
+    ? product.type === 'unit'
+      ? 'шт'
+      : 'пачки'
+    : undefined
+
   const bgColor = leaf && material
     ? hexToRgba(material.color, 0.1)
     : leaf
@@ -176,14 +185,20 @@ export function CellCard({
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             {displayAddress}
           </span>
-          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} />
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
         </div>
 
         <span
           className="text-sm font-medium text-center block px-1 leading-tight"
           style={{ color: product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
         >
-          {product ? getProductDisplayName(product) : mode === 'edit' ? 'Задайте размеры' : '—'}
+          {product
+            ? getProductDisplayName(product)
+            : mode === 'edit'
+              ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0
+                  ? 'Назначьте товар'
+                  : 'Задайте размеры')
+              : '—'}
         </span>
 
         <DateLabel

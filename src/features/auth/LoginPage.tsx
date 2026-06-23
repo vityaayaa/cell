@@ -149,12 +149,10 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="btn-primary w-full"
             disabled={loading}
             style={{
               height: 56,
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
               fontSize: 16,
               fontWeight: 600,
             }}

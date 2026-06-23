@@ -69,6 +69,9 @@ export function CellSettingsSheet({
     product.height_mm != null &&
     product.width_mm !== product.height_mm
 
+  const isPackUnit = product?.type === 'bulk' || product?.type === 'round'
+  const overrideUnitLabel = isPackUnit ? 'пачек' : product?.type === 'unit' ? 'шт' : 'ед.'
+
   const calculatedCapacity =
     product?.type === 'unit'
       ? getEffectiveCapacity(
@@ -164,9 +167,12 @@ export function CellSettingsSheet({
           <DialogTitle>Настройки {address}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5 max-h-[60dvh] overflow-y-auto pr-1">
-          {/* Размеры ячейки — приоритетная секция */}
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4 max-h-[60dvh] overflow-y-auto pr-1">
+          {/* Размеры ячейки — приоритетная секция, карточка */}
+          <div
+            className="flex flex-col gap-3 rounded-lg p-4"
+            style={{ background: 'var(--muted)' }}
+          >
             <p className="ui-section-title">Размеры ячейки</p>
 
             {isRoot && (
@@ -206,7 +212,10 @@ export function CellSettingsSheet({
 
           {/* Поворот */}
           {showRotation && (
-            <div className="flex items-center justify-between">
+            <div
+              className="flex items-center justify-between rounded-lg p-4"
+              style={{ background: 'var(--muted)' }}
+            >
               <p className="ui-section-title">Поворот</p>
               <button
                 onClick={() => setRotationAllowed(v => !v)}
@@ -214,7 +223,7 @@ export function CellSettingsSheet({
               >
                 <div
                   className="relative w-12 h-6 rounded-full transition-colors"
-                  style={{ background: rotationAllowed ? 'var(--primary)' : 'var(--muted)' }}
+                  style={{ background: rotationAllowed ? 'var(--primary)' : 'var(--background)' }}
                 >
                   <div
                     className="absolute top-0.5 w-5 h-5 rounded-full transition-transform"
@@ -231,18 +240,22 @@ export function CellSettingsSheet({
             </div>
           )}
 
-          {/* Указать вручную — редкое исключение, внизу */}
-          <div className="flex flex-col gap-2">
-            <p className="ui-section-title">Указать вручную</p>
+          {/* Указать вручную — редкое исключение, карточка */}
+          <div
+            className="flex flex-col gap-2 rounded-lg p-4"
+            style={{ background: 'var(--muted)' }}
+          >
+            <p className="ui-section-title">Указать вручную, {overrideUnitLabel}</p>
             <p className="ui-hint">
-              Обычно приложение само считает вместимость по размерам ячейки и товара.
-              Заполните это поле, только если нужно задать число вручную.
+              {isPackUnit
+                ? 'Для навалом и круглых товаров вместимость в пачках задаётся вручную — приложение её не считает.'
+                : 'Обычно приложение само считает вместимость по размерам ячейки и товара. Заполните это поле, только если нужно задать число вручную.'}
             </p>
             <Input
               id="override"
               type="text"
               inputMode="numeric"
-              placeholder="оставьте пустым — посчитает приложение"
+              placeholder={isPackUnit ? 'число пачек' : 'оставьте пустым — посчитает приложение'}
               value={overrideInput}
               onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
               className="text-base"
@@ -253,8 +266,8 @@ export function CellSettingsSheet({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
-          style={{ height: 52, background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          className="btn-primary w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
+          style={{ height: 52 }}
         >
           {saving ? 'Сохранение...' : 'Сохранить'}
         </button>

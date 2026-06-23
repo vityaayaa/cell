@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { ChevronLeft } from 'lucide-react'
 import { toastSuccess } from '@/lib/toast'
+import { packs } from '@/lib/plural'
 import { db } from '@/data/db'
 import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -161,7 +162,7 @@ export default function StockEntryPage() {
     }
 
     const toastMsg = isBulk
-      ? `✓ Внесено: ≈ ${value} из ${capacity} пачек (${sliderPercent}%)`
+      ? `✓ Внесено: ≈ ${value} из ${packs(capacity)} (${sliderPercent}%)`
       : `✓ Внесено: ${value} из ${capacity} шт`
 
     toastSuccess(toastMsg)
@@ -192,7 +193,7 @@ export default function StockEntryPage() {
           </p>
           <p className="ui-hint">
             Вместимость:{' '}
-            {isBulk ? `${capacity} пачек` : `${capacity} шт`}
+            {isBulk ? packs(capacity) : `${capacity} шт`}
           </p>
         </div>
 
@@ -207,7 +208,7 @@ export default function StockEntryPage() {
               onValueChange={([v]: number[]) => setSliderPercent(v)}
             />
             <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>
-              ≈ {packsValue} пачек
+              ≈ {packs(packsValue)}
             </p>
           </div>
         ) : (
@@ -241,11 +242,9 @@ export default function StockEntryPage() {
       {/* Save button */}
       <div className="px-5 pb-6 flex-shrink-0">
         <motion.button
-          className="w-full rounded-md font-semibold text-base disabled:opacity-40"
+          className="btn-primary w-full rounded-md font-semibold text-base"
           style={{
             height: '56px',
-            background: canSave ? 'var(--primary)' : 'var(--muted)',
-            color: canSave ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
           }}
           whileTap={canSave && !saving ? { scale: 0.97 } : undefined}
           onClick={handleSave}

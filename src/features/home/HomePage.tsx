@@ -165,8 +165,7 @@ export default function HomePage() {
           Обходов пока нет
         </p>
         <button
-          className="h-14 px-8 rounded-md font-semibold text-base"
-          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          className="btn-primary h-14 px-8 rounded-md font-semibold text-base"
           onClick={handleStartSweep}
           disabled={starting}
         >

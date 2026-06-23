@@ -56,8 +56,7 @@ export function SweepProgressBar({ visited, total, sessionId }: SweepProgressBar
           <span style={{ color: '#10B981' }}>✓</span>
         </span>
         <button
-          className="text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
-          style={{ color: 'var(--primary-foreground)', background: 'var(--primary)' }}
+          className="btn-primary text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
           onClick={handleGoToOrderClick}
           disabled={loading || total === 0}
         >
@@ -74,10 +73,12 @@ export function SweepProgressBar({ visited, total, sessionId }: SweepProgressBar
             Внесено только {visited} из {total} ячеек. Ненаполненные ячейки не войдут в заявку.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowConfirm(false)}>
+            <Button variant="outline" className="w-full" style={{ height: 48 }} onClick={() => setShowConfirm(false)}>
               Отмена
             </Button>
             <Button
+              className="btn-primary w-full"
+              style={{ height: 52 }}
               disabled={loading}
               onClick={async () => {
                 setShowConfirm(false)

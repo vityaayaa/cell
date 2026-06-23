@@ -129,11 +129,9 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
           </div>
           {error && <p className="text-sm" style={{ color: '#EF4444' }}>{error}</p>}
           <button
-            className="w-full rounded-md font-semibold text-base"
+            className="btn-primary w-full rounded-md font-semibold text-base"
             style={{
               height: 56,
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
               opacity: saving ? 0.7 : 1,
             }}
             onClick={handleSave}

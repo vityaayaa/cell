@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { ChecklistEntry, OrderLine } from '@/data/db'
 import { saveChecklistEntry } from './saveChecklistEntry'
+import { packs } from '@/lib/plural'
 
 interface ChecklistActionSheetProps {
   entry: ChecklistEntry | null
@@ -73,7 +74,7 @@ export function ChecklistActionSheet({
     onOpenChange(false)
   }
 
-  const title = `${line.product_name} · ${line.quantity_packs} пачек`
+  const title = `${line.product_name} · ${packs(line.quantity_packs)}`
 
   return (
     <>
@@ -169,7 +170,7 @@ export function ChecklistActionSheet({
           </div>
 
           <Button
-            className="w-full"
+            className="btn-primary w-full"
             style={{ height: 56 }}
             onClick={handleConfirmLess}
             disabled={saving}

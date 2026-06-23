@@ -8,6 +8,7 @@ import { supabase } from '@/data/supabase'
 import { useAppStore } from '@/data/store'
 import { updateSessionStatus } from './updateSessionStatus'
 import { sortOrderLines } from './orderSort'
+import { packs } from '@/lib/plural'
 import { OrderLineSheet, BoundaryLineSheet, FinalizeSheet } from './OrderLineSheet'
 import { AddLineSheet } from './AddLineSheet'
 
@@ -237,7 +238,7 @@ export default function OrderDraftPage() {
                     className="text-sm flex-shrink-0"
                     style={{ color: 'var(--muted-foreground)' }}
                   >
-                    {line.quantity_packs} пачек · {line.quantity_units} шт
+                    {packs(line.quantity_packs)} · {line.quantity_units} шт
                   </span>
                 </button>
                 <div className="mx-4 border-t" style={{ borderColor: 'var(--border)' }} />

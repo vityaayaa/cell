@@ -42,11 +42,9 @@ export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRo
             e.stopPropagation()
             onQuickDone()
           }}
-          className="flex-shrink-0 px-4 rounded-md font-semibold text-sm"
+          className="btn-primary flex-shrink-0 px-4 rounded-md font-semibold text-sm"
           style={{
             height: 56,
-            background: 'var(--primary)',
-            color: 'var(--primary-foreground)',
             minWidth: 72,
           }}
           aria-label={`Взял ${line.product_name}`}
@@ -61,7 +59,7 @@ export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRo
     const actual = entry.actual_packs ?? line.quantity_packs
     const actualLabel =
       actual < line.quantity_packs
-        ? `Взял ${actual} из ${line.quantity_packs} пачек`
+        ? `Взял ${actual} из ${line.quantity_packs} ${pluralPacks(line.quantity_packs)}`
         : `Взял ${actual} ${pluralPacks(actual)}`
 
     return (

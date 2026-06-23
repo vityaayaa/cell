@@ -209,12 +209,10 @@ export default function UsersPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="btn-primary w-full"
               disabled={submitting}
               style={{
-                height: 48,
-                background: 'var(--primary)',
-                color: 'var(--primary-foreground)',
+                height: 52,
               }}
             >
               {submitting ? 'Отправка...' : 'Пригласить'}

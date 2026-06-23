@@ -58,10 +58,9 @@ export function NeedsReviewDialog({
             Открыть настройки
           </Button>
           <Button
-            className="flex-1 h-12"
+            className="btn-primary flex-1 h-14"
             onClick={handleConfirm}
             disabled={loading}
-            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
           >
             {loading ? '...' : 'Всё в порядке ✓'}
           </Button>

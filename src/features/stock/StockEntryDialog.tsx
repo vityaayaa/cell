@@ -10,6 +10,7 @@ import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
 import { getProductDisplayName } from '@/features/shelf/cellUtils'
+import { packs } from '@/lib/plural'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { motion } from 'motion/react'
@@ -54,11 +55,16 @@ function BulkFillMeter({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Snap the raw pointer position to the nearest whole pack, then convert back
+  // to a percent that lands exactly on a pack boundary (0/25/50/75/100% for 4).
   function computePercent(clientY: number): number {
     const rect = containerRef.current?.getBoundingClientRect()
     if (!rect) return percent
     const rel = (clientY - rect.top) / rect.height
-    return Math.max(0, Math.min(100, Math.round((1 - rel) * 100)))
+    const rawPercent = Math.max(0, Math.min(100, (1 - rel) * 100))
+    if (capacity <= 0) return 0
+    const pack = Math.max(0, Math.min(capacity, Math.round((rawPercent / 100) * capacity)))
+    return (pack / capacity) * 100
   }
 
   function handlePointer(e: React.PointerEvent) {
@@ -66,7 +72,7 @@ function BulkFillMeter({
     onChange(computePercent(e.clientY))
   }
 
-  const packs = Math.round((percent / 100) * capacity)
+  const pack = capacity > 0 ? Math.round((percent / 100) * capacity) : 0
 
   return (
     <div className="flex gap-4 items-stretch" style={{ height: 260 }}>
@@ -92,12 +98,12 @@ function BulkFillMeter({
       >
         {/* Unfilled top */}
         <div
-          className="absolute top-0 left-0 right-0 transition-all"
+          className="absolute top-0 left-0 right-0"
           style={{ height: `${100 - percent}%`, background: 'var(--muted)' }}
         />
         {/* Filled bottom */}
         <div
-          className="absolute bottom-0 left-0 right-0 transition-all"
+          className="absolute bottom-0 left-0 right-0"
           style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
         />
         {/* Divider line */}
@@ -107,19 +113,19 @@ function BulkFillMeter({
             style={{ top: `${100 - percent}%`, height: 2, background: 'var(--primary)' }}
           />
         )}
-        {/* Center label */}
+        {/* Center label — packs dominate, percent is secondary */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
           <span
             className="text-3xl font-bold"
             style={{ color: percent >= 50 ? 'white' : 'var(--foreground)' }}
           >
-            {percent}%
+            {packs(pack)}
           </span>
           <span
             className="text-sm"
             style={{ color: percent >= 50 ? 'rgba(255,255,255,0.8)' : 'var(--muted-foreground)' }}
           >
-            ≈ {packs} пачек
+            есть в ячейке
           </span>
         </div>
       </div>
@@ -221,7 +227,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
       ])) as { error: unknown }
       if (result.error) throw result.error
       const msg = isBulk
-        ? `✓ Внесено: ≈${value} из ${capacity} пачек (${bulkPercent}%)`
+        ? `✓ Внесено: ${value} из ${packs(capacity)}`
         : `✓ Внесено: ${value} из ${capacity} шт`
       toastSuccess(msg)
     } catch {
@@ -248,7 +254,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
             {getProductDisplayName(product)}
           </p>
           <p className="ui-hint">
-            Вместимость: {isBulk ? `${capacity} пачек` : `${capacity} шт`}
+            Вместимость: {isBulk ? packs(capacity) : `${capacity} шт`}
           </p>
         </div>
 
@@ -290,12 +296,8 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
         )}
 
         <motion.button
-          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-40"
-          style={{
-            height: 52,
-            background: canSave ? 'var(--primary)' : 'var(--muted)',
-            color: canSave ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-          }}
+          className="btn-primary w-full rounded-md font-semibold text-base mt-2 disabled:opacity-40"
+          style={{ height: 52 }}
           whileTap={canSave && !saving ? { scale: 0.97 } : undefined}
           onClick={handleSave}
           disabled={!canSave || saving}

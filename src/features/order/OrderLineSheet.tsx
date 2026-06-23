@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { packs } from '@/lib/plural'
 
 interface OrderLineSheetProps {
   line: OrderLine | null
@@ -66,7 +67,7 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
           <DialogTitle className="text-base">{line.product_name}</DialogTitle>
           {line.deficit_units != null && (
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-              Дефицит: {line.deficit_units} шт · расчётное {line.quantity_packs} пачек
+              Дефицит: {line.deficit_units} шт · расчётное {packs(line.quantity_packs)}
             </p>
           )}
         </DialogHeader>
@@ -101,7 +102,7 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
           </button>
         </div>
 
-        <Button className="w-full h-14" onClick={handleSave} disabled={saving}>
+        <Button className="btn-primary w-full h-14" onClick={handleSave} disabled={saving}>
           {saving ? '…' : 'Сохранить'}
         </Button>
 
@@ -179,7 +180,7 @@ export function BoundaryLineSheet({
           </p>
         </DialogHeader>
 
-        <Button className="w-full h-14" onClick={handleInclude} disabled={saving}>
+        <Button className="btn-primary w-full h-14" onClick={handleInclude} disabled={saving}>
           {saving ? '…' : 'Включить в заявку'}
         </Button>
       </DialogContent>
@@ -222,7 +223,7 @@ export function FinalizeSheet({
         <DialogHeader>
           <DialogTitle>Готово к финализации</DialogTitle>
           <p className="text-base font-medium" style={{ color: 'var(--foreground)' }}>
-            {totalPositions} позиций · {totalPacks} пачек
+            {totalPositions} позиций · {packs(totalPacks)}
           </p>
         </DialogHeader>
         <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
@@ -238,7 +239,7 @@ export function FinalizeSheet({
             Отмена
           </Button>
           <Button
-            className="flex-1 h-14"
+            className="btn-primary flex-1 h-14"
             onClick={handleFinalize}
             disabled={loading}
           >
