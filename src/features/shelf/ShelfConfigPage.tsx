@@ -31,6 +31,8 @@ export default function ShelfConfigPage() {
   const [shelfActionsOpen, setShelfActionsOpen] = useState(false)
   const [addingRow, setAddingRow] = useState(false)
   const [addingCol, setAddingCol] = useState(false)
+  const [confirmRecreate, setConfirmRecreate] = useState(false)
+  const [recreating, setRecreating] = useState(false)
 
   useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true) })
 
@@ -133,6 +135,31 @@ export default function ShelfConfigPage() {
     }
     setAddingCol(false)
     setShelfActionsOpen(false)
+  }
+
+  async function handleRecreate() {
+    if (!shelf) return
+    setRecreating(true)
+    try {
+      // Server delete cascades cells → stock_entries (migration 005). Order /
+      // checklist history doesn't reference cells, so it stays.
+      const { error } = await supabase.from('shelves').delete().eq('id', shelf.id)
+      if (error) throw error
+      const cellRows = await db.cells.where('shelf_id').equals(shelf.id).toArray()
+      const cellIds = cellRows.map((c) => c.id)
+      await db.transaction('rw', [db.shelves, db.cells, db.stock_entries], async () => {
+        await db.shelves.delete(shelf.id)
+        await db.cells.where('shelf_id').equals(shelf.id).delete()
+        if (cellIds.length) await db.stock_entries.where('cell_id').anyOf(cellIds).delete()
+      })
+      // shelf is now null → ShelfSetupPage renders, asking for the new size.
+    } catch {
+      toast.error('Не удалось пересоздать. Попробуйте ещё раз.')
+    } finally {
+      setRecreating(false)
+      setConfirmRecreate(false)
+      setShelfActionsOpen(false)
+    }
   }
 
   function getCellAddress(cell: Cell): string {
@@ -280,6 +307,44 @@ export default function ShelfConfigPage() {
             >
               {addingCol ? 'Добавляем...' : '+ Добавить столбец справа'}
             </Button>
+            <button
+              className="w-full rounded-md font-medium text-base"
+              style={{ height: 52, color: 'var(--destructive)', border: '1px solid var(--destructive)', background: 'transparent' }}
+              onClick={() => { setShelfActionsOpen(false); setConfirmRecreate(true) }}
+            >
+              Пересоздать стеллаж
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recreate shelf confirmation */}
+      <Dialog open={confirmRecreate} onOpenChange={v => !v && setConfirmRecreate(false)}>
+        <DialogContent preventOutsideClose>
+          <DialogHeader>
+            <DialogTitle>Пересоздать стеллаж?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Текущий стеллаж и все ячейки будут удалены — дальше зададите новый размер.
+            История заявок и обходов сохранится; удалятся только замеры остатков по ячейкам.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              className="flex-1 rounded-md font-medium text-base border"
+              style={{ height: 48, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+              onClick={() => setConfirmRecreate(false)}
+              disabled={recreating}
+            >
+              Отмена
+            </button>
+            <button
+              className="flex-1 rounded-md font-semibold text-base"
+              style={{ height: 52, background: 'var(--destructive)', color: 'var(--destructive-foreground)' }}
+              onClick={handleRecreate}
+              disabled={recreating}
+            >
+              {recreating ? '…' : 'Пересоздать'}
+            </button>
           </div>
         </DialogContent>
       </Dialog>
