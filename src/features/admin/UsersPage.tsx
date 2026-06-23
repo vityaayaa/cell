@@ -70,27 +70,30 @@ export default function UsersPage() {
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setDeleting(true)
-    const { data, error } = await supabase.functions.invoke('delete-user', {
-      body: { userId: deleteTarget.id },
-    })
-    setDeleting(false)
-    const ok = !error && (data as { ok?: boolean } | null)?.ok
-    if (!ok) {
-      const reason = (data as { reason?: string } | null)?.reason
-      toast.error(
-        reason === 'has_history'
-          ? 'У сотрудника есть история — удалить нельзя. Заблокируйте его.'
-          : reason === 'self'
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deleteTarget.id },
+      })
+      const ok = !error && (data as { ok?: boolean } | null)?.ok
+      if (!ok) {
+        const reason = (data as { reason?: string } | null)?.reason
+        toast.error(
+          reason === 'self'
             ? 'Нельзя удалить свой аккаунт'
             : 'Не удалось удалить аккаунт',
-      )
-      return
+        )
+        return
+      }
+      await db.user_profiles.delete(deleteTarget.id)
+      toast.success('Аккаунт удалён')
+      setDeleteTarget(null)
+    } catch {
+      toast.error('Не удалось удалить аккаунт')
+    } finally {
+      setDeleting(false)
     }
-    await db.user_profiles.delete(deleteTarget.id)
-    toast.success('Аккаунт удалён')
-    setDeleteTarget(null)
   }
 
   async function toggleActive(id: string, currentlyActive: boolean) {
