@@ -275,8 +275,8 @@ export default function UsersPage() {
             <DialogTitle>Удалить аккаунт «{deleteTarget?.name}»?</DialogTitle>
           </DialogHeader>
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-            Аккаунт и доступ будут удалены безвозвратно. Если у сотрудника уже есть
-            история обходов — удалить нельзя, тогда заблокируйте его.
+            Аккаунт, доступ и вся история обходов этого сотрудника будут удалены
+            безвозвратно. Чтобы сохранить историю — заблокируйте его вместо удаления.
           </p>
           <div className="flex gap-3 mt-2">
             <button

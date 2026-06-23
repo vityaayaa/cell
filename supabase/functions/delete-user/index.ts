@@ -47,16 +47,20 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: 'self' })
     }
 
-    // Hard delete the auth user — cascades the user_profiles row. If the user has
-    // history (sessions / stock / checklist reference them), the FK blocks it.
+    // Full delete: remove everything tied to this user so the account can be
+    // erased regardless of history. Service role bypasses RLS.
+    // Deleting the user's sessions cascades their orders → order_lines →
+    // checklist_entries and stock_entries.
+    await supabaseAdmin.from('sessions').delete().eq('user_id', userId)
+    await supabaseAdmin.from('stock_entries').delete().eq('user_id', userId)
+    // Detach remaining references that would otherwise block the profile cascade.
+    await supabaseAdmin.from('checklist_entries').update({ user_id: null }).eq('user_id', userId)
+    await supabaseAdmin.from('audit_log').update({ actor_id: null }).eq('actor_id', userId)
+    await supabaseAdmin.from('user_profiles').update({ created_by: null }).eq('created_by', userId)
+
+    // Hard delete the auth user — cascades the user_profiles row.
     const { error: delError } = await supabaseAdmin.auth.admin.deleteUser(userId)
-    if (delError) {
-      const msg = (delError.message || '').toLowerCase()
-      if (msg.includes('foreign key') || msg.includes('violates') || msg.includes('constraint')) {
-        return json({ ok: false, reason: 'has_history' })
-      }
-      throw delError
-    }
+    if (delError) throw delError
 
     return json({ ok: true })
   } catch (err) {
