@@ -256,10 +256,7 @@ export default function OrderDraftPage() {
         {boundaryLines.length > 0 && (
           <>
             <div className="mx-4 mt-2 mb-1">
-              <p
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--muted-foreground)' }}
-              >
+              <p className="ui-section-title">
                 Пограничные позиции
               </p>
             </div>

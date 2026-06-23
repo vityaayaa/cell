@@ -93,7 +93,7 @@ export function AddLineSheet({
               <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                 {getProductDisplayName(selected)}
               </p>
-              <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+              <p className="ui-hint mt-0.5">
                 {selected.pack_size} шт/пачка
               </p>
             </div>
@@ -167,7 +167,6 @@ export function AddLineSheet({
                   color: 'var(--foreground)',
                   outline: 'none',
                 }}
-                autoFocus
               />
             </div>
 

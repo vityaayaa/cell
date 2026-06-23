@@ -178,9 +178,8 @@ export default function ChecklistPage() {
         {resolved.length > 0 && (
           <>
             <div
-              className="px-4 py-2 text-xs font-semibold uppercase tracking-wide no-print"
+              className="px-4 py-2 ui-section-title no-print"
               style={{
-                color: 'var(--muted-foreground)',
                 background: 'var(--muted)',
                 borderBottom: '1px solid var(--border)',
               }}

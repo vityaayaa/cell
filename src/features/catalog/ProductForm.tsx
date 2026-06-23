@@ -51,7 +51,6 @@ function toInt(s: string): number | null {
 function validate(f: FormState): string | null {
   if (!f.name.trim()) return 'Введите название'
   if (!f.material_id) return 'Выберите материал'
-  if (!toInt(f.pack_size)) return 'Укажите размер пачки'
   if (f.type === 'unit') {
     if (!toInt(f.width_mm)) return 'Укажите ширину'
     if (!toInt(f.height_mm)) return 'Укажите высоту'
@@ -109,7 +108,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       name: form.name.trim(),
       type: form.type,
       material_id: form.material_id,
-      pack_size: toInt(form.pack_size)!,
+      pack_size: toInt(form.pack_size) ?? 1,
       width_mm: form.type === 'unit' ? toInt(form.width_mm) : null,
       height_mm: form.type === 'unit' ? toInt(form.height_mm) : null,
       length_mm: (form.type === 'unit' || form.type === 'round') ? toInt(form.length_mm) : null,
@@ -154,10 +153,10 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: 'calc(65dvh - 100px)' }}>
+        <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: 'calc(88dvh - 130px)' }}>
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="ui-field-label">
               Название <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <input
@@ -167,7 +166,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
               placeholder="Брусок, Труба ПВХ, Штапик..."
               className="rounded-md border px-3 text-base"
               style={{
-                height: 48,
+                height: 44,
                 fontSize: 16,
                 background: 'var(--background)',
                 borderColor: 'var(--border)',
@@ -179,7 +178,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
           {/* Type */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="ui-field-label">
               Тип <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <div className="flex gap-2">
@@ -203,7 +202,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
           {/* Material */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="ui-field-label">
               Материал <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <select
@@ -211,7 +210,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
               onChange={(e) => set('material_id', e.target.value)}
               className="rounded-md border px-3 text-base"
               style={{
-                height: 48,
+                height: 44,
                 fontSize: 16,
                 background: 'var(--background)',
                 borderColor: 'var(--border)',
@@ -231,8 +230,8 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
           {/* Pack size */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              Размер пачки (шт) <span style={{ color: '#EF4444' }}>*</span>
+            <label className="ui-field-label">
+              Размер пачки (шт)
             </label>
             <input
               type="number"
@@ -242,7 +241,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
               placeholder="4"
               className="rounded-md border px-3 text-base"
               style={{
-                height: 48,
+                height: 44,
                 fontSize: 16,
                 background: 'var(--background)',
                 borderColor: 'var(--border)',
@@ -250,12 +249,13 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                 outline: 'none',
               }}
             />
+            <p className="ui-hint">Оставьте пустым, если товар поштучно</p>
           </div>
 
           {/* Unit fields */}
           {form.type === 'unit' && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+            <div className="flex flex-col gap-2">
+              <p className="ui-section-title">
                 Размеры сечения и длина
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -265,7 +265,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                   { key: 'length_mm', label: 'Длина, мм' },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex flex-col gap-1">
-                    <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                    <label className="ui-field-label">
                       {label} <span style={{ color: '#EF4444' }}>*</span>
                     </label>
                     <input
@@ -276,7 +276,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       placeholder="50"
                       className="rounded-md border px-2 text-base text-center"
                       style={{
-                        height: 48,
+                        height: 44,
                         fontSize: 16,
                         background: 'var(--background)',
                         borderColor: 'var(--border)',
@@ -292,8 +292,8 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
           {/* Round fields */}
           {form.type === 'round' && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+            <div className="flex flex-col gap-2">
+              <p className="ui-section-title">
                 Диаметр и длина
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -302,7 +302,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                   { key: 'length_mm', label: 'Длина, мм' },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex flex-col gap-1">
-                    <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                    <label className="ui-field-label">
                       {label} <span style={{ color: '#EF4444' }}>*</span>
                     </label>
                     <input
@@ -313,7 +313,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       placeholder="110"
                       className="rounded-md border px-2 text-base text-center"
                       style={{
-                        height: 48,
+                        height: 44,
                         fontSize: 16,
                         background: 'var(--background)',
                         borderColor: 'var(--border)',

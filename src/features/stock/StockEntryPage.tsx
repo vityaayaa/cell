@@ -190,7 +190,7 @@ export default function StockEntryPage() {
           <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
             {getProductDisplayName(product)}
           </p>
-          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="ui-hint">
             Вместимость:{' '}
             {isBulk ? `${capacity} пачек` : `${capacity} шт`}
           </p>

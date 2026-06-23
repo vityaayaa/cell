@@ -256,10 +256,7 @@ export default function HomePage() {
             }}
             onClick={() => setHistoryOpen((v) => !v)}
           >
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: 'var(--muted-foreground)' }}
-            >
+            <span className="ui-section-title">
               История · {historySessions.length}
             </span>
             <ChevronDown

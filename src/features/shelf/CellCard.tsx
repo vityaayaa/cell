@@ -36,10 +36,16 @@ function FlagArea({
   onFlagTap?: () => void
   capacityMissing?: boolean
 }) {
+  // Each flag is a 32x32 tap target (padding) with a compensating negative
+  // margin so the compact cell layout doesn't grow.
+  const flagBtnClass =
+    'flex items-center justify-center -m-[9px] p-[9px]'
   return (
     <div className="flex items-center gap-0.5 flex-shrink-0" style={{ minWidth: 18, minHeight: 18 }}>
       {cell.needs_review && (
         <button
+          type="button"
+          className={flagBtnClass}
           onClick={e => { e.stopPropagation(); onFlagTap?.() }}
           aria-label="Нужна проверка"
         >
@@ -48,7 +54,9 @@ function FlagArea({
       )}
       {capacityMissing && (
         <button
-          onClick={e => { e.stopPropagation(); toastInfo('Вместимость не задана. Откройте настройки ячейки и укажите переопределение.') }}
+          type="button"
+          className={flagBtnClass}
+          onClick={e => { e.stopPropagation(); toastInfo('Вместимость не задана. Откройте настройки ячейки и укажите вручную.') }}
           aria-label="Вместимость не задана"
         >
           <AlertTriangle size={14} color="#EF4444" />
@@ -56,6 +64,8 @@ function FlagArea({
       )}
       {!cell.rotation_allowed && (
         <button
+          type="button"
+          className={flagBtnClass}
           onClick={e => { e.stopPropagation(); toastInfo('Поворот товара запрещён для этой ячейки.') }}
           aria-label="Поворот запрещён"
         >
@@ -64,6 +74,8 @@ function FlagArea({
       )}
       {cell.capacity_override != null && (
         <button
+          type="button"
+          className={flagBtnClass}
           onClick={e => { e.stopPropagation(); toastInfo(`Вместимость задана вручную: ${cell.capacity_override} шт.`) }}
           aria-label="Вместимость переопределена"
         >
@@ -148,9 +160,12 @@ export function CellCard({
 
   if (leaf) {
     return (
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onTap(cell)}
-        className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
+        className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer"
         style={{
           background: bgColor,
           borderColor: 'var(--border)',
@@ -177,7 +192,7 @@ export function CellCard({
           visitedCellIds={visitedCellIds}
           lastEntryDate={lastEntryDate}
         />
-      </button>
+      </div>
     )
   }
 
@@ -188,9 +203,12 @@ export function CellCard({
     : null
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onTap(cell)}
-      className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
+      className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer"
       style={{
         background: 'var(--card)',
         borderColor: 'var(--border)',
@@ -236,6 +254,6 @@ export function CellCard({
         )}
         <ChevronRight size={16} style={{ color: 'var(--muted-foreground)' }} />
       </div>
-    </button>
+    </div>
   )
 }

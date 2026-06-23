@@ -53,6 +53,7 @@ function DialogContent({
   showCloseButton = true,
   preventOutsideClose = false,
   onInteractOutside,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -68,6 +69,10 @@ function DialogContent({
           className
         )}
         onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : onInteractOutside}
+        // Don't pull focus into the first field on open — that pops the mobile
+        // keyboard everywhere. Consumers that genuinely want it (stock entry)
+        // pass their own onOpenAutoFocus or autoFocus a specific field.
+        onOpenAutoFocus={onOpenAutoFocus ?? ((e) => e.preventDefault())}
         {...props}
       >
         {children}
@@ -133,7 +138,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "text-base leading-none font-medium",
+        "text-lg leading-tight font-semibold",
         className
       )}
       {...props}

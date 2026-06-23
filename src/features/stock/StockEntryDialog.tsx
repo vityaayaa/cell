@@ -237,7 +237,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
           <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
             {getProductDisplayName(product)}
           </p>
-          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="ui-hint">
             Вместимость: {isBulk ? `${capacity} пачек` : `${capacity} шт`}
           </p>
         </div>
@@ -250,7 +250,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
           />
         ) : (
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
+            <p className="ui-field-label">
               Сколько сейчас в ячейке?
             </p>
             <div className="flex items-center gap-3">
@@ -258,6 +258,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
                 type="text"
                 inputMode="numeric"
                 placeholder="0"
+                autoFocus
                 value={numericValue}
                 onChange={(e) => setNumericValue(e.target.value.replace(/[^0-9]/g, ''))}
                 className="text-base w-32"

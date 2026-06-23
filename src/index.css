@@ -1,6 +1,38 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
 
+/* The app switches themes via [data-theme="…"], not the prefers-color-scheme
+   media query. Re-bind Tailwind's `dark:` variant to our dark + oled themes
+   so shadcn component styles (dialog/button/input) actually apply. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="oled"], [data-theme="oled"] *));
+
+/* Map our design tokens to Tailwind's color namespace so utilities like
+   bg-card / bg-popover / border-border / bg-primary resolve. Without this
+   block every shadcn color class is a no-op (Tailwind v4 requires --color-*). */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-progress: var(--progress);
+  --color-warning: var(--warning);
+}
+
 /* ───────── Theme tokens ───────── */
 
 :root,
@@ -16,9 +48,22 @@
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --ring: #F97316;
+}
+
+/* Derived tokens — theme-agnostic, resolve against the active base tokens.
+   Defined once; var() substitution picks up the per-theme overrides above. */
+:root {
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--foreground);
+  --accent: var(--muted);
+  --accent-foreground: var(--foreground);
+  --input: var(--border);
   /* status colors — same across all themes */
-  --color-progress: #10B981;
-  --color-warning: #F59E0B;
+  --progress: #10B981;
+  --warning: #F59E0B;
 }
 
 [data-theme="dark"] {
@@ -66,4 +111,25 @@ input,
 textarea,
 select {
   font-size: 16px;
+}
+
+/* ───────── Typography hierarchy ─────────
+   One shared ladder so headings stand apart from body everywhere:
+   dialog title (18) > section title (16) > body (14) > label/hint (12). */
+.ui-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+.ui-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.ui-hint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--muted-foreground);
 }

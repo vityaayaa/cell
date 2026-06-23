@@ -52,8 +52,13 @@ export function subscribeToTable(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChanged: (payload: any) => void,
 ): RealtimeChannel {
+  // Unique channel name per subscriber. supabase.channel(topic) returns the
+  // SAME instance for a repeated topic, and calling .on() on an already
+  // subscribed channel throws "cannot add postgres_changes callbacks ...
+  // after subscribe()". A unique suffix gives each mount its own channel,
+  // so overlapping subscribers (e.g. shelf grid + stock-entry dialog) coexist.
   return supabase
-    .channel(`public:${table}`)
+    .channel(`public:${table}:${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table }, onChanged)
     .subscribe()
 }

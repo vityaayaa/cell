@@ -229,7 +229,7 @@ export default function AuditPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-0.5">
-            <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>С:</label>
+            <label className="ui-field-label">С:</label>
             <input
               type="date"
               value={filterFrom}
@@ -246,7 +246,7 @@ export default function AuditPage() {
             />
           </div>
           <div className="flex flex-col gap-0.5">
-            <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>По:</label>
+            <label className="ui-field-label">По:</label>
             <input
               type="date"
               value={filterTo}

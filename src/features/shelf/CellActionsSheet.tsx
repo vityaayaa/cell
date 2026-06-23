@@ -165,6 +165,7 @@ export function CellActionsSheet({
   cell,
   allCells,
   products,
+  materials,
   address,
   open,
   onClose,
@@ -178,6 +179,9 @@ export function CellActionsSheet({
 
   const leaf = isLeaf(cell.id, allCells)
   const currentProduct = leaf ? products.find(p => p.id === cell.product_id) : undefined
+  const assignedProductIds = new Set(
+    allCells.map(c => c.product_id).filter((id): id is string => id != null),
+  )
   const sibling = leaf ? getBspSibling(cell, allCells) : null
   const siblingAddress = sibling ? getRootAddress(sibling) : null
 
@@ -369,6 +373,8 @@ export function CellActionsSheet({
           <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto">
             {products.map(p => {
               const { name, dims } = getProductParts(p)
+              const material = materials.find(m => m.id === p.material_id)
+              const inShelf = assignedProductIds.has(p.id)
               return (
                 <button
                   key={p.id}
@@ -377,7 +383,16 @@ export function CellActionsSheet({
                   onClick={() => handleSelectProduct(p)}
                   disabled={loadingAction === 'assign-product'}
                 >
-                  <span className="text-sm font-medium">{name}</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    {material && (
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ background: material.color }}
+                      />
+                    )}
+                    <span className="text-sm font-medium truncate">{name}</span>
+                    {inShelf && <span className="ui-hint flex-shrink-0">в стеллаже</span>}
+                  </span>
                   {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
                 </button>
               )

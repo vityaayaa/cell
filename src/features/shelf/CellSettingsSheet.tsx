@@ -165,41 +165,49 @@ export function CellSettingsSheet({
         </DialogHeader>
 
         <div className="flex flex-col gap-5 max-h-[60dvh] overflow-y-auto pr-1">
-          {/* Capacity block — вместимость + переопределение в одном визуальном блоке */}
-          <div
-            className="flex flex-col gap-3 rounded-lg p-3"
-            style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}
-          >
-            <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-              Вместимость
-            </p>
+          {/* Размеры ячейки — приоритетная секция */}
+          <div className="flex flex-col gap-3">
+            <p className="ui-section-title">Размеры ячейки</p>
+
+            {isRoot && (
+              <div className="flex gap-3">
+                <div className="flex-1 flex flex-col gap-1">
+                  <Label htmlFor="width" className="ui-field-label">Ширина, мм</Label>
+                  <Input
+                    id="width"
+                    type="text"
+                    inputMode="numeric"
+                    value={widthInput}
+                    onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="text-base"
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1">
+                  <Label htmlFor="height" className="ui-field-label">Высота, мм</Label>
+                  <Input
+                    id="height"
+                    type="text"
+                    inputMode="numeric"
+                    value={heightInput}
+                    onChange={e => setHeightInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="text-base"
+                  />
+                </div>
+              </div>
+            )}
+
             {calculatedCapacity != null && (
-              <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                Расчётная: {calculatedCapacity} шт
+              <p style={{ fontSize: 16, color: 'var(--foreground)' }}>
+                Расчётная вместимость:{' '}
+                <span style={{ fontWeight: 700 }}>{calculatedCapacity} шт</span>
               </p>
             )}
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="override" style={{ color: 'var(--muted-foreground)', fontSize: 12 }}>
-                Переопределение вручную
-              </Label>
-              <Input
-                id="override"
-                type="text"
-                inputMode="numeric"
-                placeholder="пусто = по формуле"
-                value={overrideInput}
-                onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
-                className="text-base"
-              />
-            </div>
           </div>
 
-          {/* Rotation */}
+          {/* Поворот */}
           {showRotation && (
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                Поворот
-              </p>
+              <p className="ui-section-title">Поворот</p>
               <button
                 onClick={() => setRotationAllowed(v => !v)}
                 className="flex items-center gap-2"
@@ -223,38 +231,23 @@ export function CellSettingsSheet({
             </div>
           )}
 
-          {/* Root dimensions */}
-          {isRoot && (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                Размеры ячейки
-              </p>
-              <div className="flex gap-3">
-                <div className="flex-1 flex flex-col gap-1">
-                  <Label htmlFor="width">Ширина, мм</Label>
-                  <Input
-                    id="width"
-                    type="text"
-                    inputMode="numeric"
-                    value={widthInput}
-                    onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="text-base"
-                  />
-                </div>
-                <div className="flex-1 flex flex-col gap-1">
-                  <Label htmlFor="height">Высота, мм</Label>
-                  <Input
-                    id="height"
-                    type="text"
-                    inputMode="numeric"
-                    value={heightInput}
-                    onChange={e => setHeightInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="text-base"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Указать вручную — редкое исключение, внизу */}
+          <div className="flex flex-col gap-2">
+            <p className="ui-section-title">Указать вручную</p>
+            <p className="ui-hint">
+              Обычно приложение само считает вместимость по размерам ячейки и товара.
+              Заполните это поле, только если нужно задать число вручную.
+            </p>
+            <Input
+              id="override"
+              type="text"
+              inputMode="numeric"
+              placeholder="оставьте пустым — посчитает приложение"
+              value={overrideInput}
+              onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
+              className="text-base"
+            />
+          </div>
         </div>
 
         <button

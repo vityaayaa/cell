@@ -85,7 +85,7 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="ui-field-label">
               Название <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <input
@@ -105,7 +105,7 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <label className="ui-field-label">
               Цвет
             </label>
             <div className="flex items-center gap-3">
@@ -208,10 +208,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
           className="flex items-center justify-between px-4 py-3 border-b"
           style={{ borderColor: 'var(--border)', background: 'var(--muted)' }}
         >
-          <span
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: 'var(--muted-foreground)' }}
-          >
+          <span className="ui-section-title">
             Материалы
           </span>
           <button

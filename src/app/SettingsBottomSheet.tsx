@@ -48,7 +48,7 @@ export function SettingsBottomSheet({ open, onClose }: Props) {
 
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-medium mb-2" style={{ color: 'var(--muted-foreground)' }}>
+            <p className="ui-section-title mb-2">
               Тема
             </p>
             <div className="flex gap-2">

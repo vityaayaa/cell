@@ -94,7 +94,7 @@ export default function SettingsPage() {
 
         {/* Theme */}
         <div className="px-4 mt-6 mb-2">
-          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="ui-section-title mb-3">
             Тема
           </p>
           <div className="flex gap-2">
