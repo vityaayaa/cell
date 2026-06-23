@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import type { Cell, Material, Product, Shelf } from '@/data/db'
 import { isLeaf } from '@/domain/bsp'
@@ -44,69 +44,6 @@ export function ShelfGrid({
   const [drillStack, setDrillStack] = useState<DrillEntry[]>([])
 
   const currentDrill = drillStack[drillStack.length - 1] ?? null
-
-  // --- Free pan (drag the grid like a map, including diagonally) ---
-  const panRef = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    startLeft: 0,
-    startTop: 0,
-    moved: false,
-  })
-
-  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // Only react to primary pointer (touch / left mouse)
-    if (e.button !== undefined && e.button !== 0) return
-    const el = e.currentTarget
-    const p = panRef.current
-    p.active = true
-    p.moved = false
-    p.startX = e.clientX
-    p.startY = e.clientY
-    p.startLeft = el.scrollLeft
-    p.startTop = el.scrollTop
-    try {
-      el.setPointerCapture(e.pointerId)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    const p = panRef.current
-    if (!p.active) return
-    const dx = e.clientX - p.startX
-    const dy = e.clientY - p.startY
-    if (!p.moved && Math.abs(dx) + Math.abs(dy) > 8) {
-      p.moved = true
-    }
-    if (p.moved) {
-      const el = e.currentTarget
-      el.scrollLeft = p.startLeft - dx
-      el.scrollTop = p.startTop - dy
-    }
-  }
-
-  function endPan(e: React.PointerEvent<HTMLDivElement>) {
-    const p = panRef.current
-    if (!p.active) return
-    p.active = false
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function handleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
-    // If the pointer was panned, swallow the click so cells don't open.
-    if (panRef.current.moved) {
-      e.stopPropagation()
-      e.preventDefault()
-      panRef.current.moved = false
-    }
-  }
 
   function handleCellTap(cell: Cell) {
     if (isLeaf(cell.id, cells)) {
@@ -185,15 +122,7 @@ export function ShelfGrid({
 
       {/* Grid level */}
       {!currentDrill ? (
-        <div
-          className="flex-1 min-h-0 overflow-auto"
-          style={{ touchAction: 'none' }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={endPan}
-          onPointerCancel={endPan}
-          onClickCapture={handleClickCapture}
-        >
+        <div className="flex-1 min-h-0 overflow-auto">
           <div style={gridStyle}>
             {rootCells.map(cell => (
               <CellCard

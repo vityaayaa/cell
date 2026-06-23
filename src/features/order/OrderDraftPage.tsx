@@ -14,14 +14,12 @@ import { AddLineSheet } from './AddLineSheet'
 
 export default function OrderDraftPage() {
   const navigate = useNavigate()
-  const { activeSessionId, userId, priorityMaterialId, setPriorityMaterialId } = useAppStore(
-    (s) => ({
-      activeSessionId: s.activeSessionId,
-      userId: s.userId,
-      priorityMaterialId: s.priorityMaterialId,
-      setPriorityMaterialId: s.setPriorityMaterialId,
-    }),
-  )
+  // Individual primitive selectors — an inline object selector returns a new
+  // object every render and triggers React error #185 (infinite re-render).
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const userId = useAppStore((s) => s.userId)
+  const priorityMaterialId = useAppStore((s) => s.priorityMaterialId)
+  const setPriorityMaterialId = useAppStore((s) => s.setPriorityMaterialId)
 
   const order = useLiveQuery<Order | undefined>(
     async () =>

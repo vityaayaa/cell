@@ -144,8 +144,32 @@ export default function HomePage() {
     if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
-      await db.sessions.delete(deleteTarget)
-      await supabase.from('sessions').delete().eq('id', deleteTarget)
+      // Delete on the server first — if RLS/network blocks it, we must NOT
+      // remove it locally, otherwise it reappears on the next sync.
+      const { error } = await supabase.from('sessions').delete().eq('id', deleteTarget)
+      if (error) throw error
+
+      // Server FKs cascade-delete the children; mirror that in Dexie so they
+      // don't linger locally.
+      const orders = await db.orders.where('session_id').equals(deleteTarget).toArray()
+      const orderIds = orders.map((o) => o.id)
+      const lines = orderIds.length
+        ? await db.order_lines.where('order_id').anyOf(orderIds).toArray()
+        : []
+      const lineIds = lines.map((l) => l.id)
+      await db.transaction(
+        'rw',
+        [db.sessions, db.orders, db.order_lines, db.checklist_entries, db.stock_entries],
+        async () => {
+          await db.sessions.delete(deleteTarget)
+          await db.stock_entries.where('session_id').equals(deleteTarget).delete()
+          if (orderIds.length) await db.orders.bulkDelete(orderIds)
+          if (lineIds.length) {
+            await db.order_lines.bulkDelete(lineIds)
+            await db.checklist_entries.where('order_line_id').anyOf(lineIds).delete()
+          }
+        },
+      )
       toast.success('Обход удалён')
     } catch {
       toast.error('Не удалось удалить')

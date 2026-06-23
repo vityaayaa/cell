@@ -58,6 +58,8 @@ create policy "sessions_insert" on sessions for insert to authenticated
   with check (user_id = auth.uid());
 create policy "sessions_update" on sessions for update to authenticated
   using (user_id = auth.uid() or is_admin());
+create policy "sessions_delete" on sessions for delete to authenticated
+  using (user_id = auth.uid() or is_admin());
 
 -- stock_entries: own + admin
 create policy "stock_entries_select" on stock_entries for select to authenticated
