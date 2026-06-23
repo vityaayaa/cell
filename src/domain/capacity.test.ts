@@ -76,6 +76,23 @@ describe('getEffectiveCapacity', () => {
     )).toBe(80)
   })
 
+  it('lays the larger side down — input order does not matter (40×50 == 50×40)', () => {
+    // Cell 540×400, board 40×50: larger side (50) goes horizontal → 540/50=10,
+    // 400/40=10 = 100 base; leftover 40mm fits a rotated column: 1 × (400/50=8) = 8.
+    const cell = { computed_width_mm: 540, computed_height_mm: 400 }
+    const opts = { rotation_allowed: true, capacity_override: null }
+    expect(getEffectiveCapacity(cell, { type: 'unit', width_mm: 40, height_mm: 50 }, opts)).toBe(108)
+    expect(getEffectiveCapacity(cell, { type: 'unit', width_mm: 50, height_mm: 40 }, opts)).toBe(108)
+  })
+
+  it('rotation off still uses larger-side-down base (40×50 in 540×400 → 100)', () => {
+    expect(getEffectiveCapacity(
+      { computed_width_mm: 540, computed_height_mm: 400 },
+      { type: 'unit', width_mm: 40, height_mm: 50 },
+      { rotation_allowed: false, capacity_override: null },
+    )).toBe(100)
+  })
+
   it('returns capacity_override and ignores calculation when override is set', () => {
     expect(getEffectiveCapacity(
       { computed_width_mm: 545, computed_height_mm: 400 },

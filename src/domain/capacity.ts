@@ -64,10 +64,23 @@ export function getEffectiveCapacity(
 
   if (product.type !== 'unit') return 0
 
-  const base = calculateBaseCapacity(cell, product)
+  // Stability rule: a board is always laid with its larger cross-section side
+  // horizontal (the wider base sits down). So orient the base with the larger
+  // dimension across the cell width and the smaller as the height — regardless
+  // of which order the two numbers were entered. Rotation then fills the
+  // leftover width strip with pieces turned 90°.
+  const longSide = Math.max(product.width_mm, product.height_mm)
+  const shortSide = Math.min(product.width_mm, product.height_mm)
+  const oriented: UnitProductDimensions = {
+    type: 'unit',
+    width_mm: longSide,
+    height_mm: shortSide,
+  }
+
+  const base = calculateBaseCapacity(cell, oriented)
   const rotated =
-    options.rotation_allowed && product.width_mm !== product.height_mm
-      ? calculateRotatedCapacity(cell, product)
+    options.rotation_allowed && longSide !== shortSide
+      ? calculateRotatedCapacity(cell, oriented)
       : 0
 
   return base + rotated
