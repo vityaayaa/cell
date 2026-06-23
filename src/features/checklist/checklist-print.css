@@ -7,6 +7,23 @@
     display: none !important;
   }
 
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   .checklist-print-table {
     display: table !important;
     width: 100%;
@@ -18,12 +35,37 @@
   .checklist-print-table th,
   .checklist-print-table td {
     border: 1px solid #999;
-    padding: 6px 8px;
+    padding: 8px;
+    vertical-align: middle;
   }
 
   .checklist-print-table th {
     background: #eee;
     font-weight: bold;
+    text-align: center;
+  }
+
+  .checklist-print-table th.col-product {
+    text-align: left;
+  }
+
+  .checklist-print-table td.col-product {
+    text-align: left;
+  }
+
+  .checklist-print-table td.col-center {
+    text-align: center;
+  }
+
+  .checklist-print-table .blank-line {
+    display: inline-block;
+    min-width: 56px;
+    border-bottom: 1px solid #333;
+  }
+
+  .checklist-print-table .box {
+    font-size: 14pt;
+    margin-right: 4px;
   }
 
   .checklist-row {

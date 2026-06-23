@@ -8,6 +8,7 @@ import { useAppStore } from '@/data/store'
 import { supabase } from '@/data/supabase'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
+import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
 import {
   Dialog,
   DialogContent,
@@ -71,8 +72,8 @@ export default function CatalogPage() {
   const products = useLiveQuery(() => db.products.toArray())
   const materials = useLiveQuery(() => db.materials.orderBy('name').toArray())
 
-  const [materialCycleIdx, setMaterialCycleIdx] = useState(0)
-  const [sortMode, setSortMode] = useState<'length-desc' | 'length-asc' | 'alpha-asc' | 'alpha-desc'>('alpha-asc')
+  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
   const [formOpen, setFormOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -86,31 +87,12 @@ export default function CatalogPage() {
     [materials],
   )
 
-  const selectedMaterial = useMemo(() => {
-    if (!materials || materialCycleIdx === 0) return null
-    return materials[materialCycleIdx - 1] ?? null
-  }, [materials, materialCycleIdx])
-
   const filteredProducts = useMemo(() => {
-    if (!products || !materials) return []
-    const base = selectedMaterial
-      ? products.filter((p) => p.material_id === selectedMaterial.id)
-      : products
-
-    return [...base].sort((a, b) => {
-      if (sortMode === 'length-desc' || sortMode === 'length-asc') {
-        const lenA = a.length_mm ?? a.diameter_mm ?? 0
-        const lenB = b.length_mm ?? b.diameter_mm ?? 0
-        return sortMode === 'length-desc' ? lenB - lenA : lenA - lenB
-      }
-      const matA = materialMap.get(a.material_id)?.name ?? ''
-      const matB = materialMap.get(b.material_id)?.name ?? ''
-      const matCmp = matA.localeCompare(matB, 'ru')
-      if (matCmp !== 0) return sortMode === 'alpha-asc' ? matCmp : -matCmp
-      const nameCmp = a.name.localeCompare(b.name, 'ru')
-      return sortMode === 'alpha-asc' ? nameCmp : -nameCmp
-    })
-  }, [products, materials, selectedMaterial, sortMode, materialMap])
+    const base = materialId
+      ? (products ?? []).filter((p) => p.material_id === materialId)
+      : (products ?? [])
+    return sortByMode(base, (p) => p, materialMap, sortMode)
+  }, [products, materialId, sortMode, materialMap])
 
   if (!products || !materials) {
     return (
@@ -209,66 +191,13 @@ export default function CatalogPage() {
   return (
     <div className="flex flex-col pb-6">
       {/* Sort bar */}
-      <div className="flex px-4 py-2" style={{ borderBottom: '1px solid var(--border)', gap: 0 }}>
-        {/* Material cycle button */}
-        <button
-          onClick={() => setMaterialCycleIdx((i) => (materials ? (i + 1) % (materials.length + 1) : 0))}
-          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-medium truncate"
-          style={{
-            height: 36,
-            borderRadius: '6px 0 0 6px',
-            border: `1px solid ${selectedMaterial ? selectedMaterial.color : 'var(--border)'}`,
-            borderRight: 0,
-            background: selectedMaterial ? selectedMaterial.color + '33' : 'transparent',
-            color: selectedMaterial ? selectedMaterial.color : 'var(--muted-foreground)',
-          }}
-        >
-          {selectedMaterial && (
-            <span
-              className="rounded-full flex-shrink-0"
-              style={{ width: 8, height: 8, background: selectedMaterial.color }}
-              aria-hidden
-            />
-          )}
-          <span className="truncate">{selectedMaterial ? selectedMaterial.name : 'Материал'}</span>
-        </button>
-
-        {/* Length sort button */}
-        <button
-          onClick={() => setSortMode((m) =>
-            m === 'length-desc' ? 'length-asc' : m === 'length-asc' ? 'length-desc' : 'length-desc',
-          )}
-          className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs font-medium"
-          style={{
-            height: 36,
-            borderRadius: 0,
-            border: `1px solid ${sortMode.startsWith('length') ? 'var(--primary)' : 'var(--border)'}`,
-            borderRight: 0,
-            background: sortMode.startsWith('length') ? 'var(--primary)' : 'transparent',
-            color: sortMode.startsWith('length') ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-          }}
-        >
-          <span>{sortMode === 'length-asc' ? '↑' : '↓'}</span>
-          <span className="truncate">Длина</span>
-        </button>
-
-        {/* Alpha sort button */}
-        <button
-          onClick={() => setSortMode((m) =>
-            m === 'alpha-asc' ? 'alpha-desc' : m === 'alpha-desc' ? 'alpha-asc' : 'alpha-asc',
-          )}
-          className="flex-1 min-w-0 flex items-center justify-center text-xs font-medium truncate"
-          style={{
-            height: 36,
-            borderRadius: '0 6px 6px 0',
-            border: `1px solid ${sortMode.startsWith('alpha') ? 'var(--primary)' : 'var(--border)'}`,
-            background: sortMode.startsWith('alpha') ? 'var(--primary)' : 'transparent',
-            color: sortMode.startsWith('alpha') ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-          }}
-        >
-          {sortMode === 'alpha-desc' ? 'Я-А' : 'А-Я'}
-        </button>
-      </div>
+      <ProductSortBar
+        materials={materials}
+        materialId={materialId}
+        sortMode={sortMode}
+        onMaterialId={setMaterialId}
+        onSortMode={setSortMode}
+      />
 
       {/* Add button */}
       <div className="px-4 pt-3">
@@ -291,7 +220,7 @@ export default function CatalogPage() {
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 px-8 py-12">
           <p className="text-base text-center" style={{ color: 'var(--muted-foreground)' }}>
-            {selectedMaterial ? 'Нет товаров с этим материалом' : 'Каталог пуст'}
+            {materialId ? 'Нет товаров с этим материалом' : 'Каталог пуст'}
           </p>
         </div>
       ) : (

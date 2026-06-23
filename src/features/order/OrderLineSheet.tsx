@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { db } from '@/data/db'
 import type { OrderLine } from '@/data/db'
 import { supabase } from '@/data/supabase'
@@ -20,22 +20,28 @@ interface OrderLineSheetProps {
 }
 
 export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps) {
-  const [packCount, setPackCount] = useState<number>(line?.quantity_packs ?? 1)
+  // String state so the field can be edited freely (cleared, retyped).
+  const [packStr, setPackStr] = useState('1')
   const [saving, setSaving] = useState(false)
 
-  if (line && packCount !== line.quantity_packs && !saving) {
-    setPackCount(line.quantity_packs)
-  }
+  // Sync from the line only when it changes / the sheet opens — NOT every
+  // render (a render-time setState here reset every +/- and keystroke).
+  useEffect(() => {
+    if (line) setPackStr(String(line.quantity_packs))
+  }, [line?.id, open])
 
   if (!line) return null
 
+  const count = parseInt(packStr, 10)
+  const valid = !isNaN(count) && count >= 1
   const packSize = line.quantity_packs > 0
     ? Math.round(line.quantity_units / line.quantity_packs)
     : 1
 
   async function handleSave() {
-    if (!line) return
+    if (!line || !valid) return
     setSaving(true)
+    const packCount = count
     const newUnits = packCount * packSize
     const now = new Date().toISOString()
     await db.order_lines.update(line.id, {
@@ -72,37 +78,37 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
           )}
         </DialogHeader>
 
-        {/* Pack counter */}
-        <div className="flex items-center gap-3">
+        {/* Pack counter — large, centered */}
+        <div className="flex items-center justify-center gap-4 py-2">
           <button
-            className="w-10 h-10 rounded-md border text-lg font-medium flex items-center justify-center"
-            style={{ borderColor: 'var(--border)' }}
-            onClick={() => setPackCount((p) => Math.max(1, p - 1))}
-            disabled={packCount <= 1}
+            className="rounded-lg border text-3xl font-medium flex items-center justify-center disabled:opacity-40"
+            style={{ width: 60, height: 60, borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            onClick={() => setPackStr(String(Math.max(1, (isNaN(count) ? 1 : count) - 1)))}
+            disabled={!valid || count <= 1}
+            aria-label="Меньше"
           >
             −
           </button>
           <Input
-            type="number"
+            type="text"
             inputMode="numeric"
-            value={packCount}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10)
-              if (!isNaN(v) && v >= 1) setPackCount(v)
-            }}
-            className="w-20 text-center text-base"
-            style={{ fontSize: '16px' }}
+            value={packStr}
+            onChange={(e) => setPackStr(e.target.value.replace(/[^0-9]/g, ''))}
+            className="text-center"
+            style={{ width: 100, height: 60, fontSize: 28, fontWeight: 700 }}
           />
           <button
-            className="w-10 h-10 rounded-md border text-lg font-medium flex items-center justify-center"
-            style={{ borderColor: 'var(--border)' }}
-            onClick={() => setPackCount((p) => p + 1)}
+            className="rounded-lg border text-3xl font-medium flex items-center justify-center"
+            style={{ width: 60, height: 60, borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            onClick={() => setPackStr(String((isNaN(count) ? 0 : count) + 1))}
+            aria-label="Больше"
           >
             +
           </button>
         </div>
+        <p className="text-center ui-hint">{valid ? `${count * packSize} шт` : 'Введите число пачек'}</p>
 
-        <Button className="btn-primary w-full h-14" onClick={handleSave} disabled={saving}>
+        <Button className="btn-primary w-full h-14" onClick={handleSave} disabled={saving || !valid}>
           {saving ? '…' : 'Сохранить'}
         </Button>
 

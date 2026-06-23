@@ -24,7 +24,7 @@ function AppLayoutInner() {
 
   return (
     <div
-      className="flex flex-col"
+      className="app-shell flex flex-col"
       style={{
         height: '100dvh',
         overflow: 'hidden',
@@ -32,7 +32,7 @@ function AppLayoutInner() {
       }}
     >
       <header
-        className="flex items-center justify-between px-4 flex-shrink-0"
+        className="no-print flex items-center justify-between px-4 flex-shrink-0"
         style={{
           height: 56,
           background: 'var(--card)',
@@ -80,7 +80,9 @@ function AppLayoutInner() {
         </PageTransition>
       </main>
 
-      <BottomNav />
+      <div className="no-print">
+        <BottomNav />
+      </div>
 
       {userRole === 'employee' && (
         <SettingsBottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />

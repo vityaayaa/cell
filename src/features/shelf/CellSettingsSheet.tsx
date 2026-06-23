@@ -50,6 +50,7 @@ export function CellSettingsSheet({
   const [widthInput, setWidthInput] = useState('')
   const [heightInput, setHeightInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   useEffect(() => {
     if (!cell) return
@@ -152,6 +153,64 @@ export function CellSettingsSheet({
       await db.cells.update(cell.id, updates)
       const { error } = await supabase.from('cells').update(updates).eq('id', cell.id)
       if (error) throw error
+    } catch {
+      toast.error('Не сохранилось. Попробуйте ещё раз.')
+    } finally {
+      setSaving(false)
+      onClose()
+    }
+  }
+
+  async function handleReset() {
+    if (!cell) return
+    setSaving(true)
+
+    const now = new Date().toISOString()
+
+    try {
+      if (isRoot) {
+        const subtreeCells = allCells.filter(c => {
+          let cur: Cell | undefined = c
+          while (cur) {
+            if (cur.id === cell.id) return true
+            cur = allCells.find(x => x.id === cur!.parent_id)
+          }
+          return false
+        })
+
+        const hasChildren = allCells.some(c => c.parent_id === cell.id)
+
+        const updated: Cell[] = subtreeCells.map(c => {
+          const next: Cell = {
+            ...c,
+            computed_width_mm: 0,
+            computed_height_mm: 0,
+            capacity_override: null,
+            rotation_allowed: true,
+            updated_at: now,
+          }
+          if (c.id === cell.id) {
+            next.width_mm = null
+            next.height_mm = null
+            if (!hasChildren) next.product_id = null
+          }
+          return next
+        })
+
+        await db.cells.bulkPut(updated)
+        const { error } = await supabase.from('cells').upsert(updated)
+        if (error) throw error
+      } else {
+        const updates: Partial<Cell> = {
+          product_id: null,
+          capacity_override: null,
+          rotation_allowed: true,
+          updated_at: now,
+        }
+        await db.cells.update(cell.id, updates)
+        const { error } = await supabase.from('cells').update(updates).eq('id', cell.id)
+        if (error) throw error
+      }
     } catch {
       toast.error('Не сохранилось. Попробуйте ещё раз.')
     } finally {
@@ -271,6 +330,57 @@ export function CellSettingsSheet({
         >
           {saving ? 'Сохранение...' : 'Сохранить'}
         </button>
+
+        <button
+          onClick={() => setConfirmReset(true)}
+          disabled={saving}
+          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
+          style={{
+            height: 48,
+            color: 'var(--destructive)',
+            border: '1px solid var(--destructive)',
+            background: 'transparent',
+          }}
+        >
+          Сбросить ячейку
+        </button>
+
+        <Dialog open={confirmReset} onOpenChange={v => !v && setConfirmReset(false)}>
+          <DialogContent preventOutsideClose>
+            <DialogHeader>
+              <DialogTitle>Сбросить ячейку?</DialogTitle>
+            </DialogHeader>
+            <p style={{ fontSize: 16, color: 'var(--muted-foreground)' }}>
+              Будут очищены товар, размеры и настройки этой ячейки.
+            </p>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setConfirmReset(false)}
+                disabled={saving}
+                className="flex-1 rounded-md font-semibold text-base disabled:opacity-50"
+                style={{
+                  height: 48,
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmReset(false)
+                  handleReset()
+                }}
+                disabled={saving}
+                className="flex-1 rounded-md font-semibold text-base text-white disabled:opacity-50"
+                style={{ height: 52, background: 'var(--destructive)' }}
+              >
+                Сбросить
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   )

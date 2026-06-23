@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Plus } from 'lucide-react'
@@ -7,8 +7,8 @@ import type { Order, OrderLine, Product, Material } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { useAppStore } from '@/data/store'
 import { updateSessionStatus } from './updateSessionStatus'
-import { sortOrderLines } from './orderSort'
 import { packs } from '@/lib/plural'
+import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
 import { OrderLineSheet, BoundaryLineSheet, FinalizeSheet } from './OrderLineSheet'
 import { AddLineSheet } from './AddLineSheet'
 
@@ -18,8 +18,9 @@ export default function OrderDraftPage() {
   // object every render and triggers React error #185 (infinite re-render).
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const userId = useAppStore((s) => s.userId)
-  const priorityMaterialId = useAppStore((s) => s.priorityMaterialId)
-  const setPriorityMaterialId = useAppStore((s) => s.setPriorityMaterialId)
+
+  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
 
   const order = useLiveQuery<Order | undefined>(
     async () =>
@@ -47,41 +48,13 @@ export default function OrderDraftPage() {
     [materials],
   )
 
-  // Unique materials present in the current order lines (main only)
-  const orderMaterials = useMemo<Material[]>(() => {
-    const seen = new Set<string>()
-    const result: Material[] = []
-    for (const line of allLines ?? []) {
-      if (line.is_boundary) continue
-      const product = productMap.get(line.product_id ?? '')
-      if (!product?.material_id) continue
-      const mat = materialMap.get(product.material_id)
-      if (mat && !seen.has(mat.id)) {
-        seen.add(mat.id)
-        result.push(mat)
-      }
-    }
-    return result.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-  }, [allLines, productMap, materialMap])
-
-  // Default priority to "Дерево" on first load
-  useEffect(() => {
-    if (priorityMaterialId !== null) return
-    if (!materials || materials.length === 0) return
-    const derevo = materials.find((m) => m.name === 'Дерево' || m.name === 'дерево')
-    setPriorityMaterialId(derevo?.id ?? materials[0].id)
-  }, [materials, priorityMaterialId, setPriorityMaterialId])
-
-  const mainLines = useMemo(
-    () =>
-      sortOrderLines(
-        (allLines ?? []).filter((l) => !l.is_boundary),
-        productMap,
-        materialMap,
-        priorityMaterialId,
-      ),
-    [allLines, productMap, materialMap, priorityMaterialId],
-  )
+  const mainLines = useMemo(() => {
+    const base = (allLines ?? []).filter((l) => !l.is_boundary)
+    const filtered = materialId
+      ? base.filter((l) => productMap.get(l.product_id ?? '')?.material_id === materialId)
+      : base
+    return sortByMode(filtered, (l) => productMap.get(l.product_id ?? ''), materialMap, sortMode)
+  }, [allLines, productMap, materialMap, materialId, sortMode])
 
   const boundaryLines = useMemo(
     () => (allLines ?? []).filter((l) => l.is_boundary),
@@ -187,30 +160,14 @@ export default function OrderDraftPage() {
           </button>
         </div>
 
-        {/* Material priority chips */}
-        {orderMaterials.length > 1 && (
-          <div className="flex gap-2 px-4 pb-3 overflow-x-auto">
-            {orderMaterials.map((mat) => {
-              const isActive = mat.id === priorityMaterialId
-              return (
-                <button
-                  key={mat.id}
-                  onClick={() => setPriorityMaterialId(isActive ? null : mat.id)}
-                  className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium border"
-                  style={{
-                    background: isActive ? 'var(--primary)' : 'var(--background)',
-                    color: isActive ? 'var(--primary-foreground)' : 'var(--foreground)',
-                    borderColor: isActive ? 'var(--primary)' : 'var(--border)',
-                  }}
-                >
-                  {mat.name} {isActive ? '↑' : ''}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        <div className="mx-4 border-t" style={{ borderColor: 'var(--border)' }} />
+        {/* Sort bar */}
+        <ProductSortBar
+          materials={materials ?? []}
+          materialId={materialId}
+          sortMode={sortMode}
+          onMaterialId={setMaterialId}
+          onSortMode={setSortMode}
+        />
 
         {/* Main lines */}
         {mainLines.length > 0 ? (

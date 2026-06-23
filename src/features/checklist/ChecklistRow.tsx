@@ -4,7 +4,6 @@ import type { ChecklistEntry, OrderLine } from '@/data/db'
 interface ChecklistRowProps {
   entry: ChecklistEntry
   line: OrderLine
-  onQuickDone: () => void
   onRowTap: () => void
 }
 
@@ -21,7 +20,7 @@ function packsSubline(packs: number, units: number): string {
   return `${packs} ${pluralPacks(packs)} · ${units} шт`
 }
 
-export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRowProps) {
+export function ChecklistRow({ entry, line, onRowTap }: ChecklistRowProps) {
   if (entry.status === 'pending') {
     return (
       <div
@@ -40,16 +39,16 @@ export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRo
         <button
           onClick={(e) => {
             e.stopPropagation()
-            onQuickDone()
+            onRowTap()
           }}
-          className="btn-primary flex-shrink-0 px-4 rounded-md font-semibold text-sm"
+          className="btn-primary flex-shrink-0 px-5 rounded-md font-semibold text-sm"
           style={{
             height: 56,
-            minWidth: 72,
+            minWidth: 104,
           }}
-          aria-label={`Взял ${line.product_name}`}
+          aria-label={`Отметить ${line.product_name}`}
         >
-          Взял
+          Отметить
         </button>
       </div>
     )
@@ -57,10 +56,10 @@ export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRo
 
   if (entry.status === 'done') {
     const actual = entry.actual_packs ?? line.quantity_packs
-    const actualLabel =
-      actual < line.quantity_packs
-        ? `Взял ${actual} из ${line.quantity_packs} ${pluralPacks(line.quantity_packs)}`
-        : `Взял ${actual} ${pluralPacks(actual)}`
+    const isPartial = actual < line.quantity_packs
+    const actualLabel = isPartial
+      ? `Взял ${actual} из ${line.quantity_packs} ${pluralPacks(line.quantity_packs)}`
+      : `Взял ${actual} ${pluralPacks(actual)}`
 
     return (
       <div
@@ -91,7 +90,10 @@ export function ChecklistRow({ entry, line, onQuickDone, onRowTap }: ChecklistRo
             {packsSubline(line.quantity_packs, line.quantity_units)}
           </p>
         </div>
-        <span className="text-sm flex-shrink-0 font-medium" style={{ color: '#10B981' }}>
+        <span
+          className="text-sm flex-shrink-0 font-medium"
+          style={{ color: isPartial ? '#F59E0B' : '#10B981' }}
+        >
           {actualLabel}
         </span>
       </div>

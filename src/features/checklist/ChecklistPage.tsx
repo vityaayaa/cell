@@ -5,9 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ChevronLeft, Printer } from 'lucide-react'
 import { db } from '@/data/db'
 import type { ChecklistEntry, OrderLine, Product, Material } from '@/data/db'
-import { useAppStore } from '@/data/store'
-import { sortOrderLines } from '@/features/order/orderSort'
-import { saveChecklistEntry } from './saveChecklistEntry'
+import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
 import { ChecklistRow } from './ChecklistRow'
 import { ChecklistActionSheet } from './ChecklistActionSheet'
 import './checklist-print.css'
@@ -23,10 +21,11 @@ function sortPairsAlpha(pairs: EntryWithLine[]): EntryWithLine[] {
 export default function ChecklistPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
-  const priorityMaterialId = useAppStore((s) => s.priorityMaterialId)
 
   const [sheetEntry, setSheetEntry] = useState<ChecklistEntry | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
 
   const products = useLiveQuery<Product[]>(() => db.products.toArray(), [])
   const materials = useLiveQuery<Material[]>(() => db.materials.toArray(), [])
@@ -68,13 +67,20 @@ export default function ChecklistPage() {
     .filter((e) => lineMap.has(e.order_line_id))
     .map((e) => ({ entry: e, line: lineMap.get(e.order_line_id)! }))
 
-  const pendingLines = (allPairs.filter((p) => p.entry.status === 'pending')).map((p) => p.line)
-  const sortedPendingLines = sortOrderLines(pendingLines, productMap, materialMap, priorityMaterialId)
-  const sortedPendingIds = new Map(sortedPendingLines.map((l, i) => [l.id, i]))
-
-  const pending = allPairs
+  const pendingPairs = allPairs
     .filter((p) => p.entry.status === 'pending')
-    .sort((a, b) => (sortedPendingIds.get(a.line.id) ?? 0) - (sortedPendingIds.get(b.line.id) ?? 0))
+    .filter(
+      (p) =>
+        materialId == null ||
+        productMap.get(p.line.product_id ?? '')?.material_id === materialId,
+    )
+
+  const pending = sortByMode(
+    pendingPairs,
+    (p) => productMap.get(p.line.product_id ?? ''),
+    materialMap,
+    sortMode,
+  )
 
   const resolved = sortPairsAlpha(allPairs.filter((p) => p.entry.status !== 'pending'))
 
@@ -87,14 +93,6 @@ export default function ChecklistPage() {
   function openSheet(entry: ChecklistEntry) {
     setSheetEntry(entry)
     setSheetOpen(true)
-  }
-
-  async function handleQuickDone(entry: ChecklistEntry, line: OrderLine) {
-    await saveChecklistEntry(
-      entry.id,
-      { status: 'done', actual_packs: line.quantity_packs },
-      sessionId!,
-    )
   }
 
   return (
@@ -145,6 +143,15 @@ export default function ChecklistPage() {
             />
           </div>
         </div>
+
+        {/* Sort bar */}
+        <ProductSortBar
+          materials={materials ?? []}
+          materialId={materialId}
+          sortMode={sortMode}
+          onMaterialId={setMaterialId}
+          onSortMode={setSortMode}
+        />
       </div>
 
       {/* List */}
@@ -168,7 +175,6 @@ export default function ChecklistPage() {
               <ChecklistRow
                 entry={entry}
                 line={line}
-                onQuickDone={() => handleQuickDone(entry, line)}
                 onRowTap={() => openSheet(entry)}
               />
             </motion.div>
@@ -191,7 +197,6 @@ export default function ChecklistPage() {
                 key={entry.id}
                 entry={entry}
                 line={line}
-                onQuickDone={() => {}}
                 onRowTap={() => openSheet(entry)}
               />
             ))}
@@ -205,21 +210,25 @@ export default function ChecklistPage() {
       <table className="checklist-print-table">
         <thead>
           <tr>
-            <th style={{ textAlign: 'left' }}>Товар</th>
+            <th className="col-product">Товар</th>
             <th>Пачек</th>
-            <th>Взял ☐</th>
-            <th>Нет на складе ☐</th>
-            <th>Взял столько: ___</th>
+            <th>Взял</th>
+            <th>Нет на складе</th>
           </tr>
         </thead>
         <tbody>
           {[...pending, ...resolved].map(({ line }) => (
             <tr key={line.id} className="checklist-row">
-              <td>{line.product_name}</td>
-              <td style={{ textAlign: 'center' }}>{line.quantity_packs}</td>
-              <td style={{ textAlign: 'center' }}></td>
-              <td style={{ textAlign: 'center' }}></td>
-              <td></td>
+              <td className="col-product">{line.product_name}</td>
+              <td className="col-center">{line.quantity_packs}</td>
+              <td>
+                <span className="box">☐</span> всё
+                {'   '}
+                <span className="blank-line" /> шт/уп
+              </td>
+              <td className="col-center">
+                <span className="box">☐</span>
+              </td>
             </tr>
           ))}
         </tbody>
