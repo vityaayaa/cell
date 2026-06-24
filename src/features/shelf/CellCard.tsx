@@ -133,7 +133,7 @@ function SplitMini({ cell, allCells }: { cell: Cell; allCells: Cell[] }) {
   if (children.length === 0) {
     return (
       <div
-        style={{ flex: 1, minWidth: 0, minHeight: 0, border: '1px solid rgba(148,163,184,0.18)' }}
+        style={{ width: '100%', height: '100%', border: '1px solid rgba(148,163,184,0.32)' }}
       />
     )
   }
@@ -141,7 +141,7 @@ function SplitMini({ cell, allCells }: { cell: Cell; allCells: Cell[] }) {
   const isV = cell.split_direction === 'V'
   return (
     <div
-      style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', width: '100%', height: '100%', gap: 2 }}
+      style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', width: '100%', height: '100%' }}
     >
       {children.map(ch => (
         <div key={ch.id} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
