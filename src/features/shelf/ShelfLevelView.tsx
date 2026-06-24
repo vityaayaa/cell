@@ -1,5 +1,4 @@
 import type { Cell, Material, Product } from '@/data/db'
-import { isLeaf } from '@/domain/bsp'
 import { CellCard } from './CellCard'
 
 interface ShelfLevelViewProps {
@@ -16,110 +15,100 @@ interface ShelfLevelViewProps {
   onFlagTap: (cell: Cell) => void
 }
 
-function getChildAddress(parent: Cell, child: Cell, parentAddress: string): string {
-  if (parent.split_direction === 'V') {
-    const col = child.is_first_child ? 1 : 2
-    return `${parentAddress}(1,${col})`
-  }
-  if (parent.split_direction === 'H') {
-    const row = child.is_first_child ? 1 : 2
-    return `${parentAddress}(${row},1)`
-  }
-  return parentAddress
+/** Address segment of a child relative to its parent: (row,col). */
+function relSegment(parent: Cell, child: Cell): string {
+  if (parent.split_direction === 'V') return `(1,${child.is_first_child ? 1 : 2})`
+  if (parent.split_direction === 'H') return `(${child.is_first_child ? 1 : 2},1)`
+  return ''
 }
 
-interface LevelGridProps {
-  parentCell: Cell
-  children: Cell[]
-  allCells: Cell[]
-  products: Product[]
-  materials: Material[]
-  mode: 'edit' | 'view'
-  addressPrefix: string
-  depth: number
-  sessionId?: string
-  visitedCellIds?: Set<string>
-  onLeafTap: (cell: Cell) => void
-  onSplitTap: (cell: Cell) => void
-  onFlagTap: (cell: Cell) => void
-}
-
-function LevelGrid({
-  parentCell,
-  children,
-  allCells,
-  products,
-  materials,
-  mode,
-  addressPrefix,
-  depth,
-  sessionId,
-  visitedCellIds,
-  onLeafTap,
-  onSplitTap,
-  onFlagTap,
-}: LevelGridProps) {
-  const isVSplit = parentCell.split_direction === 'V'
-  const sorted = [...children].sort((a, b) => {
+function sortChildren(children: Cell[]): Cell[] {
+  return [...children].sort((a, b) => {
     if (a.is_first_child && !b.is_first_child) return -1
     if (!a.is_first_child && b.is_first_child) return 1
     return 0
   })
+}
 
-  const gridStyle: React.CSSProperties = isVSplit
-    ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: '160px', gap: '8px' }
-    : { display: 'grid', gridTemplateColumns: '1fr', gridAutoRows: '160px', gap: '8px' }
+interface NodeProps {
+  cell: Cell
+  addr: string
+  allCells: Cell[]
+  products: Product[]
+  materials: Material[]
+  mode: 'edit' | 'view'
+  sessionId?: string
+  visitedCellIds?: Set<string>
+  onLeafTap: (cell: Cell) => void
+  onFlagTap: (cell: Cell) => void
+}
+
+/** Renders a cell (and its subtree) scaled to its real proportions:
+ *  a V-split lays children left↔right by width, an H-split top↔bottom by height. */
+function ProportionalNode({
+  cell,
+  addr,
+  allCells,
+  products,
+  materials,
+  mode,
+  sessionId,
+  visitedCellIds,
+  onLeafTap,
+  onFlagTap,
+}: NodeProps) {
+  const children = sortChildren(allCells.filter(c => c.parent_id === cell.id))
+
+  if (children.length === 0) {
+    return (
+      <div style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0 }}>
+        <CellCard
+          cell={cell}
+          allCells={allCells}
+          products={products}
+          materials={materials}
+          mode={mode}
+          address={addr}
+          sessionId={sessionId}
+          visitedCellIds={visitedCellIds}
+          onTap={onLeafTap}
+          onFlagTap={onFlagTap}
+        />
+      </div>
+    )
+  }
+
+  const isV = cell.split_direction === 'V'
 
   return (
-    <div style={gridStyle}>
-      {sorted.map(child => {
-        const childAddress = getChildAddress(parentCell, child, addressPrefix)
-        const displayAddress = childAddress.slice(addressPrefix.length)
-        const grandChildren = allCells.filter(c => c.parent_id === child.id)
-        const childIsLeaf = isLeaf(child.id, allCells)
-
-        if (!childIsLeaf && grandChildren.length > 0) {
-          return (
-            <div key={child.id} style={{ position: 'relative' }}>
-              <LevelGrid
-                parentCell={child}
-                children={grandChildren}
-                allCells={allCells}
-                products={products}
-                materials={materials}
-                mode={mode}
-                addressPrefix={childAddress}
-                depth={depth + 1}
-                sessionId={sessionId}
-                visitedCellIds={visitedCellIds}
-                onLeafTap={onLeafTap}
-                onSplitTap={onSplitTap}
-                onFlagTap={onFlagTap}
-              />
-            </div>
-          )
-        }
-
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: isV ? 'row' : 'column',
+        width: '100%',
+        height: '100%',
+        gap: 4,
+        minWidth: 0,
+        minHeight: 0,
+      }}
+    >
+      {children.map(child => {
+        const basis = Math.max(1, isV ? child.computed_width_mm : child.computed_height_mm)
         return (
-          <CellCard
-            key={child.id}
-            cell={child}
-            allCells={allCells}
-            products={products}
-            materials={materials}
-            mode={mode}
-            address={displayAddress}
-            sessionId={sessionId}
-            visitedCellIds={visitedCellIds}
-            onTap={cell => {
-              if (isLeaf(cell.id, allCells)) {
-                onLeafTap(cell)
-              } else {
-                onSplitTap(cell)
-              }
-            }}
-            onFlagTap={onFlagTap}
-          />
+          <div key={child.id} style={{ flexGrow: basis, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+            <ProportionalNode
+              cell={child}
+              addr={addr + relSegment(cell, child)}
+              allCells={allCells}
+              products={products}
+              materials={materials}
+              mode={mode}
+              sessionId={sessionId}
+              visitedCellIds={visitedCellIds}
+              onLeafTap={onLeafTap}
+              onFlagTap={onFlagTap}
+            />
+          </div>
         )
       })}
     </div>
@@ -132,41 +121,29 @@ export function ShelfLevelView({
   products,
   materials,
   mode,
-  addressPrefix,
   sessionId,
   visitedCellIds,
   onLeafTap,
-  onSplitTap,
   onFlagTap,
 }: ShelfLevelViewProps) {
-  const children = allCells
-    .filter(c => c.parent_id === parentCell.id)
-    .sort((a, b) => {
-      if (a.is_first_child && !b.is_first_child) return -1
-      if (!a.is_first_child && b.is_first_child) return 1
-      return 0
-    })
-
-  if (children.length === 0) return null
+  const hasChildren = allCells.some(c => c.parent_id === parentCell.id)
+  if (!hasChildren) return null
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6" style={{ minHeight: 0 }}>
-      <div style={{ width: '100%' }}>
-      <LevelGrid
-        parentCell={parentCell}
-        children={children}
-        allCells={allCells}
-        products={products}
-        materials={materials}
-        mode={mode}
-        addressPrefix={addressPrefix}
-        depth={0}
-        sessionId={sessionId}
-        visitedCellIds={visitedCellIds}
-        onLeafTap={onLeafTap}
-        onSplitTap={onSplitTap}
-        onFlagTap={onFlagTap}
-      />
+    <div className="flex-1 min-h-0 overflow-auto p-3">
+      <div style={{ width: '100%', height: '100%', minHeight: 320 }}>
+        <ProportionalNode
+          cell={parentCell}
+          addr=""
+          allCells={allCells}
+          products={products}
+          materials={materials}
+          mode={mode}
+          sessionId={sessionId}
+          visitedCellIds={visitedCellIds}
+          onLeafTap={onLeafTap}
+          onFlagTap={onFlagTap}
+        />
       </div>
     </div>
   )
