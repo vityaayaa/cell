@@ -24,6 +24,8 @@ export interface CellCardProps {
   sessionId?: string
   visitedCellIds?: Set<string>
   lastEntryDate?: string | null
+  /** Compact rendering for the proportional drill view (no min height / date). */
+  dense?: boolean
   onTap: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
 }
@@ -131,6 +133,7 @@ export function CellCard({
   sessionId,
   visitedCellIds,
   lastEntryDate,
+  dense = false,
   onTap,
   onFlagTap,
 }: CellCardProps) {
@@ -174,23 +177,30 @@ export function CellCard({
         tabIndex={0}
         onClick={() => onTap(cell)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
-        className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer"
+        className="rounded-lg border flex flex-col justify-between w-full h-full text-left cursor-pointer overflow-hidden"
         style={{
           background: bgColor,
           borderColor: 'var(--border)',
-          minHeight: 72,
+          minHeight: dense ? 0 : 72,
+          padding: dense ? 6 : 8,
         }}
       >
         <div className="flex items-start justify-between gap-1">
-          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-            {displayAddress}
-          </span>
+          {!dense && (
+            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+              {displayAddress}
+            </span>
+          )}
+          {dense && <span />}
           <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
         </div>
 
         <span
-          className="text-sm font-medium text-center block px-1 leading-tight"
-          style={{ color: product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
+          className="font-medium text-center block px-1 leading-tight"
+          style={{
+            color: product ? 'var(--foreground)' : 'var(--muted-foreground)',
+            fontSize: dense ? 12 : 14,
+          }}
         >
           {product
             ? getProductDisplayName(product)
@@ -201,12 +211,14 @@ export function CellCard({
               : '—'}
         </span>
 
-        <DateLabel
-          cell={cell}
-          sessionId={sessionId}
-          visitedCellIds={visitedCellIds}
-          lastEntryDate={lastEntryDate}
-        />
+        {dense ? <span /> : (
+          <DateLabel
+            cell={cell}
+            sessionId={sessionId}
+            visitedCellIds={visitedCellIds}
+            lastEntryDate={lastEntryDate}
+          />
+        )}
       </div>
     )
   }

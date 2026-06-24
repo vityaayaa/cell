@@ -15,11 +15,14 @@ interface ShelfLevelViewProps {
   onFlagTap: (cell: Cell) => void
 }
 
-/** Address segment of a child relative to its parent: (row,col). */
-function relSegment(parent: Cell, child: Cell): string {
-  if (parent.split_direction === 'V') return `(1,${child.is_first_child ? 1 : 2})`
-  if (parent.split_direction === 'H') return `(${child.is_first_child ? 1 : 2},1)`
-  return ''
+// Readable, structural sizing (not squished to screen):
+// base cell = 100px tall; each horizontal split halves the height, floored at 50px.
+// Vertical splits keep the height and divide the width equally. Scrolls if tall.
+const BASE_H = 100
+const MIN_H = 50
+
+function leafHeight(hDepth: number): number {
+  return Math.max(MIN_H, Math.round(BASE_H / 2 ** Math.max(0, hDepth - 1)))
 }
 
 function sortChildren(children: Cell[]): Cell[] {
@@ -32,7 +35,7 @@ function sortChildren(children: Cell[]): Cell[] {
 
 interface NodeProps {
   cell: Cell
-  addr: string
+  hDepth: number
   allCells: Cell[]
   products: Product[]
   materials: Material[]
@@ -43,11 +46,9 @@ interface NodeProps {
   onFlagTap: (cell: Cell) => void
 }
 
-/** Renders a cell (and its subtree) scaled to its real proportions:
- *  a V-split lays children left↔right by width, an H-split top↔bottom by height. */
-function ProportionalNode({
+function Node({
   cell,
-  addr,
+  hDepth,
   allCells,
   products,
   materials,
@@ -61,14 +62,15 @@ function ProportionalNode({
 
   if (children.length === 0) {
     return (
-      <div style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0 }}>
+      <div style={{ height: leafHeight(hDepth), width: '100%' }}>
         <CellCard
           cell={cell}
           allCells={allCells}
           products={products}
           materials={materials}
           mode={mode}
-          address={addr}
+          address=""
+          dense
           sessionId={sessionId}
           visitedCellIds={visitedCellIds}
           onTap={onLeafTap}
@@ -79,38 +81,33 @@ function ProportionalNode({
   }
 
   const isV = cell.split_direction === 'V'
+  const childDepth = hDepth + (isV ? 0 : 1)
 
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: isV ? 'row' : 'column',
+        gap: 3,
         width: '100%',
-        height: '100%',
-        gap: 4,
-        minWidth: 0,
-        minHeight: 0,
       }}
     >
-      {children.map(child => {
-        const basis = Math.max(1, isV ? child.computed_width_mm : child.computed_height_mm)
-        return (
-          <div key={child.id} style={{ flexGrow: basis, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
-            <ProportionalNode
-              cell={child}
-              addr={addr + relSegment(cell, child)}
-              allCells={allCells}
-              products={products}
-              materials={materials}
-              mode={mode}
-              sessionId={sessionId}
-              visitedCellIds={visitedCellIds}
-              onLeafTap={onLeafTap}
-              onFlagTap={onFlagTap}
-            />
-          </div>
-        )
-      })}
+      {children.map(child => (
+        <div key={child.id} style={isV ? { flex: 1, minWidth: 0 } : { width: '100%' }}>
+          <Node
+            cell={child}
+            hDepth={childDepth}
+            allCells={allCells}
+            products={products}
+            materials={materials}
+            mode={mode}
+            sessionId={sessionId}
+            visitedCellIds={visitedCellIds}
+            onLeafTap={onLeafTap}
+            onFlagTap={onFlagTap}
+          />
+        </div>
+      ))}
     </div>
   )
 }
@@ -131,20 +128,18 @@ export function ShelfLevelView({
 
   return (
     <div className="flex-1 min-h-0 overflow-auto p-3">
-      <div style={{ width: '100%', height: '100%', minHeight: 320 }}>
-        <ProportionalNode
-          cell={parentCell}
-          addr=""
-          allCells={allCells}
-          products={products}
-          materials={materials}
-          mode={mode}
-          sessionId={sessionId}
-          visitedCellIds={visitedCellIds}
-          onLeafTap={onLeafTap}
-          onFlagTap={onFlagTap}
-        />
-      </div>
+      <Node
+        cell={parentCell}
+        hDepth={0}
+        allCells={allCells}
+        products={products}
+        materials={materials}
+        mode={mode}
+        sessionId={sessionId}
+        visitedCellIds={visitedCellIds}
+        onLeafTap={onLeafTap}
+        onFlagTap={onFlagTap}
+      />
     </div>
   )
 }
