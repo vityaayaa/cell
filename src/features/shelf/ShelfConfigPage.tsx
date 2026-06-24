@@ -65,14 +65,13 @@ export default function ShelfConfigPage() {
       row_index: newRow,
       col_index: i + 1,
       split_direction: null as null,
-      is_first_child: null as null,
+      child_index: null as null,
       width_mm: null as null,
       height_mm: null as null,
       computed_width_mm: 0,
       computed_height_mm: 0,
       product_id: null as null,
       capacity_override: null as null,
-      split_ratio: null as null,
       rotation_allowed: true,
       needs_review: false,
       created_at: now,
@@ -107,14 +106,13 @@ export default function ShelfConfigPage() {
       row_index: i + 1,
       col_index: newCol,
       split_direction: null as null,
-      is_first_child: null as null,
+      child_index: null as null,
       width_mm: null as null,
       height_mm: null as null,
       computed_width_mm: 0,
       computed_height_mm: 0,
       product_id: null as null,
       capacity_override: null as null,
-      split_ratio: null as null,
       rotation_allowed: true,
       needs_review: false,
       created_at: now,
@@ -166,88 +164,6 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
-  // Equalize STRICTLY the picked cells: they split their combined space equally,
-  // every other cell keeps its current size. Purely visual (split_ratio), no mm.
-  async function handleEqualizeSelected(ids: string[]) {
-    if (ids.length < 2) return
-
-    const childrenOf = (id: string) => cells.filter(c => c.parent_id === id)
-    const ratioOf = (c: Cell) => {
-      const r = c.split_ratio
-      return r == null || isNaN(r) ? 0.5 : r
-    }
-
-    // Lowest common ancestor of the picked cells.
-    const chain = (id: string): string[] => {
-      const out: string[] = []
-      let cur: Cell | undefined = cells.find(c => c.id === id)
-      while (cur) {
-        out.push(cur.id)
-        cur = cells.find(c => c.id === cur!.parent_id)
-      }
-      return out
-    }
-    const chains = ids.map(chain)
-    const lcaId = chains[0].find(cid => chains.every(ch => ch.includes(cid)))
-    if (!lcaId) return
-
-    // Current area-fraction of every leaf under the LCA (product of split ratios).
-    const frac = new Map<string, number>()
-    const assign = (id: string, f: number) => {
-      const ch = childrenOf(id)
-      if (ch.length < 2) { frac.set(id, f); return }
-      const first = ch.find(c => c.is_first_child) ?? ch[0]
-      const second = ch.find(c => c.id !== first.id) ?? ch[1]
-      const rf = ratioOf(first)
-      assign(first.id, f * rf)
-      assign(second.id, f * (1 - rf))
-    }
-    assign(lcaId, 1)
-
-    // Picked cells get the average of their current fractions (so they end up
-    // equal and their combined area is unchanged); everyone else keeps theirs.
-    const selected = ids.filter(id => frac.has(id))
-    if (selected.length < 2) return
-    const sumSel = selected.reduce((s, id) => s + frac.get(id)!, 0)
-    const equalShare = sumSel / selected.length
-    const selectedSet = new Set(selected)
-    const weight = new Map<string, number>()
-    frac.forEach((f, id) => weight.set(id, selectedSet.has(id) ? equalShare : f))
-
-    const nodeWeight = (id: string): number => {
-      const ch = childrenOf(id)
-      if (ch.length < 2) return weight.get(id) ?? 0
-      return ch.reduce((s, c) => s + nodeWeight(c.id), 0)
-    }
-    const allNodes = (id: string): string[] => {
-      const ch = childrenOf(id)
-      return [id, ...ch.flatMap(c => allNodes(c.id))]
-    }
-
-    // Rewrite each split's ratio from the new weights.
-    const now = new Date().toISOString()
-    const updates: Cell[] = []
-    for (const nid of allNodes(lcaId)) {
-      const ch = childrenOf(nid)
-      if (ch.length < 2) continue
-      const first = ch.find(c => c.is_first_child) ?? ch[0]
-      const total = nodeWeight(nid)
-      if (total <= 0) continue
-      const newRatio = nodeWeight(first.id) / total
-      if (Math.abs(newRatio - ratioOf(first)) < 1e-6) continue
-      updates.push({ ...first, split_ratio: newRatio, updated_at: now })
-    }
-    if (updates.length === 0) { toast.success('Уже выровнено'); return }
-
-    await db.cells.bulkPut(updates)
-    const { error } = await supabase.from('cells').upsert(updates)
-    if (error) {
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
-      return
-    }
-    toast.success('Выровнено')
-  }
-
   return (
     <div className="flex flex-col h-full">
       <ShelfGrid
@@ -260,7 +176,6 @@ export default function ShelfConfigPage() {
         onFlagTap={cell => {
           if (cell.needs_review) setReviewCell(cell)
         }}
-        onEqualizeSelected={handleEqualizeSelected}
       />
 
       {/* Cell actions sheet */}

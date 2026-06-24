@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
 import type { Cell, Material, Product, Shelf } from '@/data/db'
-import { isLeaf } from '@/domain/bsp'
 import { CellCard } from './CellCard'
-import { ShelfLevelView } from './ShelfLevelView'
-import { getRootAddress } from './cellUtils'
+
+/** Pixel size of a single leaf отсек. Tunable. */
+const LEAF_W = 120
+const LEAF_H = 88
+const GAP = 4
 
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
@@ -19,13 +19,74 @@ export interface ShelfGridProps {
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
-  /** Equalize the chosen sub-cells (the user picks them in the drill view). */
-  onEqualizeSelected?: (cellIds: string[]) => void
 }
 
-interface DrillEntry {
+function sortChildren(children: Cell[]): Cell[] {
+  return [...children].sort((a, b) => (a.child_index ?? 0) - (b.child_index ?? 0))
+}
+
+/** How many leaf отсеков the subtree spans across (cols) and down (rows). */
+function footprint(cell: Cell, allCells: Cell[]): { cols: number; rows: number } {
+  const children = allCells.filter(c => c.parent_id === cell.id)
+  if (children.length === 0) return { cols: 1, rows: 1 }
+  const fs = children.map(c => footprint(c, allCells))
+  if (cell.split_direction === 'V') {
+    return { cols: fs.reduce((s, f) => s + f.cols, 0), rows: Math.max(...fs.map(f => f.rows)) }
+  }
+  return { cols: Math.max(...fs.map(f => f.cols)), rows: fs.reduce((s, f) => s + f.rows, 0) }
+}
+
+interface SubtreeProps {
   cell: Cell
-  address: string
+  allCells: Cell[]
+  products: Product[]
+  materials: Material[]
+  mode: 'edit' | 'view'
+  sessionId?: string
+  visitedCellIds?: Set<string>
+  onLeafTap: (cell: Cell) => void
+  onFlagTap: (cell: Cell) => void
+}
+
+/** Recursively render a base cell's subtree filling 100%×100% of its grid area. */
+function Subtree(props: SubtreeProps) {
+  const { cell, allCells } = props
+  const children = sortChildren(allCells.filter(c => c.parent_id === cell.id))
+
+  if (children.length === 0) {
+    return (
+      <CellCard
+        cell={cell}
+        allCells={allCells}
+        products={props.products}
+        materials={props.materials}
+        mode={props.mode}
+        sessionId={props.sessionId}
+        visitedCellIds={props.visitedCellIds}
+        onTap={props.onLeafTap}
+        onFlagTap={props.onFlagTap}
+      />
+    )
+  }
+
+  const isV = cell.split_direction === 'V'
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: isV ? 'row' : 'column',
+        gap: GAP,
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      {children.map(child => (
+        <div key={child.id} style={{ flex: 1, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+          <Subtree {...props} cell={child} />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function ShelfGrid({
@@ -36,196 +97,89 @@ export function ShelfGrid({
   materials,
   sessionId,
   visitedCellIds = new Set(),
-  subheaderHeight = 0,
   onLeafTap,
   onEditTap,
   onFlagTap,
-  onEqualizeSelected,
 }: ShelfGridProps) {
-  const [drillStack, setDrillStack] = useState<DrillEntry[]>([])
-  const [selectMode, setSelectMode] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-  const currentDrill = drillStack[drillStack.length - 1] ?? null
-
-  function exitSelect() {
-    setSelectMode(false)
-    setSelectedIds(new Set())
+  function handleLeafTap(cell: Cell) {
+    if (mode === 'edit') onEditTap?.(cell)
+    else onLeafTap?.(cell)
   }
 
-  function toggleSelect(id: string) {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const baseCells = cells.filter(c => c.parent_id === null)
 
-  function confirmEqualize() {
-    if (selectedIds.size >= 2) onEqualizeSelected?.([...selectedIds])
-    exitSelect()
-  }
-
-  function handleCellTap(cell: Cell) {
-    if (isLeaf(cell.id, cells)) {
-      if (mode === 'edit') {
-        onEditTap?.(cell)
-      } else {
-        onLeafTap?.(cell)
-      }
-    } else {
-      const address = currentDrill
-        ? buildSubAddress(currentDrill.cell, cell, currentDrill.address)
-        : getRootAddress(cell)
-      setDrillStack(prev => [...prev, { cell, address }])
+  // Position base cells by row/col so we can find each grid track's max footprint.
+  const cols = shelf.cols_count
+  const rows = shelf.rows_count
+  const byPosition = new Map<string, Cell>()
+  for (const c of baseCells) {
+    if (c.row_index != null && c.col_index != null) {
+      byPosition.set(`${c.row_index}:${c.col_index}`, c)
     }
   }
 
-  function handleFlagTap(cell: Cell) {
-    onFlagTap?.(cell)
-  }
+  // colUnits[c] = max footprint cols of any base cell in column c.
+  const colUnits = Array.from({ length: cols }, (_, ci) => {
+    const col = ci + 1
+    let max = 1
+    for (let r = 1; r <= rows; r++) {
+      const cell = byPosition.get(`${r}:${col}`)
+      if (cell) max = Math.max(max, footprint(cell, cells).cols)
+    }
+    return max
+  })
 
-  function goBack() {
-    exitSelect()
-    setDrillStack(prev => prev.slice(0, -1))
-  }
-
-  const rootCells = cells
-    .filter(c => c.parent_id === null)
-    .sort((a, b) => {
-      if (a.row_index !== b.row_index) return (a.row_index ?? 0) - (b.row_index ?? 0)
-      return (a.col_index ?? 0) - (b.col_index ?? 0)
-    })
-
-  // 2.5 columns visible (half column signals scrollability)
-  // 3.5 rows visible in the available viewport space
-  const overhead = 120 + subheaderHeight // header(56) + bottomnav(64) + any subheader
-  const cellWidth = 'calc(40vw)'
-  const cellHeight = `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5)`
+  // rowUnits[r] = max footprint rows of any base cell in row r.
+  const rowUnits = Array.from({ length: rows }, (_, ri) => {
+    const row = ri + 1
+    let max = 1
+    for (let c = 1; c <= cols; c++) {
+      const cell = byPosition.get(`${row}:${c}`)
+      if (cell) max = Math.max(max, footprint(cell, cells).rows)
+    }
+    return max
+  })
 
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: `repeat(${shelf.cols_count}, ${cellWidth})`,
-    gridTemplateRows: `repeat(${shelf.rows_count}, ${cellHeight})`,
-    gap: '3px',
+    gridTemplateColumns: colUnits.map(u => `${u * LEAF_W}px`).join(' '),
+    gridTemplateRows: rowUnits.map(u => `${u * LEAF_H}px`).join(' '),
+    gap: GAP,
+    padding: GAP,
   }
-
-  const headerLabel = currentDrill
-    ? `← ${currentDrill.address}`
-    : null
 
   return (
     <div className="flex flex-col h-full flex-1 min-h-0">
-      {/* Header breadcrumb */}
-      {currentDrill && (
-        <div
-          className="flex items-center justify-between px-4 border-b flex-shrink-0 gap-2"
-          style={{ height: 48, borderColor: 'var(--border)' }}
-        >
-          {selectMode ? (
-            <>
-              <button
-                onClick={exitSelect}
-                className="text-sm font-medium"
-                style={{ color: 'var(--muted-foreground)' }}
-              >
-                Отмена
-              </button>
-              <span className="text-sm" style={{ color: 'var(--foreground)' }}>
-                Выбрать ячейки для выравнивания · {selectedIds.size}
-              </span>
-              <button
-                onClick={confirmEqualize}
-                disabled={selectedIds.size < 2}
-                className="btn-primary text-xs font-medium rounded-md px-3 disabled:opacity-40"
-                style={{ height: 32 }}
-              >
-                Выровнять
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={goBack}
-                className="flex items-center gap-1"
-                style={{ color: 'var(--primary)' }}
-              >
-                <ChevronLeft size={20} />
-                <span className="text-sm font-medium">{currentDrill.address}</span>
-              </button>
-              {onEqualizeSelected && mode === 'edit' && (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  className="text-xs font-medium rounded-md px-3"
-                  style={{ height: 32, color: 'var(--primary)', border: '1px solid var(--primary)' }}
-                >
-                  Выровнять
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Grid level */}
-      {!currentDrill ? (
-        <div className="flex-1 min-h-0 overflow-auto">
-          <div style={gridStyle}>
-            {rootCells.map(cell => (
-              <CellCard
+      <div className="flex-1 min-h-0 overflow-auto">
+        <div style={gridStyle}>
+          {baseCells.map(cell => {
+            if (cell.row_index == null || cell.col_index == null) return null
+            return (
+              <div
                 key={cell.id}
-                cell={cell}
-                allCells={cells}
-                products={products}
-                materials={materials}
-                mode={mode}
-                sessionId={sessionId}
-                visitedCellIds={visitedCellIds}
-                onTap={handleCellTap}
-                onFlagTap={handleFlagTap}
-              />
-            ))}
-          </div>
+                style={{
+                  gridColumn: cell.col_index,
+                  gridRow: cell.row_index,
+                  minWidth: 0,
+                  minHeight: 0,
+                }}
+              >
+                <Subtree
+                  cell={cell}
+                  allCells={cells}
+                  products={products}
+                  materials={materials}
+                  mode={mode}
+                  sessionId={sessionId}
+                  visitedCellIds={visitedCellIds}
+                  onLeafTap={handleLeafTap}
+                  onFlagTap={c => onFlagTap?.(c)}
+                />
+              </div>
+            )
+          })}
         </div>
-      ) : (
-        <ShelfLevelView
-          parentCell={currentDrill.cell}
-          allCells={cells}
-          products={products}
-          materials={materials}
-          mode={mode}
-          addressPrefix={currentDrill.address}
-          sessionId={sessionId}
-          visitedCellIds={visitedCellIds}
-          selectMode={selectMode}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onLeafTap={cell => {
-            if (mode === 'edit') onEditTap?.(cell)
-            else onLeafTap?.(cell)
-          }}
-          onSplitTap={cell => {
-            const addr = buildSubAddress(currentDrill.cell, cell, currentDrill.address)
-            setDrillStack(prev => [...prev, { cell, address: addr }])
-          }}
-          onFlagTap={handleFlagTap}
-        />
-      )}
-
-      {headerLabel && <span className="sr-only">{headerLabel}</span>}
+      </div>
     </div>
   )
-}
-
-function buildSubAddress(parent: Cell, child: Cell, parentAddress: string): string {
-  if (parent.split_direction === 'V') {
-    const col = child.is_first_child ? 1 : 2
-    return `${parentAddress}(1,${col})`
-  }
-  if (parent.split_direction === 'H') {
-    const row = child.is_first_child ? 1 : 2
-    return `${parentAddress}(${row},1)`
-  }
-  return parentAddress
 }

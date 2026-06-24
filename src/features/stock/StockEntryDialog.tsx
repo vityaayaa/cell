@@ -25,8 +25,9 @@ function buildCellAddress(cell: Cell, allCells: Cell[]): string {
   const parent = allCells.find((c) => c.id === cell.parent_id)
   if (!parent) return '?'
   const parentAddr = buildCellAddress(parent, allCells)
-  if (parent.split_direction === 'V') return `${parentAddr}(1,${cell.is_first_child ? 1 : 2})`
-  if (parent.split_direction === 'H') return `${parentAddr}(${cell.is_first_child ? 1 : 2},1)`
+  const n = (cell.child_index ?? 0) + 1
+  if (parent.split_direction === 'V') return `${parentAddr}(1,${n})`
+  if (parent.split_direction === 'H') return `${parentAddr}(${n},1)`
   return parentAddr
 }
 

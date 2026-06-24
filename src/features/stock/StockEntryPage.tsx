@@ -31,13 +31,12 @@ function buildCellAddress(cell: Cell, allCells: Cell[]): string {
     return `${row}${col}`
   }
   const parentAddr = buildCellAddress(parent, allCells)
+  const n = (cell.child_index ?? 0) + 1
   if (parent.split_direction === 'V') {
-    const col = cell.is_first_child ? 1 : 2
-    return `${parentAddr}(1,${col})`
+    return `${parentAddr}(1,${n})`
   }
   if (parent.split_direction === 'H') {
-    const row = cell.is_first_child ? 1 : 2
-    return `${parentAddr}(${row},1)`
+    return `${parentAddr}(${n},1)`
   }
   return parentAddr
 }

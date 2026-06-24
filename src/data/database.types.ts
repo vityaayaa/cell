@@ -58,14 +58,13 @@ export type Database = {
       cells: {
         Row: {
           capacity_override: number | null
-          split_ratio: number | null
+          child_index: number | null
           col_index: number | null
           computed_height_mm: number
           computed_width_mm: number
           created_at: string
           height_mm: number | null
           id: string
-          is_first_child: boolean | null
           needs_review: boolean
           parent_id: string | null
           product_id: string | null
@@ -80,14 +79,13 @@ export type Database = {
         }
         Insert: {
           capacity_override?: number | null
-          split_ratio?: number | null
+          child_index?: number | null
           col_index?: number | null
           computed_height_mm: number
           computed_width_mm: number
           created_at?: string
           height_mm?: number | null
           id?: string
-          is_first_child?: boolean | null
           needs_review?: boolean
           parent_id?: string | null
           product_id?: string | null
@@ -102,14 +100,13 @@ export type Database = {
         }
         Update: {
           capacity_override?: number | null
-          split_ratio?: number | null
+          child_index?: number | null
           col_index?: number | null
           computed_height_mm?: number
           computed_width_mm?: number
           created_at?: string
           height_mm?: number | null
           id?: string
-          is_first_child?: boolean | null
           needs_review?: boolean
           parent_id?: string | null
           product_id?: string | null

@@ -1,174 +1,99 @@
 import { describe, it, expect } from 'vitest'
 import {
-  computeChildDimensions,
   recomputeDescendants,
   isLeaf,
   getLeafNodes,
   type BspNode,
 } from './bsp'
 
-function makeRoot(w: number, h: number): BspNode {
-  return {
-    id: 'root',
-    parent_id: null,
-    split_direction: null,
-    is_first_child: null,
-    width_mm: w,
-    height_mm: h,
-    computed_width_mm: w,
-    computed_height_mm: h,
-  }
-}
-
-describe('computeChildDimensions', () => {
-  it('V-split of 545×400 gives both children 272×400 (floor split)', () => {
-    const root = makeRoot(545, 400)
-    const left = computeChildDimensions(root, 'V', true)
-    const right = computeChildDimensions(root, 'V', false)
-    expect(left).toEqual({ computed_width_mm: 272, computed_height_mm: 400 })
-    expect(right).toEqual({ computed_width_mm: 272, computed_height_mm: 400 })
-  })
-
-  it('H-split of 545×400 gives both children 545×200', () => {
-    const root = makeRoot(545, 400)
-    const top = computeChildDimensions(root, 'H', true)
-    const bottom = computeChildDimensions(root, 'H', false)
-    expect(top).toEqual({ computed_width_mm: 545, computed_height_mm: 200 })
-    expect(bottom).toEqual({ computed_width_mm: 545, computed_height_mm: 200 })
-  })
-})
-
 describe('recomputeDescendants', () => {
-  it('recalculates all descendants when root dimensions change', () => {
-    // Tree: root 544×400 --V-split--> left, right (both stale 100×100)
+  it('splits a V-node into N equal columns (floored)', () => {
+    // root 545×400 --V-split into 2--> two children of 272×400
     const nodes: BspNode[] = [
-      {
-        id: 'root',
-        parent_id: null,
-        split_direction: 'V',
-        is_first_child: null,
-        width_mm: 544,
-        height_mm: 400,
-        computed_width_mm: 544,
-        computed_height_mm: 400,
-      },
-      {
-        id: 'left',
-        parent_id: 'root',
-        split_direction: null,
-        is_first_child: true,
-        computed_width_mm: 100, // stale — should become 272
-        computed_height_mm: 100, // stale — should become 400
-      },
-      {
-        id: 'right',
-        parent_id: 'root',
-        split_direction: null,
-        is_first_child: false,
-        computed_width_mm: 100, // stale
-        computed_height_mm: 100, // stale
-      },
+      { id: 'root', parent_id: null, split_direction: 'V', child_index: null, computed_width_mm: 545, computed_height_mm: 400 },
+      { id: 'c0', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c1', parent_id: 'root', split_direction: null, child_index: 1, computed_width_mm: 0, computed_height_mm: 0 },
     ]
-
-    const result = recomputeDescendants(nodes)
-    const left = result.find(n => n.id === 'left')!
-    const right = result.find(n => n.id === 'right')!
-
-    expect(left.computed_width_mm).toBe(272)
-    expect(left.computed_height_mm).toBe(400)
-    expect(right.computed_width_mm).toBe(272)
-    expect(right.computed_height_mm).toBe(400)
-  })
-
-  it('handles depth-2 tree: root V-split then right child H-split', () => {
-    // root 545×400 --V-split--> left(272×400), right --H-split--> right_top, right_bottom
-    const nodes: BspNode[] = [
-      {
-        id: 'root',
-        parent_id: null,
-        split_direction: 'V',
-        is_first_child: null,
-        width_mm: 545,
-        height_mm: 400,
-        computed_width_mm: 545,
-        computed_height_mm: 400,
-      },
-      {
-        id: 'left',
-        parent_id: 'root',
-        split_direction: null,
-        is_first_child: true,
-        computed_width_mm: 0,
-        computed_height_mm: 0,
-      },
-      {
-        id: 'right',
-        parent_id: 'root',
-        split_direction: 'H',
-        is_first_child: false,
-        computed_width_mm: 0,
-        computed_height_mm: 0,
-      },
-      {
-        id: 'right_top',
-        parent_id: 'right',
-        split_direction: null,
-        is_first_child: true,
-        computed_width_mm: 0,
-        computed_height_mm: 0,
-      },
-      {
-        id: 'right_bottom',
-        parent_id: 'right',
-        split_direction: null,
-        is_first_child: false,
-        computed_width_mm: 0,
-        computed_height_mm: 0,
-      },
-    ]
-
     const result = recomputeDescendants(nodes)
     const byId = Object.fromEntries(result.map(n => [n.id, n]))
+    expect(byId['c0'].computed_width_mm).toBe(272)
+    expect(byId['c0'].computed_height_mm).toBe(400)
+    expect(byId['c1'].computed_width_mm).toBe(272)
+    expect(byId['c1'].computed_height_mm).toBe(400)
+  })
 
-    expect(byId['left'].computed_width_mm).toBe(272)
-    expect(byId['left'].computed_height_mm).toBe(400)
-    // right = same width as left (V-split), full height
-    expect(byId['right'].computed_width_mm).toBe(272)
-    expect(byId['right'].computed_height_mm).toBe(400)
-    // right_top and right_bottom: H-split of right (272×400)
-    expect(byId['right_top'].computed_width_mm).toBe(272)
-    expect(byId['right_top'].computed_height_mm).toBe(200)
-    expect(byId['right_bottom'].computed_width_mm).toBe(272)
-    expect(byId['right_bottom'].computed_height_mm).toBe(200)
+  it('splits an H-node into 3 equal rows (floored)', () => {
+    // root 600×400 --H-split into 3--> three children of 600×133
+    const nodes: BspNode[] = [
+      { id: 'root', parent_id: null, split_direction: 'H', child_index: null, computed_width_mm: 600, computed_height_mm: 400 },
+      { id: 'c0', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c1', parent_id: 'root', split_direction: null, child_index: 1, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c2', parent_id: 'root', split_direction: null, child_index: 2, computed_width_mm: 0, computed_height_mm: 0 },
+    ]
+    const result = recomputeDescendants(nodes)
+    const byId = Object.fromEntries(result.map(n => [n.id, n]))
+    for (const id of ['c0', 'c1', 'c2']) {
+      expect(byId[id].computed_width_mm).toBe(600)
+      expect(byId[id].computed_height_mm).toBe(133)
+    }
+  })
+
+  it('keeps the whole subtree at 0 when the root size is 0', () => {
+    const nodes: BspNode[] = [
+      { id: 'root', parent_id: null, split_direction: 'V', child_index: null, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c0', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c1', parent_id: 'root', split_direction: null, child_index: 1, computed_width_mm: 0, computed_height_mm: 0 },
+    ]
+    const result = recomputeDescendants(nodes)
+    const byId = Object.fromEntries(result.map(n => [n.id, n]))
+    expect(byId['c0'].computed_width_mm).toBe(0)
+    expect(byId['c1'].computed_height_mm).toBe(0)
+  })
+
+  it('handles depth-2 tree: root V-split (3 cols) then one child H-split (2 rows)', () => {
+    // root 600×400 --V into 3--> each 200×400; c2 --H into 2--> 200×200 each
+    const nodes: BspNode[] = [
+      { id: 'root', parent_id: null, split_direction: 'V', child_index: null, computed_width_mm: 600, computed_height_mm: 400 },
+      { id: 'c0', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c1', parent_id: 'root', split_direction: null, child_index: 1, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c2', parent_id: 'root', split_direction: 'H', child_index: 2, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c2a', parent_id: 'c2', split_direction: null, child_index: 0, computed_width_mm: 0, computed_height_mm: 0 },
+      { id: 'c2b', parent_id: 'c2', split_direction: null, child_index: 1, computed_width_mm: 0, computed_height_mm: 0 },
+    ]
+    const result = recomputeDescendants(nodes)
+    const byId = Object.fromEntries(result.map(n => [n.id, n]))
+    expect(byId['c0'].computed_width_mm).toBe(200)
+    expect(byId['c0'].computed_height_mm).toBe(400)
+    expect(byId['c2'].computed_width_mm).toBe(200)
+    expect(byId['c2'].computed_height_mm).toBe(400)
+    expect(byId['c2a'].computed_width_mm).toBe(200)
+    expect(byId['c2a'].computed_height_mm).toBe(200)
+    expect(byId['c2b'].computed_width_mm).toBe(200)
+    expect(byId['c2b'].computed_height_mm).toBe(200)
   })
 })
 
 describe('isLeaf', () => {
+  const nodes: BspNode[] = [
+    { id: 'root', parent_id: null, split_direction: 'V', child_index: null, computed_width_mm: 545, computed_height_mm: 400 },
+    { id: 'child', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 272, computed_height_mm: 400 },
+  ]
   it('returns false for a node that has children', () => {
-    const nodes: BspNode[] = [
-      { ...makeRoot(545, 400), id: 'root', split_direction: 'V' },
-      { id: 'child', parent_id: 'root', split_direction: null, is_first_child: true, computed_width_mm: 272, computed_height_mm: 400 },
-    ]
     expect(isLeaf('root', nodes)).toBe(false)
   })
-
   it('returns true for a node with no children', () => {
-    const nodes: BspNode[] = [
-      { ...makeRoot(545, 400), id: 'root', split_direction: 'V' },
-      { id: 'child', parent_id: 'root', split_direction: null, is_first_child: true, computed_width_mm: 272, computed_height_mm: 400 },
-    ]
     expect(isLeaf('child', nodes)).toBe(true)
   })
 })
 
 describe('getLeafNodes', () => {
-  it('returns all 3 leaf nodes from a depth-2 tree', () => {
+  it('returns all leaf nodes from a depth-2 tree', () => {
     const nodes: BspNode[] = [
-      { id: 'root', parent_id: null, split_direction: 'V', is_first_child: null, width_mm: 545, height_mm: 400, computed_width_mm: 545, computed_height_mm: 400 },
-      { id: 'left', parent_id: 'root', split_direction: null, is_first_child: true, computed_width_mm: 272, computed_height_mm: 400 },
-      { id: 'right', parent_id: 'root', split_direction: 'H', is_first_child: false, computed_width_mm: 272, computed_height_mm: 400 },
-      { id: 'right_top', parent_id: 'right', split_direction: null, is_first_child: true, computed_width_mm: 272, computed_height_mm: 200 },
-      { id: 'right_bottom', parent_id: 'right', split_direction: null, is_first_child: false, computed_width_mm: 272, computed_height_mm: 200 },
+      { id: 'root', parent_id: null, split_direction: 'V', child_index: null, computed_width_mm: 600, computed_height_mm: 400 },
+      { id: 'left', parent_id: 'root', split_direction: null, child_index: 0, computed_width_mm: 300, computed_height_mm: 400 },
+      { id: 'right', parent_id: 'root', split_direction: 'H', child_index: 1, computed_width_mm: 300, computed_height_mm: 400 },
+      { id: 'right_top', parent_id: 'right', split_direction: null, child_index: 0, computed_width_mm: 300, computed_height_mm: 200 },
+      { id: 'right_bottom', parent_id: 'right', split_direction: null, child_index: 1, computed_width_mm: 300, computed_height_mm: 200 },
     ]
     const leaves = getLeafNodes(nodes)
     expect(leaves).toHaveLength(3)

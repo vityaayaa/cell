@@ -59,3 +59,18 @@ db.version(2).stores({
 db.version(3).stores({
   sessions: '&id, user_id, status, updated_at, started_at',
 })
+
+// v4 — flat shelf model (N-ary equal splits via child_index; dropped
+// is_first_child / split_ratio). Purge shelf-dependent caches so stale rows
+// from the old binary model don't linger; they re-sync from Supabase.
+db.version(4).upgrade(async (tx) => {
+  await Promise.all([
+    tx.table('cells').clear(),
+    tx.table('shelves').clear(),
+    tx.table('stock_entries').clear(),
+    tx.table('sessions').clear(),
+    tx.table('orders').clear(),
+    tx.table('order_lines').clear(),
+    tx.table('checklist_entries').clear(),
+  ])
+})
