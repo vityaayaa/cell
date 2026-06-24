@@ -58,6 +58,7 @@ export type Database = {
       cells: {
         Row: {
           capacity_override: number | null
+          split_ratio: number | null
           col_index: number | null
           computed_height_mm: number
           computed_width_mm: number
@@ -79,6 +80,7 @@ export type Database = {
         }
         Insert: {
           capacity_override?: number | null
+          split_ratio?: number | null
           col_index?: number | null
           computed_height_mm: number
           computed_width_mm: number
@@ -100,6 +102,7 @@ export type Database = {
         }
         Update: {
           capacity_override?: number | null
+          split_ratio?: number | null
           col_index?: number | null
           computed_height_mm?: number
           computed_width_mm?: number

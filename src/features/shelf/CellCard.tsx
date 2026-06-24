@@ -139,12 +139,14 @@ function SplitMini({ cell, allCells }: { cell: Cell; allCells: Cell[] }) {
   }
 
   const isV = cell.split_direction === 'V'
+  const r = children[0].split_ratio
+  const f = r == null || isNaN(r) ? 0.5 : Math.min(0.92, Math.max(0.08, r))
   return (
     <div
       style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', width: '100%', height: '100%' }}
     >
-      {children.map(ch => (
-        <div key={ch.id} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      {children.map((ch, i) => (
+        <div key={ch.id} style={{ flexGrow: i === 0 ? f : 1 - f, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
           <SplitMini cell={ch} allCells={allCells} />
         </div>
       ))}

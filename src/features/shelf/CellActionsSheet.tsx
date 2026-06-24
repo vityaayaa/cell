@@ -66,6 +66,7 @@ async function splitCell(cell: Cell, direction: 'H' | 'V') {
     computed_height_mm: dims1.computed_height_mm,
     product_id: null,
     capacity_override: null,
+    split_ratio: null,
     rotation_allowed: true,
     needs_review: false,
     created_at: now,

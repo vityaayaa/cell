@@ -41,6 +41,7 @@ export function ShelfSetupPage() {
             computed_height_mm: 0,
             product_id: null,
             capacity_override: null,
+            split_ratio: null,
             rotation_allowed: true,
             needs_review: false,
             created_at: now,

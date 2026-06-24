@@ -18,18 +18,6 @@ interface ShelfLevelViewProps {
   onFlagTap: (cell: Cell) => void
 }
 
-// Base = the size of a normal shelf cell (~viewport / 3.5 rows, like the main grid).
-// Each horizontal split halves the height, floored at half the base. Vertical
-// splits keep the height and divide the width equally. Scrolls when tall.
-function baseHeight(): number {
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 760
-  return Math.max(120, Math.round((vh - 168) / 3.5))
-}
-
-function leafHeight(hDepth: number, base: number): number {
-  return Math.max(Math.round(base / 2), Math.round(base / 2 ** Math.max(0, hDepth - 1)))
-}
-
 function sortChildren(children: Cell[]): Cell[] {
   return [...children].sort((a, b) => {
     if (a.is_first_child && !b.is_first_child) return -1
@@ -38,7 +26,13 @@ function sortChildren(children: Cell[]): Cell[] {
   })
 }
 
-/** Leaf ids in reading order (top→bottom, left→right) for sequential numbering. */
+/** Visual fraction of the first child (0..1); defaults to half. */
+function firstFraction(firstChild: Cell): number {
+  const r = firstChild.split_ratio
+  if (r == null || isNaN(r)) return 0.5
+  return Math.min(0.92, Math.max(0.08, r))
+}
+
 function leafOrder(cell: Cell, allCells: Cell[]): string[] {
   const children = sortChildren(allCells.filter(c => c.parent_id === cell.id))
   if (children.length === 0) return [cell.id]
@@ -47,8 +41,6 @@ function leafOrder(cell: Cell, allCells: Cell[]): string[] {
 
 interface NodeProps {
   cell: Cell
-  hDepth: number
-  base: number
   numberById: Map<string, number>
   allCells: Cell[]
   products: Product[]
@@ -64,38 +56,36 @@ interface NodeProps {
 }
 
 function Node(props: NodeProps) {
-  const { cell, hDepth, base, numberById, allCells, mode } = props
+  const { cell, allCells } = props
   const children = sortChildren(allCells.filter(c => c.parent_id === cell.id))
 
   if (children.length === 0) {
     return (
-      <div style={{ height: leafHeight(hDepth, base), width: '100%' }}>
-        <CellCard
-          cell={cell}
-          allCells={allCells}
-          products={props.products}
-          materials={props.materials}
-          mode={mode}
-          address={`№${numberById.get(cell.id) ?? ''}`}
-          dense
-          selected={props.selectMode && props.selectedIds?.has(cell.id)}
-          sessionId={props.sessionId}
-          visitedCellIds={props.visitedCellIds}
-          onTap={props.selectMode ? () => props.onToggleSelect?.(cell.id) : props.onLeafTap}
-          onFlagTap={props.onFlagTap}
-        />
-      </div>
+      <CellCard
+        cell={cell}
+        allCells={allCells}
+        products={props.products}
+        materials={props.materials}
+        mode={props.mode}
+        address={`№${props.numberById.get(cell.id) ?? ''}`}
+        dense
+        selected={props.selectMode && props.selectedIds?.has(cell.id)}
+        sessionId={props.sessionId}
+        visitedCellIds={props.visitedCellIds}
+        onTap={props.selectMode ? () => props.onToggleSelect?.(cell.id) : props.onLeafTap}
+        onFlagTap={props.onFlagTap}
+      />
     )
   }
 
   const isV = cell.split_direction === 'V'
-  const childDepth = hDepth + (isV ? 0 : 1)
+  const f = firstFraction(children[0])
 
   return (
-    <div style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', gap: 3, width: '100%' }}>
-      {children.map(child => (
-        <div key={child.id} style={isV ? { flex: 1, minWidth: 0 } : { width: '100%' }}>
-          <Node {...props} cell={child} hDepth={childDepth} />
+    <div style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', gap: 3, width: '100%', height: '100%' }}>
+      {children.map((child, i) => (
+        <div key={child.id} style={{ flexGrow: i === 0 ? f : 1 - f, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+          <Node {...props} cell={child} />
         </div>
       ))}
     </div>
@@ -119,29 +109,32 @@ export function ShelfLevelView({
   const hasChildren = allCells.some(c => c.parent_id === parentCell.id)
   if (!hasChildren) return null
 
-  const base = baseHeight()
   const order = leafOrder(parentCell, allCells)
   const numberById = new Map(order.map((id, i) => [id, i + 1]))
 
+  // Readable scale: tall enough that cells aren't squished; scrolls if needed.
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 760
+  const treeHeight = Math.max(vh - 220, order.length * 64)
+
   return (
     <div className="flex-1 min-h-0 overflow-auto p-3">
-      <Node
-        cell={parentCell}
-        hDepth={0}
-        base={base}
-        numberById={numberById}
-        allCells={allCells}
-        products={products}
-        materials={materials}
-        mode={mode}
-        sessionId={sessionId}
-        visitedCellIds={visitedCellIds}
-        selectMode={selectMode}
-        selectedIds={selectedIds}
-        onToggleSelect={onToggleSelect}
-        onLeafTap={onLeafTap}
-        onFlagTap={onFlagTap}
-      />
+      <div style={{ width: '100%', height: treeHeight }}>
+        <Node
+          cell={parentCell}
+          numberById={numberById}
+          allCells={allCells}
+          products={products}
+          materials={materials}
+          mode={mode}
+          sessionId={sessionId}
+          visitedCellIds={visitedCellIds}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
+          onLeafTap={onLeafTap}
+          onFlagTap={onFlagTap}
+        />
+      </div>
     </div>
   )
 }

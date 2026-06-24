@@ -11,8 +11,6 @@ import { Button } from '@/components/ui/button'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
-import { recomputeDescendants } from '@/domain/bsp'
-import type { BspNode } from '@/domain/bsp'
 import { subscribeToTable } from '@/data/sync'
 import { useRegisterHeaderAction } from '@/app/HeaderActionContext'
 import { useShelfData } from './useShelfData'
@@ -74,6 +72,7 @@ export default function ShelfConfigPage() {
       computed_height_mm: 0,
       product_id: null as null,
       capacity_override: null as null,
+      split_ratio: null as null,
       rotation_allowed: true,
       needs_review: false,
       created_at: now,
@@ -115,6 +114,7 @@ export default function ShelfConfigPage() {
       computed_height_mm: 0,
       product_id: null as null,
       capacity_override: null as null,
+      split_ratio: null as null,
       rotation_allowed: true,
       needs_review: false,
       created_at: now,
@@ -166,82 +166,12 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
-  async function handleEqualize(drillCell: Cell) {
-    function countLeaves(cellId: string): number {
-      const ch = cells.filter(c => c.parent_id === cellId)
-      if (ch.length === 0) return 1
-      return ch.reduce((sum, c) => sum + countLeaves(c.id), 0)
-    }
-
-    const overrides = new Map<string, { width_mm?: number; height_mm?: number }>()
-
-    function processNode(cell: Cell, availW: number, availH: number) {
-      const ch = cells.filter(c => c.parent_id === cell.id)
-      if (ch.length < 2) return
-      const first = ch.find(c => c.is_first_child)!
-      const second = ch.find(c => !c.is_first_child)!
-      const firstLeaves = countLeaves(first.id)
-      const total = firstLeaves + countLeaves(second.id)
-      if (cell.split_direction === 'V') {
-        const firstW = Math.floor((firstLeaves / total) * availW)
-        overrides.set(first.id, { width_mm: firstW })
-        processNode(first, firstW, availH)
-        processNode(second, availW - firstW, availH)
-      } else if (cell.split_direction === 'H') {
-        const firstH = Math.floor((firstLeaves / total) * availH)
-        overrides.set(first.id, { height_mm: firstH })
-        processNode(first, availW, firstH)
-        processNode(second, availW, availH - firstH)
-      }
-    }
-
-    processNode(drillCell, drillCell.computed_width_mm, drillCell.computed_height_mm)
-    if (overrides.size === 0) return
-
-    function getDescendants(cellId: string): Cell[] {
-      const ch = cells.filter(c => c.parent_id === cellId)
-      return [...ch, ...ch.flatMap(c => getDescendants(c.id))]
-    }
-
-    const subtreeCells = [drillCell, ...getDescendants(drillCell.id)]
-    const subtreeWithOverrides = subtreeCells.map(c => {
-      const ov = overrides.get(c.id)
-      return ov ? { ...c, ...ov } : c
-    })
-
-    const nodes: BspNode[] = subtreeWithOverrides.map(c => ({
-      id: c.id,
-      parent_id: c.parent_id,
-      split_direction: c.split_direction,
-      is_first_child: c.is_first_child,
-      width_mm: c.width_mm,
-      height_mm: c.height_mm,
-      computed_width_mm: c.computed_width_mm,
-      computed_height_mm: c.computed_height_mm,
-    }))
-
-    const recomputed = recomputeDescendants(nodes)
-    const now = new Date().toISOString()
-    const toSave: Cell[] = recomputed.map(node => {
-      const orig = subtreeCells.find(c => c.id === node.id)!
-      const ov = overrides.get(node.id)
-      return { ...orig, ...(ov ?? {}), computed_width_mm: node.computed_width_mm, computed_height_mm: node.computed_height_mm, updated_at: now }
-    })
-
-    await db.cells.bulkPut(toSave)
-    const { error } = await supabase.from('cells').upsert(toSave)
-    if (error) {
-      await db.cells.bulkPut(subtreeCells)
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
-      return
-    }
-    toast.success('Ячейки выровнены')
-  }
-
-  // Equalize the cells the user picked: equalize the smallest subtree that
-  // contains all of them (their lowest common ancestor).
-  function handleEqualizeSelected(ids: string[]) {
+  // Equalize the picked cells visually: in the smallest subtree containing all
+  // of them (their lowest common ancestor), set each split's ratio by leaf count
+  // so every leaf becomes an equal fraction. Pure visual — does not touch mm.
+  async function handleEqualizeSelected(ids: string[]) {
     if (ids.length < 2) return
+
     const chain = (id: string): string[] => {
       const out: string[] = []
       let cur: Cell | undefined = cells.find(c => c.id === id)
@@ -253,8 +183,36 @@ export default function ShelfConfigPage() {
     }
     const chains = ids.map(chain)
     const lcaId = chains[0].find(cid => chains.every(ch => ch.includes(cid)))
-    const lcaCell = lcaId ? cells.find(c => c.id === lcaId) : undefined
-    if (lcaCell) handleEqualize(lcaCell)
+    if (!lcaId) return
+
+    const countLeaves = (cellId: string): number => {
+      const ch = cells.filter(c => c.parent_id === cellId)
+      return ch.length === 0 ? 1 : ch.reduce((s, c) => s + countLeaves(c.id), 0)
+    }
+    const subtree = (cellId: string): Cell[] => {
+      const ch = cells.filter(c => c.parent_id === cellId)
+      const self = cells.find(c => c.id === cellId)
+      return [...(self ? [self] : []), ...ch.flatMap(c => subtree(c.id))]
+    }
+
+    const now = new Date().toISOString()
+    const updates: Cell[] = []
+    for (const node of subtree(lcaId)) {
+      const ch = cells.filter(c => c.parent_id === node.id)
+      if (ch.length < 2) continue
+      const first = ch.find(c => c.is_first_child) ?? ch[0]
+      const ratio = countLeaves(first.id) / countLeaves(node.id)
+      updates.push({ ...first, split_ratio: ratio, updated_at: now })
+    }
+    if (updates.length === 0) return
+
+    await db.cells.bulkPut(updates)
+    const { error } = await supabase.from('cells').upsert(updates)
+    if (error) {
+      toast.error('Не сохранилось. Попробуйте ещё раз.')
+      return
+    }
+    toast.success('Выровнено')
   }
 
   return (
