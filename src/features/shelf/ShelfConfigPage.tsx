@@ -166,12 +166,18 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
-  // Equalize the picked cells visually: in the smallest subtree containing all
-  // of them (their lowest common ancestor), set each split's ratio by leaf count
-  // so every leaf becomes an equal fraction. Pure visual — does not touch mm.
+  // Equalize STRICTLY the picked cells: they split their combined space equally,
+  // every other cell keeps its current size. Purely visual (split_ratio), no mm.
   async function handleEqualizeSelected(ids: string[]) {
     if (ids.length < 2) return
 
+    const childrenOf = (id: string) => cells.filter(c => c.parent_id === id)
+    const ratioOf = (c: Cell) => {
+      const r = c.split_ratio
+      return r == null || isNaN(r) ? 0.5 : r
+    }
+
+    // Lowest common ancestor of the picked cells.
     const chain = (id: string): string[] => {
       const out: string[] = []
       let cur: Cell | undefined = cells.find(c => c.id === id)
@@ -185,26 +191,53 @@ export default function ShelfConfigPage() {
     const lcaId = chains[0].find(cid => chains.every(ch => ch.includes(cid)))
     if (!lcaId) return
 
-    const countLeaves = (cellId: string): number => {
-      const ch = cells.filter(c => c.parent_id === cellId)
-      return ch.length === 0 ? 1 : ch.reduce((s, c) => s + countLeaves(c.id), 0)
+    // Current area-fraction of every leaf under the LCA (product of split ratios).
+    const frac = new Map<string, number>()
+    const assign = (id: string, f: number) => {
+      const ch = childrenOf(id)
+      if (ch.length < 2) { frac.set(id, f); return }
+      const first = ch.find(c => c.is_first_child) ?? ch[0]
+      const second = ch.find(c => c.id !== first.id) ?? ch[1]
+      const rf = ratioOf(first)
+      assign(first.id, f * rf)
+      assign(second.id, f * (1 - rf))
     }
-    const subtree = (cellId: string): Cell[] => {
-      const ch = cells.filter(c => c.parent_id === cellId)
-      const self = cells.find(c => c.id === cellId)
-      return [...(self ? [self] : []), ...ch.flatMap(c => subtree(c.id))]
+    assign(lcaId, 1)
+
+    // Picked cells get the average of their current fractions (so they end up
+    // equal and their combined area is unchanged); everyone else keeps theirs.
+    const selected = ids.filter(id => frac.has(id))
+    if (selected.length < 2) return
+    const sumSel = selected.reduce((s, id) => s + frac.get(id)!, 0)
+    const equalShare = sumSel / selected.length
+    const selectedSet = new Set(selected)
+    const weight = new Map<string, number>()
+    frac.forEach((f, id) => weight.set(id, selectedSet.has(id) ? equalShare : f))
+
+    const nodeWeight = (id: string): number => {
+      const ch = childrenOf(id)
+      if (ch.length < 2) return weight.get(id) ?? 0
+      return ch.reduce((s, c) => s + nodeWeight(c.id), 0)
+    }
+    const allNodes = (id: string): string[] => {
+      const ch = childrenOf(id)
+      return [id, ...ch.flatMap(c => allNodes(c.id))]
     }
 
+    // Rewrite each split's ratio from the new weights.
     const now = new Date().toISOString()
     const updates: Cell[] = []
-    for (const node of subtree(lcaId)) {
-      const ch = cells.filter(c => c.parent_id === node.id)
+    for (const nid of allNodes(lcaId)) {
+      const ch = childrenOf(nid)
       if (ch.length < 2) continue
       const first = ch.find(c => c.is_first_child) ?? ch[0]
-      const ratio = countLeaves(first.id) / countLeaves(node.id)
-      updates.push({ ...first, split_ratio: ratio, updated_at: now })
+      const total = nodeWeight(nid)
+      if (total <= 0) continue
+      const newRatio = nodeWeight(first.id) / total
+      if (Math.abs(newRatio - ratioOf(first)) < 1e-6) continue
+      updates.push({ ...first, split_ratio: newRatio, updated_at: now })
     }
-    if (updates.length === 0) return
+    if (updates.length === 0) { toast.success('Уже выровнено'); return }
 
     await db.cells.bulkPut(updates)
     const { error } = await supabase.from('cells').upsert(updates)

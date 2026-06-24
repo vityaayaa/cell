@@ -39,6 +39,17 @@ function leafOrder(cell: Cell, allCells: Cell[]): string[] {
   return children.flatMap(c => leafOrder(c, allCells))
 }
 
+/** How many cells the subtree resolves to across (cols) and down (rows). */
+function footprint(cell: Cell, allCells: Cell[]): { cols: number; rows: number } {
+  const children = allCells.filter(c => c.parent_id === cell.id)
+  if (children.length === 0) return { cols: 1, rows: 1 }
+  const fs = children.map(c => footprint(c, allCells))
+  if (cell.split_direction === 'V') {
+    return { cols: fs.reduce((s, f) => s + f.cols, 0), rows: Math.max(...fs.map(f => f.rows)) }
+  }
+  return { cols: Math.max(...fs.map(f => f.cols)), rows: fs.reduce((s, f) => s + f.rows, 0) }
+}
+
 interface NodeProps {
   cell: Cell
   numberById: Map<string, number>
@@ -112,11 +123,15 @@ export function ShelfLevelView({
   const order = leafOrder(parentCell, allCells)
   const numberById = new Map(order.map((id, i) => [id, i + 1]))
 
-  // Fill the screen: the whole subtree fits the available space, keeping its
-  // proportions — no scrolling. Deep layouts get smaller cells, never overflow.
+  // Fits the screen while it's sparse; once it gets dense (more than 3 across
+  // or 4 down) it scrolls instead of shrinking cells to nothing.
+  const { cols, rows } = footprint(parentCell, allCells)
+  const innerWidth = cols > 3 ? `${(cols / 3) * 100}%` : '100%'
+  const innerHeight = rows > 4 ? `${(rows / 4) * 100}%` : '100%'
+
   return (
-    <div className="flex-1 min-h-0 p-3">
-      <div style={{ width: '100%', height: '100%' }}>
+    <div className="flex-1 min-h-0 overflow-auto p-3">
+      <div style={{ width: innerWidth, height: innerHeight }}>
         <Node
           cell={parentCell}
           numberById={numberById}
