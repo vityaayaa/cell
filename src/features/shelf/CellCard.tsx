@@ -10,7 +10,6 @@ import {
   hexToRgba,
   getProductDisplayName,
   getMaterialForProduct,
-  getLeafMaterials,
   countVisitedLeaves,
 } from './cellUtils'
 
@@ -123,6 +122,34 @@ function DateLabel({
   )
 }
 
+/** Faint mini-diagram of how a cell is split inside (shown on the main grid). */
+function SplitMini({ cell, allCells }: { cell: Cell; allCells: Cell[] }) {
+  const children = allCells
+    .filter(c => c.parent_id === cell.id)
+    .sort((a, b) => (a.is_first_child === b.is_first_child ? 0 : a.is_first_child ? -1 : 1))
+
+  if (children.length === 0) {
+    return (
+      <div
+        style={{ flex: 1, minWidth: 0, minHeight: 0, borderRadius: 2, border: '1px solid rgba(148,163,184,0.4)' }}
+      />
+    )
+  }
+
+  const isV = cell.split_direction === 'V'
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', width: '100%', height: '100%', gap: 2 }}
+    >
+      {children.map(ch => (
+        <div key={ch.id} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+          <SplitMini cell={ch} allCells={allCells} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function CellCard({
   cell,
   allCells,
@@ -170,6 +197,42 @@ export function CellCard({
     ? 'var(--muted)'
     : 'var(--card)'
 
+  const leafLabel = product
+    ? getProductDisplayName(product)
+    : mode === 'edit'
+      ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0 ? 'Назначьте товар' : 'Задайте размеры')
+      : '—'
+
+  // Compact card for the proportional drill view — content centered, number
+  // top-left, flags top-right.
+  if (leaf && dense) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onTap(cell)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
+        className="rounded-lg border w-full h-full cursor-pointer overflow-hidden relative flex items-center justify-center"
+        style={{ background: bgColor, borderColor: 'var(--border)', padding: 6 }}
+      >
+        {displayAddress && (
+          <span className="absolute" style={{ top: 4, left: 6, fontSize: 11, color: 'var(--muted-foreground)' }}>
+            {displayAddress}
+          </span>
+        )}
+        <div className="absolute" style={{ top: 2, right: 2 }}>
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
+        </div>
+        <span
+          className="font-medium text-center px-1 leading-tight"
+          style={{ fontSize: 12, color: product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
+        >
+          {leafLabel}
+        </span>
+      </div>
+    )
+  }
+
   if (leaf) {
     return (
       <div
@@ -177,54 +240,34 @@ export function CellCard({
         tabIndex={0}
         onClick={() => onTap(cell)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
-        className="rounded-lg border flex flex-col justify-between w-full h-full text-left cursor-pointer overflow-hidden"
-        style={{
-          background: bgColor,
-          borderColor: 'var(--border)',
-          minHeight: dense ? 0 : 72,
-          padding: dense ? 6 : 8,
-        }}
+        className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer"
+        style={{ background: bgColor, borderColor: 'var(--border)', minHeight: 72 }}
       >
         <div className="flex items-start justify-between gap-1">
-          {!dense && (
-            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-              {displayAddress}
-            </span>
-          )}
-          {dense && <span />}
+          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+            {displayAddress}
+          </span>
           <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
         </div>
 
         <span
-          className="font-medium text-center block px-1 leading-tight"
-          style={{
-            color: product ? 'var(--foreground)' : 'var(--muted-foreground)',
-            fontSize: dense ? 12 : 14,
-          }}
+          className="text-sm font-medium text-center block px-1 leading-tight"
+          style={{ color: product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
         >
-          {product
-            ? getProductDisplayName(product)
-            : mode === 'edit'
-              ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0
-                  ? 'Назначьте товар'
-                  : 'Задайте размеры')
-              : '—'}
+          {leafLabel}
         </span>
 
-        {dense ? <span /> : (
-          <DateLabel
-            cell={cell}
-            sessionId={sessionId}
-            visitedCellIds={visitedCellIds}
-            lastEntryDate={lastEntryDate}
-          />
-        )}
+        <DateLabel
+          cell={cell}
+          sessionId={sessionId}
+          visitedCellIds={visitedCellIds}
+          lastEntryDate={lastEntryDate}
+        />
       </div>
     )
   }
 
   // Splitted cell
-  const leafMaterials = getLeafMaterials(cell, allCells, products, materials)
   const progress = sessionId && visitedCellIds
     ? countVisitedLeaves(cell, allCells, visitedCellIds)
     : null
@@ -249,26 +292,8 @@ export function CellCard({
         <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
       </div>
 
-      <div className="flex flex-col gap-0.5 overflow-hidden">
-        {leafMaterials.slice(0, 3).map(({ product: p, material: m }) => (
-          <div key={p.id} className="flex items-center gap-1 min-w-0">
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ background: m.color }}
-            />
-            <span
-              className="text-xs truncate"
-              style={{ color: 'var(--foreground)' }}
-            >
-              {getProductDisplayName(p)}
-            </span>
-          </div>
-        ))}
-        {leafMaterials.length > 3 && (
-          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-            ещё {leafMaterials.length - 3}...
-          </span>
-        )}
+      <div className="flex-1 my-1" style={{ minHeight: 0 }}>
+        <SplitMini cell={cell} allCells={allCells} />
       </div>
 
       <div className="flex items-center justify-between">
