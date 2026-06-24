@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { Cell, Material, Product } from '@/data/db'
 import { CellCard } from './CellCard'
 
@@ -117,21 +118,37 @@ export function ShelfLevelView({
   onLeafTap,
   onFlagTap,
 }: ShelfLevelViewProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => setBox({ w: el.clientWidth, h: el.clientHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const hasChildren = allCells.some(c => c.parent_id === parentCell.id)
   if (!hasChildren) return null
 
   const order = leafOrder(parentCell, allCells)
   const numberById = new Map(order.map((id, i) => [id, i + 1]))
 
-  // Fits the screen while it's sparse; once it gets dense (more than 3 across
-  // or 4 down) it scrolls instead of shrinking cells to nothing.
+  // Measure the real drill area, then size the tree in pixels. Fits the screen
+  // while sparse; past 3 cells across / 4 down it grows and scrolls on that axis
+  // so cells stay readable. Pixels avoid relying on parent height being definite.
+  const PAD = 12
   const { cols, rows } = footprint(parentCell, allCells)
-  const innerWidth = cols > 3 ? `${(cols / 3) * 100}%` : '100%'
-  const innerHeight = rows > 4 ? `${(rows / 4) * 100}%` : '100%'
+  const availW = box ? box.w - PAD * 2 : 0
+  const availH = box ? box.h - PAD * 2 : 0
+  const treeWidth = !box ? '100%' : cols > 3 ? (cols / 3) * availW : availW
+  const treeHeight = !box ? '100%' : rows > 4 ? (rows / 4) * availH : availH
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto p-3">
-      <div style={{ width: innerWidth, height: innerHeight }}>
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto" style={{ padding: PAD }}>
+      <div style={{ width: treeWidth, height: treeHeight }}>
         <Node
           cell={parentCell}
           numberById={numberById}
