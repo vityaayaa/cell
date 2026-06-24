@@ -238,6 +238,25 @@ export default function ShelfConfigPage() {
     toast.success('Ячейки выровнены')
   }
 
+  // Equalize the cells the user picked: equalize the smallest subtree that
+  // contains all of them (their lowest common ancestor).
+  function handleEqualizeSelected(ids: string[]) {
+    if (ids.length < 2) return
+    const chain = (id: string): string[] => {
+      const out: string[] = []
+      let cur: Cell | undefined = cells.find(c => c.id === id)
+      while (cur) {
+        out.push(cur.id)
+        cur = cells.find(c => c.id === cur!.parent_id)
+      }
+      return out
+    }
+    const chains = ids.map(chain)
+    const lcaId = chains[0].find(cid => chains.every(ch => ch.includes(cid)))
+    const lcaCell = lcaId ? cells.find(c => c.id === lcaId) : undefined
+    if (lcaCell) handleEqualize(lcaCell)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <ShelfGrid
@@ -250,7 +269,7 @@ export default function ShelfConfigPage() {
         onFlagTap={cell => {
           if (cell.needs_review) setReviewCell(cell)
         }}
-        onEqualize={handleEqualize}
+        onEqualizeSelected={handleEqualizeSelected}
       />
 
       {/* Cell actions sheet */}

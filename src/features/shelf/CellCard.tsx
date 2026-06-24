@@ -25,6 +25,8 @@ export interface CellCardProps {
   lastEntryDate?: string | null
   /** Compact rendering for the proportional drill view (no min height / date). */
   dense?: boolean
+  /** Selected state for the "equalize selected" mode. */
+  selected?: boolean
   onTap: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
 }
@@ -131,7 +133,7 @@ function SplitMini({ cell, allCells }: { cell: Cell; allCells: Cell[] }) {
   if (children.length === 0) {
     return (
       <div
-        style={{ flex: 1, minWidth: 0, minHeight: 0, borderRadius: 2, border: '1px solid rgba(148,163,184,0.4)' }}
+        style={{ flex: 1, minWidth: 0, minHeight: 0, border: '1px solid rgba(148,163,184,0.18)' }}
       />
     )
   }
@@ -161,6 +163,7 @@ export function CellCard({
   visitedCellIds,
   lastEntryDate,
   dense = false,
+  selected = false,
   onTap,
   onFlagTap,
 }: CellCardProps) {
@@ -213,7 +216,12 @@ export function CellCard({
         onClick={() => onTap(cell)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
         className="rounded-lg border w-full h-full cursor-pointer overflow-hidden relative flex items-center justify-center"
-        style={{ background: bgColor, borderColor: 'var(--border)', padding: 6 }}
+        style={{
+          background: bgColor,
+          borderColor: 'var(--border)',
+          padding: 6,
+          boxShadow: selected ? 'inset 0 0 0 2px var(--primary)' : undefined,
+        }}
       >
         {displayAddress && (
           <span className="absolute" style={{ top: 4, left: 6, fontSize: 11, color: 'var(--muted-foreground)' }}>
@@ -278,33 +286,36 @@ export function CellCard({
       tabIndex={0}
       onClick={() => onTap(cell)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
-      className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer"
+      className="rounded-lg border p-2 w-full h-full text-left cursor-pointer relative overflow-hidden"
       style={{
         background: 'var(--card)',
         borderColor: 'var(--border)',
         minHeight: 72,
       }}
     >
-      <div className="flex items-start justify-between gap-1">
-        <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-          {displayAddress}
-        </span>
-        <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
-      </div>
-
-      <div className="flex-1 my-1" style={{ minHeight: 0 }}>
+      {/* Faint "x-ray" of how this cell is divided inside */}
+      <div className="absolute" style={{ inset: 8 }}>
         <SplitMini cell={cell} allCells={allCells} />
       </div>
 
-      <div className="flex items-center justify-between">
-        {progress != null ? (
+      {/* Overlaid label / flags / progress */}
+      <div className="relative flex flex-col justify-between h-full" style={{ pointerEvents: 'none' }}>
+        <div className="flex items-start justify-between gap-1">
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-            {progress.visited} из {progress.total} ✓
+            {displayAddress}
           </span>
-        ) : (
-          <span />
-        )}
-        <ChevronRight size={16} style={{ color: 'var(--muted-foreground)' }} />
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
+        </div>
+        <div className="flex items-center justify-between">
+          {progress != null ? (
+            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+              {progress.visited} из {progress.total} ✓
+            </span>
+          ) : (
+            <span />
+          )}
+          <ChevronRight size={16} style={{ color: 'var(--muted-foreground)' }} />
+        </div>
       </div>
     </div>
   )

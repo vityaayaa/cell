@@ -10,6 +10,9 @@ interface ShelfLevelViewProps {
   addressPrefix: string
   sessionId?: string
   visitedCellIds?: Set<string>
+  selectMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string) => void
   onLeafTap: (cell: Cell) => void
   onSplitTap: (cell: Cell) => void
   onFlagTap: (cell: Cell) => void
@@ -53,6 +56,9 @@ interface NodeProps {
   mode: 'edit' | 'view'
   sessionId?: string
   visitedCellIds?: Set<string>
+  selectMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string) => void
   onLeafTap: (cell: Cell) => void
   onFlagTap: (cell: Cell) => void
 }
@@ -72,9 +78,10 @@ function Node(props: NodeProps) {
           mode={mode}
           address={`№${numberById.get(cell.id) ?? ''}`}
           dense
+          selected={props.selectMode && props.selectedIds?.has(cell.id)}
           sessionId={props.sessionId}
           visitedCellIds={props.visitedCellIds}
-          onTap={props.onLeafTap}
+          onTap={props.selectMode ? () => props.onToggleSelect?.(cell.id) : props.onLeafTap}
           onFlagTap={props.onFlagTap}
         />
       </div>
@@ -103,6 +110,9 @@ export function ShelfLevelView({
   mode,
   sessionId,
   visitedCellIds,
+  selectMode,
+  selectedIds,
+  onToggleSelect,
   onLeafTap,
   onFlagTap,
 }: ShelfLevelViewProps) {
@@ -126,6 +136,9 @@ export function ShelfLevelView({
         mode={mode}
         sessionId={sessionId}
         visitedCellIds={visitedCellIds}
+        selectMode={selectMode}
+        selectedIds={selectedIds}
+        onToggleSelect={onToggleSelect}
         onLeafTap={onLeafTap}
         onFlagTap={onFlagTap}
       />

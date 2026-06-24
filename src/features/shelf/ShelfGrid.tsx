@@ -19,7 +19,8 @@ export interface ShelfGridProps {
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
-  onEqualize?: (cell: Cell) => void
+  /** Equalize the chosen sub-cells (the user picks them in the drill view). */
+  onEqualizeSelected?: (cellIds: string[]) => void
 }
 
 interface DrillEntry {
@@ -39,11 +40,32 @@ export function ShelfGrid({
   onLeafTap,
   onEditTap,
   onFlagTap,
-  onEqualize,
+  onEqualizeSelected,
 }: ShelfGridProps) {
   const [drillStack, setDrillStack] = useState<DrillEntry[]>([])
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const currentDrill = drillStack[drillStack.length - 1] ?? null
+
+  function exitSelect() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function confirmEqualize() {
+    if (selectedIds.size >= 2) onEqualizeSelected?.([...selectedIds])
+    exitSelect()
+  }
 
   function handleCellTap(cell: Cell) {
     if (isLeaf(cell.id, cells)) {
@@ -65,6 +87,7 @@ export function ShelfGrid({
   }
 
   function goBack() {
+    exitSelect()
     setDrillStack(prev => prev.slice(0, -1))
   }
 
@@ -97,25 +120,50 @@ export function ShelfGrid({
       {/* Header breadcrumb */}
       {currentDrill && (
         <div
-          className="flex items-center justify-between px-4 border-b flex-shrink-0"
+          className="flex items-center justify-between px-4 border-b flex-shrink-0 gap-2"
           style={{ height: 48, borderColor: 'var(--border)' }}
         >
-          <button
-            onClick={goBack}
-            className="flex items-center gap-1"
-            style={{ color: 'var(--primary)' }}
-          >
-            <ChevronLeft size={20} />
-            <span className="text-sm font-medium">{currentDrill.address}</span>
-          </button>
-          {onEqualize && mode === 'edit' && (
-            <button
-              onClick={() => onEqualize(currentDrill.cell)}
-              className="text-xs font-medium rounded-md px-3"
-              style={{ height: 32, color: 'var(--primary)', border: '1px solid var(--primary)' }}
-            >
-              Выровнять
-            </button>
+          {selectMode ? (
+            <>
+              <button
+                onClick={exitSelect}
+                className="text-sm font-medium"
+                style={{ color: 'var(--muted-foreground)' }}
+              >
+                Отмена
+              </button>
+              <span className="text-sm" style={{ color: 'var(--foreground)' }}>
+                Выбрать ячейки для выравнивания · {selectedIds.size}
+              </span>
+              <button
+                onClick={confirmEqualize}
+                disabled={selectedIds.size < 2}
+                className="btn-primary text-xs font-medium rounded-md px-3 disabled:opacity-40"
+                style={{ height: 32 }}
+              >
+                Выровнять
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={goBack}
+                className="flex items-center gap-1"
+                style={{ color: 'var(--primary)' }}
+              >
+                <ChevronLeft size={20} />
+                <span className="text-sm font-medium">{currentDrill.address}</span>
+              </button>
+              {onEqualizeSelected && mode === 'edit' && (
+                <button
+                  onClick={() => setSelectMode(true)}
+                  className="text-xs font-medium rounded-md px-3"
+                  style={{ height: 32, color: 'var(--primary)', border: '1px solid var(--primary)' }}
+                >
+                  Выровнять
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -150,6 +198,9 @@ export function ShelfGrid({
           addressPrefix={currentDrill.address}
           sessionId={sessionId}
           visitedCellIds={visitedCellIds}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
           onLeafTap={cell => {
             if (mode === 'edit') onEditTap?.(cell)
             else onLeafTap?.(cell)
