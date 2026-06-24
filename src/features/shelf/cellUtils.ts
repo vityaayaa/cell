@@ -18,10 +18,13 @@ export function hexToRgba(hex: string, alpha: number): string {
 
 export function getProductDisplayName(product: Product): string {
   if (product.type === 'unit') {
-    return `${product.name} ${product.width_mm}×${product.height_mm}×${product.length_mm}`
+    return `${product.name} ${product.height_mm}×${product.width_mm}×${product.length_mm}`
   }
   if (product.type === 'round') {
     return `${product.name} ⌀${product.diameter_mm}×${product.length_mm}`
+  }
+  if (product.type === 'bulk' && product.width_mm && product.height_mm && product.length_mm) {
+    return `${product.name} ${product.height_mm}×${product.width_mm}×${product.length_mm}`
   }
   return product.name
 }

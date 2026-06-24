@@ -19,8 +19,9 @@ import {
 } from '@/components/ui/dialog'
 
 function getProductDisplayName(p: Product): string {
-  if (p.type === 'unit') return `${p.name} ${p.width_mm}×${p.height_mm}×${p.length_mm}`
+  if (p.type === 'unit') return `${p.name} ${p.height_mm}×${p.width_mm}×${p.length_mm}`
   if (p.type === 'round') return `${p.name} ⌀${p.diameter_mm}×${p.length_mm}`
+  if (p.type === 'bulk' && p.width_mm && p.height_mm && p.length_mm) return `${p.name} ${p.height_mm}×${p.width_mm}×${p.length_mm}`
   return p.name
 }
 

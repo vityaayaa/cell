@@ -109,9 +109,9 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       type: form.type,
       material_id: form.material_id,
       pack_size: toInt(form.pack_size) ?? 1,
-      width_mm: form.type === 'unit' ? toInt(form.width_mm) : null,
-      height_mm: form.type === 'unit' ? toInt(form.height_mm) : null,
-      length_mm: (form.type === 'unit' || form.type === 'round') ? toInt(form.length_mm) : null,
+      width_mm: (form.type === 'unit' || form.type === 'bulk') ? toInt(form.width_mm) : null,
+      height_mm: (form.type === 'unit' || form.type === 'bulk') ? toInt(form.height_mm) : null,
+      length_mm: (form.type === 'unit' || form.type === 'round' || form.type === 'bulk') ? toInt(form.length_mm) : null,
       diameter_mm: form.type === 'round' ? toInt(form.diameter_mm) : null,
       created_at: product?.created_at ?? now,
       updated_at: now,
@@ -252,21 +252,21 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
             <p className="ui-hint">Оставьте пустым, если товар поштучно</p>
           </div>
 
-          {/* Unit fields */}
-          {form.type === 'unit' && (
+          {/* Unit / bulk dimensions */}
+          {(form.type === 'unit' || form.type === 'bulk') && (
             <div className="flex flex-col gap-2">
               <p className="ui-section-title">
-                Размеры сечения и длина
+                {form.type === 'unit' ? 'Размеры сечения и длина' : 'Размеры и длина (необязательно)'}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {[
+                  { key: 'height_mm', label: 'Высота, мм', placeholder: '40' },
                   { key: 'width_mm', label: 'Ширина, мм', placeholder: '50' },
-                  { key: 'height_mm', label: 'Высота, мм', placeholder: '50' },
                   { key: 'length_mm', label: 'Длина, мм', placeholder: '3000' },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key} className="flex flex-col gap-1">
                     <label className="ui-field-label">
-                      {label} <span style={{ color: '#EF4444' }}>*</span>
+                      {label}{form.type === 'unit' && <span style={{ color: '#EF4444' }}> *</span>}
                     </label>
                     <input
                       type="number"

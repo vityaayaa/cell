@@ -56,13 +56,27 @@ export function CellSettingsSheet({
     if (!cell) return
     setOverrideInput(cell.capacity_override != null ? String(cell.capacity_override) : '')
     setRotationAllowed(cell.rotation_allowed)
-    setWidthInput(cell.width_mm != null ? String(cell.width_mm) : '')
-    setHeightInput(cell.height_mm != null ? String(cell.height_mm) : '')
+    if (cell.parent_id === null) {
+      setWidthInput(cell.width_mm != null ? String(cell.width_mm) : '')
+      setHeightInput(cell.height_mm != null ? String(cell.height_mm) : '')
+    } else {
+      // sub-cell: show its current computed sizes
+      setWidthInput(cell.computed_width_mm ? String(cell.computed_width_mm) : '')
+      setHeightInput(cell.computed_height_mm ? String(cell.computed_height_mm) : '')
+    }
   }, [cell])
 
   if (!cell) return null
 
   const isRoot = cell.parent_id === null
+  const parent = isRoot ? null : (allCells.find(c => c.id === cell.parent_id) ?? null)
+  const parentSplit = parent?.split_direction ?? null
+  // A sub-cell can only be resized along its parent's split axis; the other
+  // side is inherited from the parent (V-split → width is free, H-split → height).
+  const editableAxis: 'width' | 'height' | null = isRoot
+    ? null
+    : parentSplit === 'V' ? 'width' : parentSplit === 'H' ? 'height' : null
+  const showDims = isRoot || editableAxis !== null
   const product = products.find(p => p.id === cell.product_id)
   const showRotation =
     product?.type === 'unit' &&
@@ -137,6 +151,71 @@ export function CellSettingsSheet({
           await db.transaction('rw', [db.cells], async () => {
             await db.cells.bulkPut(updatedCells)
           })
+          const { error } = await supabase.from('cells').upsert(updatedCells)
+          if (error) throw error
+        } catch {
+          toast.error('Не сохранилось. Попробуйте ещё раз.')
+        } finally {
+          setSaving(false)
+          onClose()
+        }
+        return
+      }
+    }
+
+    // Sub-cell resize along the parent's split axis → adjust the first child's
+    // override and recompute the parent's subtree (so the sibling/children follow).
+    if (!isRoot && parent && parentSplit && editableAxis) {
+      const valStr = editableAxis === 'width' ? widthInput : heightInput
+      const val = parseInt(valStr)
+      const currentDim = editableAxis === 'width' ? cell.computed_width_mm : cell.computed_height_mm
+      const parentDim = editableAxis === 'width' ? parent.computed_width_mm : parent.computed_height_mm
+
+      if (!isNaN(val) && val > 0 && val < parentDim && val !== currentDim) {
+        const siblings = allCells.filter(c => c.parent_id === parent.id)
+        const firstChild = siblings.find(c => c.is_first_child) ?? siblings[0]
+        const firstSize = cell.is_first_child ? val : Math.max(1, parentDim - val)
+
+        const subtreeCells = allCells.filter(c => {
+          let cur: Cell | undefined = c
+          while (cur) {
+            if (cur.id === parent.id) return true
+            cur = allCells.find(x => x.id === cur!.parent_id)
+          }
+          return false
+        })
+
+        const nodes: BspNode[] = subtreeCells.map(c => {
+          const node = cellToBspNode(c)
+          if (c.id === firstChild.id) {
+            if (editableAxis === 'width') node.width_mm = firstSize
+            else node.height_mm = firstSize
+          }
+          return node
+        })
+
+        const recomputed = recomputeDescendants(nodes)
+        const updatedCells: Cell[] = recomputed.map(node => {
+          const orig = allCells.find(c => c.id === node.id)!
+          const next: Cell = {
+            ...orig,
+            computed_width_mm: node.computed_width_mm,
+            computed_height_mm: node.computed_height_mm,
+            updated_at: now,
+          }
+          if (node.id === firstChild.id) {
+            if (editableAxis === 'width') next.width_mm = firstSize
+            else next.height_mm = firstSize
+          }
+          if (node.id === cell.id) {
+            next.capacity_override = updates.capacity_override ?? null
+            next.rotation_allowed = updates.rotation_allowed ?? true
+          }
+          return next
+        })
+
+        try {
+          await db.cells.bulkPut(updatedCells)
           const { error } = await supabase.from('cells').upsert(updatedCells)
           if (error) throw error
         } catch {
@@ -234,19 +313,8 @@ export function CellSettingsSheet({
           >
             <p className="ui-section-title">Размеры ячейки</p>
 
-            {isRoot && (
+            {showDims && (
               <div className="flex gap-3">
-                <div className="flex-1 flex flex-col gap-1">
-                  <Label htmlFor="width" className="ui-field-label">Ширина, мм</Label>
-                  <Input
-                    id="width"
-                    type="text"
-                    inputMode="numeric"
-                    value={widthInput}
-                    onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="text-base"
-                  />
-                </div>
                 <div className="flex-1 flex flex-col gap-1">
                   <Label htmlFor="height" className="ui-field-label">Высота, мм</Label>
                   <Input
@@ -254,11 +322,31 @@ export function CellSettingsSheet({
                     type="text"
                     inputMode="numeric"
                     value={heightInput}
+                    disabled={!isRoot && editableAxis !== 'height'}
                     onChange={e => setHeightInput(e.target.value.replace(/[^0-9]/g, ''))}
                     className="text-base"
+                    style={!isRoot && editableAxis !== 'height' ? { opacity: 0.55 } : undefined}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1">
+                  <Label htmlFor="width" className="ui-field-label">Ширина, мм</Label>
+                  <Input
+                    id="width"
+                    type="text"
+                    inputMode="numeric"
+                    value={widthInput}
+                    disabled={!isRoot && editableAxis !== 'width'}
+                    onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="text-base"
+                    style={!isRoot && editableAxis !== 'width' ? { opacity: 0.55 } : undefined}
                   />
                 </div>
               </div>
+            )}
+            {!isRoot && editableAxis && (
+              <p className="ui-hint">
+                Меняется только сторона вдоль разделения; вторая наследуется от родителя.
+              </p>
             )}
 
             {calculatedCapacity != null && (
@@ -314,7 +402,7 @@ export function CellSettingsSheet({
               id="override"
               type="text"
               inputMode="numeric"
-              placeholder={isPackUnit ? 'число пачек' : 'оставьте пустым — посчитает приложение'}
+              placeholder={isPackUnit ? 'число пачек' : 'по желанию'}
               value={overrideInput}
               onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
               className="text-base"
