@@ -112,13 +112,11 @@ export function ShelfLevelView({
   const order = leafOrder(parentCell, allCells)
   const numberById = new Map(order.map((id, i) => [id, i + 1]))
 
-  // Readable scale: tall enough that cells aren't squished; scrolls if needed.
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 760
-  const treeHeight = Math.max(vh - 220, order.length * 64)
-
+  // Fill the screen: the whole subtree fits the available space, keeping its
+  // proportions — no scrolling. Deep layouts get smaller cells, never overflow.
   return (
-    <div className="flex-1 min-h-0 overflow-auto p-3">
-      <div style={{ width: '100%', height: treeHeight }}>
+    <div className="flex-1 min-h-0 p-3">
+      <div style={{ width: '100%', height: '100%' }}>
         <Node
           cell={parentCell}
           numberById={numberById}

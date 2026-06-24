@@ -226,7 +226,7 @@ export function CellCard({
         }}
       >
         {displayAddress && (
-          <span className="absolute" style={{ top: 4, left: 6, fontSize: 11, color: 'var(--muted-foreground)' }}>
+          <span className="absolute" style={{ top: 4, left: 6, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
             {displayAddress}
           </span>
         )}
@@ -254,7 +254,7 @@ export function CellCard({
         style={{ background: bgColor, borderColor: 'var(--border)', minHeight: 72 }}
       >
         <div className="flex items-start justify-between gap-1">
-          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
             {displayAddress}
           </span>
           <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
@@ -303,7 +303,7 @@ export function CellCard({
       {/* Overlaid label / flags / progress */}
       <div className="relative flex flex-col justify-between h-full" style={{ pointerEvents: 'none' }}>
         <div className="flex items-start justify-between gap-1">
-          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
             {displayAddress}
           </span>
           <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} />
