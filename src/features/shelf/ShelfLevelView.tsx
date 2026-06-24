@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef, useState } from 'react'
 import type { Cell, Material, Product } from '@/data/db'
 import { CellCard } from './CellCard'
 
@@ -118,36 +117,28 @@ export function ShelfLevelView({
   onLeafTap,
   onFlagTap,
 }: ShelfLevelViewProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [box, setBox] = useState<{ w: number; h: number } | null>(null)
-  useLayoutEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const update = () => setBox({ w: el.clientWidth, h: el.clientHeight })
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
   const hasChildren = allCells.some(c => c.parent_id === parentCell.id)
   if (!hasChildren) return null
 
   const order = leafOrder(parentCell, allCells)
   const numberById = new Map(order.map((id, i) => [id, i + 1]))
 
-  // Measure the real drill area, then size the tree in pixels. Fits the screen
-  // while sparse; past 3 cells across / 4 down it grows and scrolls on that axis
-  // so cells stay readable. Pixels avoid relying on parent height being definite.
-  const PAD = 12
+  // Size the tree in pixels off the viewport (reliable across the app's layout).
+  // Fills the screen until the layout passes 3 cells across or 4 down, then grows
+  // past the edge and scrolls on that axis so cells stay readable.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 393
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 760
+  const availW = vw - 26
+  const availH = vh - 220
   const { cols, rows } = footprint(parentCell, allCells)
-  const availW = box ? box.w - PAD * 2 : 0
-  const availH = box ? box.h - PAD * 2 : 0
-  const treeWidth = !box ? '100%' : cols > 3 ? (cols / 3) * availW : availW
-  const treeHeight = !box ? '100%' : rows > 4 ? (rows / 4) * availH : availH
+  const treeWidth = cols > 3 ? Math.round((cols / 3) * availW) : availW
+  const treeHeight = rows > 4 ? Math.round((rows / 4) * availH) : availH
 
   return (
-    <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto" style={{ padding: PAD }}>
+    <div
+      className="flex-1 min-h-0 p-3"
+      style={{ overflowX: cols > 3 ? 'auto' : 'hidden', overflowY: rows > 4 ? 'auto' : 'hidden' }}
+    >
       <div style={{ width: treeWidth, height: treeHeight }}>
         <Node
           cell={parentCell}
