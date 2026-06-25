@@ -50,10 +50,12 @@ export function BulkFillMeter({
   percent,
   onChange,
   capacity,
+  height = 260,
 }: {
   percent: number
   onChange: (p: number) => void
   capacity: number
+  height?: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -77,7 +79,7 @@ export function BulkFillMeter({
   const pack = capacity > 0 ? Math.round((percent / 100) * capacity) : 0
 
   return (
-    <div className="flex gap-4 items-stretch" style={{ height: 260 }}>
+    <div className="flex gap-4 items-stretch" style={{ height }}>
       {/* Vertical tick labels */}
       <div
         className="flex flex-col justify-between text-xs py-1 flex-shrink-0"

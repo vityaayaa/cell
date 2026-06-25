@@ -18,6 +18,8 @@ export interface ShelfGridProps {
   visitedCellIds?: Set<string>
   /** Extra px taken up by subheaders above the grid (progress bar, sweep bar, etc.) */
   subheaderHeight?: number
+  /** Outline this leaf (e.g. the cell the sweep is currently on). */
+  highlightCellId?: string
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
@@ -48,6 +50,7 @@ interface SubtreeProps {
   visitedCellIds?: Set<string>
   /** True when rendering compartments inside a grouped base cell. */
   bare?: boolean
+  highlightCellId?: string
   onLeafTap: (cell: Cell) => void
   onFlagTap: (cell: Cell) => void
 }
@@ -68,6 +71,7 @@ function Subtree(props: SubtreeProps) {
         sessionId={props.sessionId}
         visitedCellIds={props.visitedCellIds}
         bare={props.bare}
+        highlighted={props.highlightCellId != null && cell.id === props.highlightCellId}
         onTap={props.onLeafTap}
         onFlagTap={props.onFlagTap}
       />
@@ -103,6 +107,7 @@ export function ShelfGrid({
   sessionId,
   visitedCellIds = new Set(),
   subheaderHeight = 0,
+  highlightCellId,
   onLeafTap,
   onEditTap,
   onFlagTap,
@@ -174,6 +179,7 @@ export function ShelfGrid({
                 sessionId={sessionId}
                 visitedCellIds={visitedCellIds}
                 bare={subdivided}
+                highlightCellId={highlightCellId}
                 onLeafTap={handleLeafTap}
                 onFlagTap={c => onFlagTap?.(c)}
               />

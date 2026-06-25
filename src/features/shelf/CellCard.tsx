@@ -24,6 +24,8 @@ export interface CellCardProps {
   lastEntryDate?: string | null
   /** Compartment inside a grouped base cell: lighter chrome, no address label. */
   bare?: boolean
+  /** Outline this cell with the accent (e.g. the sweep's current cell). */
+  highlighted?: boolean
   onTap: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
 }
@@ -132,6 +134,7 @@ export function CellCard({
   visitedCellIds,
   lastEntryDate,
   bare = false,
+  highlighted = false,
   onTap,
   onFlagTap,
 }: CellCardProps) {
@@ -179,7 +182,11 @@ export function CellCard({
       onClick={() => onTap(cell)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
       className={`${bare ? 'rounded-md' : 'rounded-lg'} border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer overflow-hidden`}
-      style={{ background: bgColor, borderColor: bare ? 'rgba(148,163,184,0.25)' : 'var(--border)' }}
+      style={{
+        background: bgColor,
+        borderColor: bare ? 'rgba(148,163,184,0.25)' : 'var(--border)',
+        boxShadow: highlighted ? 'inset 0 0 0 2px var(--primary)' : undefined,
+      }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>

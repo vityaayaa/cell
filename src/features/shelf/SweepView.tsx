@@ -132,7 +132,7 @@ export function SweepView({
         onOpen={() => setRadarOpen(true)}
       />
 
-      <div className="flex-1 min-h-0 overflow-auto flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {currentCell && (
           <CurrentCellCard
             cell={currentCell}
@@ -219,6 +219,7 @@ export function SweepView({
               materials={materials}
               sessionId={sessionId}
               visitedCellIds={visitedCellIds}
+              highlightCellId={currentCell?.id}
               onLeafTap={(cell) => {
                 setCurrentCellId(cell.id)
                 setRadarOpen(false)
@@ -327,7 +328,7 @@ function RadarStrip({
       onClick={onOpen}
       aria-label="Открыть карту стеллажа"
       className="w-full flex-shrink-0 border-b px-3 py-2 relative"
-      style={{ height: 150, borderColor: 'var(--border)', background: 'var(--background)' }}
+      style={{ height: 124, borderColor: 'var(--border)', background: 'var(--background)' }}
     >
       <div
         className="w-full h-full rounded-md p-2"
@@ -538,7 +539,7 @@ function InputZone({
   return (
     <div className="px-4 pt-4 pb-4 mt-auto">
       {isBulk ? (
-        <BulkFillMeter percent={bulkPercent} onChange={setBulkPercent} capacity={capacity} />
+        <BulkFillMeter percent={bulkPercent} onChange={setBulkPercent} capacity={capacity} height={200} />
       ) : (
         <div className="flex flex-col gap-2">
           <div
