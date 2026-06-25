@@ -8,8 +8,9 @@ import { getRootAddress } from './cellUtils'
 // cell multiplies this by how many отсеков it spans, so отсеки stay this big and
 // the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
-/** Invisible padding around the zoomable canvas so pan limits sit far away. */
-const ZOOM_PAD = 800
+/** Small margin around the zoomable canvas: you can pan a bit past the shelf
+ *  edges but not slide it off into the void. */
+const ZOOM_PAD = 140
 
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
