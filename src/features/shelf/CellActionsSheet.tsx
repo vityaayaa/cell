@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
+import { Input } from '@/components/ui/input'
+import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
 import type { Cell, Product, Material } from '@/data/db'
 
 function getProductParts(p: Product): { name: string; dims: string | null } {
@@ -163,6 +165,9 @@ export function CellActionsSheet({
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [splitDir, setSplitDir] = useState<'H' | 'V' | null>(null)
   const [splitCount, setSplitCount] = useState(2)
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [pickerMaterialId, setPickerMaterialId] = useState<string | null>(null)
+  const [pickerSort, setPickerSort] = useState<SortMode>('alpha-asc')
 
   if (!cell) return null
 
@@ -172,6 +177,19 @@ export function CellActionsSheet({
   const currentProduct = products.find(p => p.id === cell.product_id)
   const assignedProductIds = new Set(
     allCells.map(c => c.product_id).filter((id): id is string => id != null),
+  )
+
+  // Product picker: same material/sort bar as everywhere + a name search.
+  const materialMap = new Map(materials.map(m => [m.id, m]))
+  const pickerProducts = sortByMode(
+    products.filter(p => {
+      if (pickerMaterialId && p.material_id !== pickerMaterialId) return false
+      const q = pickerSearch.trim().toLowerCase()
+      return q === '' || p.name.toLowerCase().includes(q)
+    }),
+    p => p,
+    materialMap,
+    pickerSort,
   )
 
   // Parent context: if this leaf is a child of a split, we can collapse it.
@@ -290,7 +308,7 @@ export function CellActionsSheet({
               <button
                 className="w-full flex items-center gap-3 rounded-md border text-sm font-medium"
                 style={{ height: 56, paddingLeft: 16, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
-                onClick={() => setShowProductList(true)}
+                onClick={() => { setPickerSearch(''); setShowProductList(true) }}
                 disabled={!!loadingAction}
               >
                 <Package size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
@@ -426,12 +444,32 @@ export function CellActionsSheet({
 
       {/* Product picker */}
       <Dialog open={showProductList} onOpenChange={v => !v && setShowProductList(false)}>
-        <DialogContent preventOutsideClose>
-          <DialogHeader>
+        <DialogContent preventOutsideClose className="p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4">
             <DialogTitle>Выбрать товар</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto">
-            {products.map(p => {
+
+          <div className="px-4 pt-2 pb-1">
+            <Input
+              type="text"
+              inputMode="search"
+              placeholder="Поиск по названию"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              className="text-base"
+            />
+          </div>
+
+          <ProductSortBar
+            materials={materials}
+            materialId={pickerMaterialId}
+            sortMode={pickerSort}
+            onMaterialId={setPickerMaterialId}
+            onSortMode={setPickerSort}
+          />
+
+          <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto px-4 py-3">
+            {pickerProducts.map(p => {
               const { name, dims } = getProductParts(p)
               const material = materials.find(m => m.id === p.material_id)
               const inShelf = assignedProductIds.has(p.id)
@@ -460,6 +498,11 @@ export function CellActionsSheet({
             {products.length === 0 && (
               <p className="text-sm text-center py-4" style={{ color: 'var(--muted-foreground)' }}>
                 Каталог пуст. Добавьте товары в разделе Каталог.
+              </p>
+            )}
+            {products.length > 0 && pickerProducts.length === 0 && (
+              <p className="text-sm text-center py-4" style={{ color: 'var(--muted-foreground)' }}>
+                Ничего не найдено.
               </p>
             )}
           </div>
