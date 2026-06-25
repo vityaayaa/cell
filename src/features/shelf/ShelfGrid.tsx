@@ -8,6 +8,8 @@ import { getRootAddress } from './cellUtils'
 // cell multiplies this by how many отсеков it spans, so отсеки stay this big and
 // the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
+/** Invisible padding around the zoomable canvas so pan limits sit far away. */
+const ZOOM_PAD = 800
 
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
@@ -220,9 +222,11 @@ export function ShelfGrid({
         <div className="flex-1 min-h-0 overflow-hidden">
           <TransformWrapper
             initialScale={1}
+            initialPositionX={-ZOOM_PAD}
+            initialPositionY={-ZOOM_PAD}
             minScale={0.12}
             maxScale={3}
-            limitToBounds={false}
+            limitToBounds
             centerZoomedOut={false}
             centerOnInit={false}
             doubleClick={{ disabled: true }}
@@ -230,7 +234,9 @@ export function ShelfGrid({
             wheel={{ step: 0.06 }}
           >
             <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
-              {gridInner}
+              {/* Big invisible padding pushes the pan limits far from the shelf,
+                  so panning feels free nearby but the canvas can't be lost. */}
+              <div style={{ padding: ZOOM_PAD }}>{gridInner}</div>
             </TransformComponent>
           </TransformWrapper>
         </div>
