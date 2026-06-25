@@ -241,7 +241,7 @@ export function CellSettingsSheet({
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent preventOutsideClose showCloseButton>
         <DialogHeader>
-          <div className="flex items-center justify-between gap-2" style={{ paddingRight: 28 }}>
+          <div className="flex items-center gap-5" style={{ paddingRight: 36 }}>
             <DialogTitle>Настройки {address}</DialogTitle>
             {showRotation && (
               <button

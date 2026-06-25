@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import type { Cell, Product, Material } from '@/data/db'
 
 function getProductParts(p: Product): { name: string; dims: string | null } {
-  if (p.type === 'unit') return { name: p.name, dims: `${p.width_mm}×${p.height_mm}×${p.length_mm}` }
+  if (p.type === 'unit') return { name: p.name, dims: `${p.height_mm}×${p.width_mm}×${p.length_mm}` }
   if (p.type === 'round') return { name: p.name, dims: `⌀${p.diameter_mm}×${p.length_mm}` }
   return { name: p.name, dims: null }
 }
