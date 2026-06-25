@@ -222,7 +222,8 @@ export function ShelfGrid({
             initialScale={1}
             minScale={0.12}
             maxScale={3}
-            limitToBounds
+            limitToBounds={false}
+            centerZoomedOut={false}
             centerOnInit={false}
             doubleClick={{ disabled: true }}
             panning={{ velocityDisabled: true }}
