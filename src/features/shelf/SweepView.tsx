@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
@@ -21,11 +21,10 @@ import {
 import { saveStockEntry } from '@/features/stock/saveStockEntry'
 import { ShelfGrid } from './ShelfGrid'
 import { SweepProgressBar } from './SweepProgressBar'
-import { buildSweepOrder, getBaseAncestor } from './sweepOrder'
+import { buildSweepOrder } from './sweepOrder'
 import {
   getProductDisplayName,
   getMaterialForProduct,
-  countVisitedLeaves,
 } from './cellUtils'
 
 interface SweepViewProps {
@@ -228,6 +227,56 @@ export function SweepView({
   )
 }
 
+function miniSort(children: Cell[]): Cell[] {
+  return [...children].sort((a, b) => (a.child_index ?? 0) - (b.child_index ?? 0))
+}
+
+/** Tiny faithful render of a base cell's subtree for the radar (no text). */
+function MiniNode({
+  cell,
+  cells,
+  currentId,
+  visitedCellIds,
+}: {
+  cell: Cell
+  cells: Cell[]
+  currentId: string | null
+  visitedCellIds: Set<string>
+}) {
+  const children = miniSort(cells.filter((c) => c.parent_id === cell.id))
+  if (children.length === 0) {
+    const isCurrent = cell.id === currentId
+    const isVisited = visitedCellIds.has(cell.id)
+    const bg = isCurrent
+      ? 'var(--primary)'
+      : isVisited
+        ? 'rgba(16,185,129,0.55)'
+        : 'rgba(148,163,184,0.3)'
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          background: bg,
+          borderRadius: 1.5,
+          outline: isCurrent ? '1.5px solid var(--primary)' : undefined,
+          outlineOffset: isCurrent ? 1 : undefined,
+        }}
+      />
+    )
+  }
+  const isV = cell.split_direction === 'V'
+  return (
+    <div style={{ display: 'flex', flexDirection: isV ? 'row' : 'column', gap: 1, width: '100%', height: '100%' }}>
+      {children.map((ch) => (
+        <div key={ch.id} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+          <MiniNode cell={ch} cells={cells} currentId={currentId} visitedCellIds={visitedCellIds} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RadarStrip({
   shelf,
   cells,
@@ -241,7 +290,6 @@ function RadarStrip({
   visitedCellIds: Set<string>
   onOpen: () => void
 }) {
-  const currentBase = currentCell ? getBaseAncestor(currentCell, cells) : undefined
   const baseCells = cells.filter((c) => c.parent_id === null)
   const byPos = new Map<string, Cell>()
   for (const c of baseCells) {
@@ -249,49 +297,42 @@ function RadarStrip({
       byPos.set(`${c.row_index}:${c.col_index}`, c)
     }
   }
+  const currentId = currentCell?.id ?? null
 
   return (
     <button
       onClick={onOpen}
       aria-label="Открыть карту стеллажа"
-      className="w-full flex-shrink-0 border-b px-3 py-2 flex items-center justify-center overflow-hidden"
-      style={{ height: 72, borderColor: 'var(--border)', background: 'var(--background)' }}
+      className="w-full flex-shrink-0 border-b px-3 py-2 relative"
+      style={{ height: 96, borderColor: 'var(--border)', background: 'var(--background)' }}
     >
       <div
-        className="grid gap-[3px] h-full"
-        style={{
-          gridTemplateColumns: `repeat(${shelf.cols_count}, 1fr)`,
-          gridTemplateRows: `repeat(${shelf.rows_count}, 1fr)`,
-        }}
+        className="w-full h-full rounded-md p-1.5"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
-        {Array.from({ length: shelf.rows_count }).flatMap((_, ri) =>
-          Array.from({ length: shelf.cols_count }).map((__, ci) => {
-            const cell = byPos.get(`${ri + 1}:${ci + 1}`)
-            const isCurrent = cell && currentBase && cell.id === currentBase.id
-            let bg = 'var(--muted)'
-            if (cell) {
-              const { visited, total } = countVisitedLeaves(cell, cells, visitedCellIds)
-              const fullyVisited = total > 0 && visited === total
-              if (isCurrent) bg = 'var(--primary)'
-              else if (fullyVisited) bg = 'rgba(16,185,129,0.45)'
-              else bg = 'rgba(148,163,184,0.35)'
-            } else {
-              bg = 'transparent'
-            }
-            return (
-              <div
-                key={`${ri}:${ci}`}
-                style={{
-                  background: bg,
-                  borderRadius: 3,
-                  width: 14,
-                  outline: isCurrent ? '2px solid var(--primary)' : undefined,
-                }}
-              />
-            )
-          }),
-        )}
+        <div
+          className="grid w-full h-full"
+          style={{
+            gap: 3,
+            gridTemplateColumns: `repeat(${shelf.cols_count}, 1fr)`,
+            gridTemplateRows: `repeat(${shelf.rows_count}, 1fr)`,
+          }}
+        >
+          {Array.from({ length: shelf.rows_count }).flatMap((_, ri) =>
+            Array.from({ length: shelf.cols_count }).map((__, ci) => {
+              const c = byPos.get(`${ri + 1}:${ci + 1}`)
+              return (
+                <div key={`${ri}:${ci}`} style={{ minWidth: 0, minHeight: 0 }}>
+                  {c ? (
+                    <MiniNode cell={c} cells={cells} currentId={currentId} visitedCellIds={visitedCellIds} />
+                  ) : null}
+                </div>
+              )
+            }),
+          )}
+        </div>
       </div>
+      <Maximize2 size={13} className="absolute" style={{ top: 6, right: 6, color: 'var(--muted-foreground)' }} />
     </button>
   )
 }
@@ -358,10 +399,7 @@ function CurrentCellCard({
             </span>
           </div>
 
-          {/* Reserved space for a future product icon. */}
-          <div style={{ height: 8 }} />
-
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-2">
             {material && (
               <span
                 className="inline-block rounded-full flex-shrink-0"
@@ -463,37 +501,47 @@ function InputZone({
       {isBulk ? (
         <BulkFillMeter percent={bulkPercent} onChange={setBulkPercent} capacity={capacity} />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <div
-            className="rounded-lg flex items-center justify-center"
+            className="rounded-lg flex items-center justify-center gap-1"
             style={{
-              height: 72,
+              height: 58,
               background: 'var(--card)',
               border: `1px solid ${isOverCapacity ? 'var(--destructive)' : 'var(--border)'}`,
             }}
           >
-            <span className="font-bold" style={{ fontSize: 40, color: 'var(--foreground)' }}>
-              {unitValue}
-            </span>
-            <span className="text-lg ml-2" style={{ color: 'var(--muted-foreground)' }}>шт</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              aria-label="Количество, шт"
+              placeholder="0"
+              value={unitValue === 0 ? '' : String(unitValue)}
+              onChange={(e) => {
+                const n = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10)
+                setUnitValue(isNaN(n) ? 0 : n)
+              }}
+              className="text-center font-bold bg-transparent outline-none"
+              style={{ fontSize: 30, width: '5ch', color: 'var(--foreground)' }}
+            />
+            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>шт</span>
           </div>
           {isOverCapacity && (
-            <p className="text-sm text-center" style={{ color: 'var(--destructive)' }}>
+            <p className="text-xs text-center" style={{ color: 'var(--destructive)' }}>
               Больше вместимости ({capacity} шт)
             </p>
           )}
           <div className="flex gap-2">
-            <button className={bumpBtn} style={{ height: 52, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-10)}>−10</button>
-            <button className={bumpBtn} style={{ height: 52, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-1)}>−1</button>
-            <button className={bumpBtn} style={{ height: 52, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(1)}>+1</button>
-            <button className={bumpBtn} style={{ height: 52, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(10)}>+10</button>
+            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-10)}>−10</button>
+            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-1)}>−1</button>
+            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(1)}>+1</button>
+            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(10)}>+10</button>
           </div>
         </div>
       )}
 
       <motion.button
-        className="btn-primary w-full rounded-md font-semibold text-base mt-4 disabled:opacity-40"
-        style={{ height: 56 }}
+        className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40"
+        style={{ height: 52 }}
         whileTap={!saving ? { scale: 0.97 } : undefined}
         onClick={handleSaveAndNext}
         disabled={saving}
