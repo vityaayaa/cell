@@ -117,11 +117,28 @@ describe('getEffectiveCapacity', () => {
     )).toBe(12)
   })
 
-  it('returns 0 for round product when override is null', () => {
+  it('auto-computes round product capacity by diameter when override is null', () => {
+    // Cell 545×400, ⌀110: floor(545/110)=4 across × floor(400/110)=3 down = 12
     expect(getEffectiveCapacity(
       { computed_width_mm: 545, computed_height_mm: 400 },
       { type: 'round', diameter_mm: 110 },
       { rotation_allowed: false, capacity_override: null }
+    )).toBe(12)
+  })
+
+  it('returns 0 for round product with non-positive diameter', () => {
+    expect(getEffectiveCapacity(
+      { computed_width_mm: 545, computed_height_mm: 400 },
+      { type: 'round', diameter_mm: 0 },
+      { rotation_allowed: false, capacity_override: null }
     )).toBe(0)
+  })
+
+  it('returns round override when set, ignoring diameter calc', () => {
+    expect(getEffectiveCapacity(
+      { computed_width_mm: 545, computed_height_mm: 400 },
+      { type: 'round', diameter_mm: 110 },
+      { rotation_allowed: false, capacity_override: 5 }
+    )).toBe(5)
   })
 })

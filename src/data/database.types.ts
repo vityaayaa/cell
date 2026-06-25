@@ -296,6 +296,7 @@ export type Database = {
       }
       products: {
         Row: {
+          count_pieces: boolean
           created_at: string
           diameter_mm: number | null
           height_mm: number | null
@@ -309,6 +310,7 @@ export type Database = {
           width_mm: number | null
         }
         Insert: {
+          count_pieces?: boolean
           created_at?: string
           diameter_mm?: number | null
           height_mm?: number | null
@@ -322,6 +324,7 @@ export type Database = {
           width_mm?: number | null
         }
         Update: {
+          count_pieces?: boolean
           created_at?: string
           diameter_mm?: number | null
           height_mm?: number | null

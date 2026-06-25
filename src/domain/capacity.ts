@@ -62,6 +62,24 @@ export function getEffectiveCapacity(
 ): number {
   if (options.capacity_override !== null) return options.capacity_override
 
+  // Round products: auto piece-count by diameter — how many circles of
+  // diameter D tile the cell face in a simple grid (no nesting offset).
+  if (product.type === 'round') {
+    const d = product.diameter_mm
+    if (
+      d <= 0 ||
+      cell.computed_width_mm === 0 ||
+      cell.computed_height_mm === 0
+    ) {
+      return 0
+    }
+    return (
+      Math.floor(cell.computed_width_mm / d) *
+      Math.floor(cell.computed_height_mm / d)
+    )
+  }
+
+  // Bulk: manual only (override above) — no auto capacity.
   if (product.type !== 'unit') return 0
 
   // Stability rule: a board is always laid with its larger cross-section side

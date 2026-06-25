@@ -29,6 +29,21 @@ export function getProductDisplayName(product: Product): string {
   return product.name
 }
 
+/** The unit word for a product's stock value: 'шт' for pieces, 'пачки' for bulk slider. */
+export function productUnitLabel(product: Product): string {
+  return product.type === 'bulk' ? 'пачки' : 'шт'
+}
+
+/**
+ * True when stock should be entered as a piece count (editable number + ±
+ * buttons): always for 'unit', and for 'round'/'bulk' when the product is set
+ * to «поштучно». Otherwise a fill slider is shown.
+ */
+export function isPiecesInput(product: Product): boolean {
+  if (product.type === 'unit') return true
+  return product.count_pieces === true
+}
+
 export function getMaterialForProduct(
   product: Product | undefined,
   materials: Material[],

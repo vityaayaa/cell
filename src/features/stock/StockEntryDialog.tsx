@@ -10,7 +10,7 @@ import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
-import { getProductDisplayName } from '@/features/shelf/cellUtils'
+import { getProductDisplayName, isPiecesInput, productUnitLabel } from '@/features/shelf/cellUtils'
 import { packs } from '@/lib/plural'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -202,15 +202,18 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
   }
 
   const { product, address, capacity } = data
-  const isBulk = product.type === 'bulk' || product.type === 'round'
+  const pieces = isPiecesInput(product)
+  const unitLabel = productUnitLabel(product)
+  // 'пачки' only for bulk in slider mode; everything counted in pieces shows 'шт'.
+  const capacityLabel = product.type === 'bulk' && !pieces ? packs(capacity) : `${capacity} ${unitLabel}`
   const packsValue = Math.round((bulkPercent / 100) * capacity)
   const numValue = parseInt(numericValue, 10)
-  const isOverCapacity = !isBulk && numericValue !== '' && !isNaN(numValue) && numValue > capacity
-  const canSave = isBulk ? true : numericValue !== '' && !isNaN(numValue) && !isOverCapacity
+  const isOverCapacity = pieces && numericValue !== '' && !isNaN(numValue) && numValue > capacity
+  const canSave = !pieces ? true : numericValue !== '' && !isNaN(numValue) && !isOverCapacity
 
   async function handleSave() {
     if (!canSave || !activeSessionId || !userId || !cellId) return
-    const value = isBulk ? packsValue : numValue
+    const value = !pieces ? packsValue : numValue
     setSaving(true)
     try {
       const outcome = await saveStockEntry({
@@ -220,10 +223,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
         value,
       })
       if (outcome === 'ok') {
-        const msg = isBulk
-          ? `✓ Внесено: ${value} из ${packs(capacity)}`
-          : `✓ Внесено: ${value} из ${capacity} шт`
-        toastSuccess(msg)
+        toastSuccess(`✓ Внесено: ${value} из ${capacity} ${unitLabel}`)
       } else {
         toast.error('Сохранено локально — синхронизируется позже')
       }
@@ -247,11 +247,11 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
             {getProductDisplayName(product)}
           </p>
           <p className="ui-hint">
-            Вместимость: {isBulk ? packs(capacity) : `${capacity} шт`}
+            Вместимость: {capacityLabel}
           </p>
         </div>
 
-        {isBulk ? (
+        {!pieces ? (
           <BulkFillMeter
             percent={bulkPercent}
             onChange={setBulkPercent}

@@ -16,7 +16,6 @@ import {
 import {
   buildCellAddress,
   getCapacity,
-  BulkFillMeter,
 } from '@/features/stock/StockEntryDialog'
 import { saveStockEntry } from '@/features/stock/saveStockEntry'
 import { ShelfGrid } from './ShelfGrid'
@@ -26,6 +25,8 @@ import {
   getProductDisplayName,
   getMaterialForProduct,
   getRootAddress,
+  isPiecesInput,
+  productUnitLabel,
 } from './cellUtils'
 
 interface SweepViewProps {
@@ -476,7 +477,12 @@ function CurrentCellCard({
   const material = getMaterialForProduct(product, materials)
   const address = buildCellAddress(cell, cells)
   const capacity = product ? getCapacity(cell, product) : 0
-  const isBulk = product?.type === 'bulk' || product?.type === 'round'
+  // 'пачки' only for bulk in slider mode; everything counted in pieces shows 'шт'.
+  const capacityLabel = product
+    ? product.type === 'bulk'
+      ? packs(capacity)
+      : `${capacity} ${productUnitLabel(product)}`
+    : '—'
 
   const entered = useEnteredValue(sessionId, cell.id)
 
@@ -522,7 +528,7 @@ function CurrentCellCard({
           </div>
 
           <p className="text-sm mt-2" style={{ color: 'var(--muted-foreground)' }}>
-            Вместимость: {isBulk ? packs(capacity) : `${capacity} шт`}
+            Вместимость: {capacityLabel}
           </p>
 
           {entered != null && (
@@ -541,6 +547,66 @@ function CurrentCellCard({
         >
           <ChevronRight size={24} />
         </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A thin horizontal fill bar (slider-mode stock entry). Tap or drag anywhere
+ * along its width to set the value; snaps to whole units in 0..capacity.
+ */
+function HorizontalFillBar({
+  value,
+  capacity,
+  onChange,
+}: {
+  value: number
+  capacity: number
+  onChange: (v: number) => void
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  function valueFromClientX(clientX: number): number {
+    const rect = trackRef.current?.getBoundingClientRect()
+    if (!rect || rect.width === 0 || capacity <= 0) return 0
+    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    return Math.round(frac * capacity)
+  }
+
+  function handlePointer(e: React.PointerEvent) {
+    if (e.type === 'pointermove' && e.buttons === 0) return
+    onChange(valueFromClientX(e.clientX))
+  }
+
+  const fillPct = capacity > 0 ? (value / capacity) * 100 : 0
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        ref={trackRef}
+        className="rounded-lg border overflow-hidden relative select-none"
+        style={{
+          height: 44,
+          touchAction: 'none',
+          cursor: 'ew-resize',
+          background: 'var(--muted)',
+          borderColor: 'var(--border)',
+        }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId)
+          handlePointer(e)
+        }}
+        onPointerMove={handlePointer}
+      >
+        <div
+          className="absolute top-0 left-0 bottom-0"
+          style={{ width: `${fillPct}%`, background: 'var(--primary)', opacity: 0.85 }}
+        />
+      </div>
+      <div className="flex justify-between text-xs" style={{ color: 'var(--muted-foreground)' }}>
+        <span>0</span>
+        <span>{capacity}</span>
       </div>
     </div>
   )
@@ -565,18 +631,24 @@ function InputZone({
 }) {
   const product = products.find((p) => p.id === cell.product_id)
   const capacity = product ? getCapacity(cell, product) : 0
-  const isBulk = product?.type === 'bulk' || product?.type === 'round'
+  const pieces = product ? isPiecesInput(product) : true
+  const unitLabel = product ? productUnitLabel(product) : 'шт'
+  // Unit products may exceed capacity (warned, but allowed); slider/packs clamp.
+  const clampToCapacity = product?.type !== 'unit'
 
-  const [unitValue, setUnitValue] = useState(0)
-  const [bulkPercent, setBulkPercent] = useState(0)
+  const [value, setValue] = useState(0)
   const [saving, setSaving] = useState(false)
 
-  const packsValue = Math.round((bulkPercent / 100) * capacity)
-  const value = isBulk ? packsValue : unitValue
-  const isOverCapacity = !isBulk && unitValue > capacity
+  const isOverCapacity = product?.type === 'unit' && value > capacity
+
+  function setClamped(v: number) {
+    let next = Math.max(0, v)
+    if (clampToCapacity) next = Math.min(capacity, next)
+    setValue(next)
+  }
 
   function bump(delta: number) {
-    setUnitValue((v) => Math.max(0, v + delta))
+    setClamped(value + delta)
   }
 
   async function handleSaveAndNext() {
@@ -590,10 +662,7 @@ function InputZone({
         value,
       })
       if (outcome === 'ok') {
-        const msg = isBulk
-          ? `✓ Внесено: ${value} из ${packs(capacity)}`
-          : `✓ Внесено: ${value} из ${capacity} шт`
-        toastSuccess(msg)
+        toastSuccess(`✓ Внесено: ${value} из ${capacity} ${unitLabel}`)
       } else {
         toast.error('Сохранено локально — синхронизируется позже')
       }
@@ -605,49 +674,70 @@ function InputZone({
 
   const bumpBtn =
     'flex-1 flex items-center justify-center rounded-md font-semibold text-base'
+  const bumpStyle = { height: 46, background: 'var(--card)', border: '1px solid var(--border)' }
 
   return (
-    <div className="px-4 pt-4 pb-4 mt-auto">
-      {isBulk ? (
-        <BulkFillMeter percent={bulkPercent} onChange={setBulkPercent} capacity={capacity} height={200} />
-      ) : (
-        <div className="flex flex-col gap-2">
-          <div
-            className="rounded-lg flex items-center justify-center gap-1"
-            style={{
-              height: 58,
-              background: 'var(--card)',
-              border: `1px solid ${isOverCapacity ? 'var(--destructive)' : 'var(--border)'}`,
-            }}
-          >
+    <div className="px-4 pt-3 pb-4 mt-auto">
+      {/* Big current-value readout */}
+      <div
+        className="rounded-lg flex items-center justify-center gap-1"
+        style={{
+          height: 56,
+          background: 'var(--card)',
+          border: `1px solid ${isOverCapacity ? 'var(--destructive)' : 'var(--border)'}`,
+        }}
+      >
+        {pieces ? (
+          <>
             <input
               type="text"
               inputMode="numeric"
-              aria-label="Количество, шт"
+              aria-label={`Количество, ${unitLabel}`}
               placeholder="0"
-              value={unitValue === 0 ? '' : String(unitValue)}
+              value={value === 0 ? '' : String(value)}
               onChange={(e) => {
                 const n = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10)
-                setUnitValue(isNaN(n) ? 0 : n)
+                setClamped(isNaN(n) ? 0 : n)
               }}
               className="text-center font-bold bg-transparent outline-none"
               style={{ fontSize: 30, width: '5ch', color: 'var(--foreground)' }}
             />
-            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>шт</span>
-          </div>
-          {isOverCapacity && (
-            <p className="text-xs text-center" style={{ color: 'var(--destructive)' }}>
-              Больше вместимости ({capacity} шт)
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-10)}>−10</button>
-            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(-1)}>−1</button>
-            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(1)}>+1</button>
-            <button className={bumpBtn} style={{ height: 46, background: 'var(--card)', border: '1px solid var(--border)' }} onClick={() => bump(10)}>+10</button>
-          </div>
+            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
+          </>
+        ) : product?.type === 'bulk' ? (
+          <span className="text-center font-bold" style={{ fontSize: 30, color: 'var(--foreground)' }}>
+            {packs(value)}
+          </span>
+        ) : (
+          <>
+            <span className="text-center font-bold" style={{ fontSize: 30, color: 'var(--foreground)' }}>
+              {value}
+            </span>
+            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
+          </>
+        )}
+      </div>
+
+      {isOverCapacity && (
+        <p className="text-xs text-center mt-1" style={{ color: 'var(--destructive)' }}>
+          Больше вместимости ({capacity} {unitLabel})
+        </p>
+      )}
+
+      {/* Slider mode: thin horizontal fill bar */}
+      {!pieces && (
+        <div className="mt-2">
+          <HorizontalFillBar value={value} capacity={capacity} onChange={setClamped} />
         </div>
       )}
+
+      {/* ± buttons (all modes) */}
+      <div className="flex gap-2 mt-2">
+        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-10)}>−10</button>
+        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-1)}>−1</button>
+        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(1)}>+1</button>
+        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(10)}>+10</button>
+      </div>
 
       <motion.button
         className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40"
