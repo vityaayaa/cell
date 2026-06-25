@@ -22,6 +22,8 @@ export interface CellCardProps {
   sessionId?: string
   visitedCellIds?: Set<string>
   lastEntryDate?: string | null
+  /** Compartment inside a grouped base cell: lighter chrome, no address label. */
+  bare?: boolean
   onTap: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
 }
@@ -129,11 +131,12 @@ export function CellCard({
   sessionId,
   visitedCellIds,
   lastEntryDate,
+  bare = false,
   onTap,
   onFlagTap,
 }: CellCardProps) {
   // Only base cells (top of the frame) carry an address; sub-отсеки don't.
-  const displayAddress = address ?? (cell.parent_id === null ? getRootAddress(cell) : '')
+  const displayAddress = bare ? '' : address ?? (cell.parent_id === null ? getRootAddress(cell) : '')
 
   const product = products.find(p => p.id === cell.product_id)
   const material = getMaterialForProduct(product, materials)
@@ -175,8 +178,8 @@ export function CellCard({
       tabIndex={0}
       onClick={() => onTap(cell)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(cell) } }}
-      className="rounded-lg border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer overflow-hidden"
-      style={{ background: bgColor, borderColor: 'var(--border)' }}
+      className={`${bare ? 'rounded-md' : 'rounded-lg'} border p-2 flex flex-col justify-between w-full h-full text-left cursor-pointer overflow-hidden`}
+      style={{ background: bgColor, borderColor: bare ? 'rgba(148,163,184,0.25)' : 'var(--border)' }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>

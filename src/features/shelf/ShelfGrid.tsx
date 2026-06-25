@@ -1,5 +1,6 @@
 import type { Cell, Material, Product, Shelf } from '@/data/db'
 import { CellCard } from './CellCard'
+import { getRootAddress } from './cellUtils'
 
 // One отсек (a single, undivided cell) is sized like a normal base cell: ~40vw
 // wide (≈2.5 across the screen) and ~1/3.5 of the usable height. A subdivided
@@ -45,6 +46,8 @@ interface SubtreeProps {
   mode: 'edit' | 'view'
   sessionId?: string
   visitedCellIds?: Set<string>
+  /** True when rendering compartments inside a grouped base cell. */
+  bare?: boolean
   onLeafTap: (cell: Cell) => void
   onFlagTap: (cell: Cell) => void
 }
@@ -64,6 +67,7 @@ function Subtree(props: SubtreeProps) {
         mode={props.mode}
         sessionId={props.sessionId}
         visitedCellIds={props.visitedCellIds}
+        bare={props.bare}
         onTap={props.onLeafTap}
         onFlagTap={props.onFlagTap}
       />
@@ -159,27 +163,43 @@ export function ShelfGrid({
         <div style={gridStyle}>
           {baseCells.map(cell => {
             if (cell.row_index == null || cell.col_index == null) return null
+            const subdivided = cells.some(c => c.parent_id === cell.id)
+            const subtree = (
+              <Subtree
+                cell={cell}
+                allCells={cells}
+                products={products}
+                materials={materials}
+                mode={mode}
+                sessionId={sessionId}
+                visitedCellIds={visitedCellIds}
+                bare={subdivided}
+                onLeafTap={handleLeafTap}
+                onFlagTap={c => onFlagTap?.(c)}
+              />
+            )
             return (
               <div
                 key={cell.id}
-                style={{
-                  gridColumn: cell.col_index,
-                  gridRow: cell.row_index,
-                  minWidth: 0,
-                  minHeight: 0,
-                }}
+                style={{ gridColumn: cell.col_index, gridRow: cell.row_index, minWidth: 0, minHeight: 0 }}
               >
-                <Subtree
-                  cell={cell}
-                  allCells={cells}
-                  products={products}
-                  materials={materials}
-                  mode={mode}
-                  sessionId={sessionId}
-                  visitedCellIds={visitedCellIds}
-                  onLeafTap={handleLeafTap}
-                  onFlagTap={c => onFlagTap?.(c)}
-                />
+                {subdivided ? (
+                  // All compartments of one base cell live under one outline ("крыша").
+                  <div
+                    className="relative w-full h-full rounded-lg overflow-hidden"
+                    style={{ border: '2px solid var(--border)', background: 'var(--card)', padding: 6 }}
+                  >
+                    <span
+                      className="absolute z-10 text-xs font-semibold rounded px-1"
+                      style={{ top: 5, left: 6, color: 'var(--primary)', background: 'var(--card)' }}
+                    >
+                      {getRootAddress(cell)}
+                    </span>
+                    {subtree}
+                  </div>
+                ) : (
+                  subtree
+                )}
               </div>
             )
           })}
