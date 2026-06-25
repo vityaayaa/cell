@@ -288,11 +288,22 @@ function clampN(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
 }
 
+/** How many leaf cells the subtree spans across (cols) and down (rows). */
+function footprint(cell: Cell, cells: Cell[]): { cols: number; rows: number } {
+  const ch = cells.filter((c) => c.parent_id === cell.id)
+  if (ch.length === 0) return { cols: 1, rows: 1 }
+  const fs = ch.map((c) => footprint(c, cells))
+  if (cell.split_direction === 'V')
+    return { cols: fs.reduce((s, f) => s + f.cols, 0), rows: Math.max(...fs.map((f) => f.rows)) }
+  return { cols: Math.max(...fs.map((f) => f.cols)), rows: fs.reduce((s, f) => s + f.rows, 0) }
+}
+
 /**
- * Radar = a GTA-style minimap: the whole shelf is laid out at a fixed zoom
- * (~2.5 sections across) and panned so the current section stays centered, with
- * a smooth transition as you move. At the edges it clamps (no empty void).
- * Sections show their sub-cells, a faint orange address number, current accent.
+ * Radar = a true scaled-down minimap of the shelf: sections keep the same
+ * proportions as the real grid (sized by their footprint), so it actually looks
+ * like the shelf. Panned to keep the current section centered (smooth
+ * transition), clamped at the edges, zoomed so ~2.5 sections fit across and
+ * ≥1.5 down. No text — just sub-cells, a faint orange address, current accent.
  */
 function RadarStrip({
   shelf,
@@ -319,24 +330,57 @@ function RadarStrip({
     return () => ro.disconnect()
   }, [])
 
-  const sections = cells.filter(
-    (c) => c.parent_id === null && c.row_index != null && c.col_index != null,
-  )
+  const C = shelf.cols_count
+  const R = shelf.rows_count
+  const byPos = new Map<string, Cell>()
+  for (const c of cells) {
+    if (c.parent_id === null && c.row_index != null && c.col_index != null) {
+      byPos.set(`${c.row_index}:${c.col_index}`, c)
+    }
+  }
+  // Section track sizes in footprint-units — same proportions as the real grid.
+  const colUnits = Array.from({ length: C }, (_, ci) => {
+    let m = 1
+    for (let r = 1; r <= R; r++) {
+      const c = byPos.get(`${r}:${ci + 1}`)
+      if (c) m = Math.max(m, footprint(c, cells).cols)
+    }
+    return m
+  })
+  const rowUnits = Array.from({ length: R }, (_, ri) => {
+    let m = 1
+    for (let cl = 1; cl <= C; cl++) {
+      const c = byPos.get(`${ri + 1}:${cl}`)
+      if (c) m = Math.max(m, footprint(c, cells).rows)
+    }
+    return m
+  })
+  const avgCol = colUnits.reduce((a, b) => a + b, 0) / Math.max(1, C)
+  const avgRow = rowUnits.reduce((a, b) => a + b, 0) / Math.max(1, R)
+
+  // px per footprint-unit: ~2.5 average sections across AND ≥1.5 down.
+  const U =
+    size.w > 0 && size.h > 0
+      ? Math.min(size.w / (2.5 * avgCol), size.h / (1.5 * avgRow))
+      : 24
+
+  const colW = colUnits.map((u) => u * U)
+  const rowH = rowUnits.map((u) => u * U)
+  const colX: number[] = []
+  { let a = 0; for (const w of colW) { colX.push(a); a += w } }
+  const rowY: number[] = []
+  { let a = 0; for (const h of rowH) { rowY.push(a); a += h } }
+  const totalW = colW.reduce((a, b) => a + b, 0)
+  const totalH = rowH.reduce((a, b) => a + b, 0)
+
   const currentId = currentCell?.id ?? null
   const section = currentCell ? getBaseAncestor(currentCell, cells) : null
   const cr = section?.row_index ?? 1
   const cc = section?.col_index ?? 1
-  const C = shelf.cols_count
-  const R = shelf.rows_count
-
-  // Fixed zoom: ~2.5 sections fit across the radar; square sections.
-  const sec = size.w > 0 ? size.w / 2.5 : 130
-  const mapW = C * sec
-  const mapH = R * sec
-  const cx = (cc - 0.5) * sec
-  const cy = (cr - 0.5) * sec
-  const tx = mapW <= size.w ? (size.w - mapW) / 2 : clampN(size.w / 2 - cx, size.w - mapW, 0)
-  const ty = mapH <= size.h ? (size.h - mapH) / 2 : clampN(size.h / 2 - cy, size.h - mapH, 0)
+  const ccx = (colX[cc - 1] ?? 0) + (colW[cc - 1] ?? 0) / 2
+  const ccy = (rowY[cr - 1] ?? 0) + (rowH[cr - 1] ?? 0) / 2
+  const tx = totalW <= size.w ? (size.w - totalW) / 2 : clampN(size.w / 2 - ccx, size.w - totalW, 0)
+  const ty = totalH <= size.h ? (size.h - totalH) / 2 : clampN(size.h / 2 - ccy, size.h - totalH, 0)
 
   return (
     <button
@@ -353,21 +397,23 @@ function RadarStrip({
         <div
           className="absolute top-0 left-0"
           style={{
-            width: mapW,
-            height: mapH,
+            width: totalW,
+            height: totalH,
             transform: `translate(${tx}px, ${ty}px)`,
             transition: 'transform 0.28s ease',
           }}
         >
-          {sections.map((s) => {
+          {[...byPos.values()].map((s) => {
             const r = s.row_index!
             const cl = s.col_index!
+            const w = colW[cl - 1] ?? U
+            const h = rowH[r - 1] ?? U
             const isCurrent = section != null && s.id === section.id
             return (
               <div
                 key={s.id}
                 className="absolute"
-                style={{ left: (cl - 1) * sec, top: (r - 1) * sec, width: sec, height: sec, padding: 3 }}
+                style={{ left: colX[cl - 1] ?? 0, top: rowY[r - 1] ?? 0, width: w, height: h, padding: 2 }}
               >
                 <div
                   className="relative w-full h-full rounded-sm overflow-hidden"
@@ -380,7 +426,7 @@ function RadarStrip({
                   {/* faint orange address number, spanning the section */}
                   <span
                     className="absolute inset-0 flex items-center justify-center font-bold pointer-events-none"
-                    style={{ color: 'var(--primary)', opacity: 0.16, fontSize: sec * 0.4, lineHeight: 1 }}
+                    style={{ color: 'var(--primary)', opacity: 0.15, fontSize: Math.min(w, h) * 0.45, lineHeight: 1 }}
                   >
                     {getRootAddress(s)}
                   </span>
