@@ -1,9 +1,10 @@
 import type { Cell, Material, Product, Shelf } from '@/data/db'
 import { CellCard } from './CellCard'
 
-/** Pixel size of a single leaf отсек. Tunable. */
-const LEAF_W = 120
-const LEAF_H = 88
+// One отсек (a single, undivided cell) is sized like a normal base cell: ~40vw
+// wide (≈2.5 across the screen) and ~1/3.5 of the usable height. A subdivided
+// cell multiplies this by how many отсеков it spans, so отсеки stay this big and
+// the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
 
 export interface ShelfGridProps {
@@ -97,6 +98,7 @@ export function ShelfGrid({
   materials,
   sessionId,
   visitedCellIds = new Set(),
+  subheaderHeight = 0,
   onLeafTap,
   onEditTap,
   onFlagTap,
@@ -140,10 +142,13 @@ export function ShelfGrid({
     return max
   })
 
+  const overhead = 120 + subheaderHeight // app header (56) + bottom nav (64)
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: colUnits.map(u => `${u * LEAF_W}px`).join(' '),
-    gridTemplateRows: rowUnits.map(u => `${u * LEAF_H}px`).join(' '),
+    gridTemplateColumns: colUnits.map(u => `calc(40vw * ${u})`).join(' '),
+    gridTemplateRows: rowUnits
+      .map(u => `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u})`)
+      .join(' '),
     gap: GAP,
     padding: GAP,
   }
