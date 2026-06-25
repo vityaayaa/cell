@@ -21,7 +21,7 @@ import {
 import { saveStockEntry } from '@/features/stock/saveStockEntry'
 import { ShelfGrid } from './ShelfGrid'
 import { SweepProgressBar } from './SweepProgressBar'
-import { buildSweepOrder } from './sweepOrder'
+import { buildSweepOrder, getBaseAncestor } from './sweepOrder'
 import {
   getProductDisplayName,
   getMaterialForProduct,
@@ -71,6 +71,10 @@ export function SweepView({
   // 1-based position of the next unvisited cell (for "вернуться к обходу → №N").
   const nextUnvisitedIndex = order.findIndex((c) => !visitedCellIds.has(c.id))
   const nextUnvisitedNo = nextUnvisitedIndex >= 0 ? nextUnvisitedIndex + 1 : null
+  const resumeId = nextUnvisitedIndex >= 0 ? order[nextUnvisitedIndex].id : null
+  // Only offer "вернуться к обходу" when you've wandered off the next cell —
+  // otherwise it would just duplicate the ✕ (close) button.
+  const showResume = resumeId != null && currentCell?.id !== resumeId
 
   const [radarOpen, setRadarOpen] = useState(false)
 
@@ -193,7 +197,7 @@ export function SweepView({
             >
               <X size={22} />
             </button>
-            {nextUnvisitedNo != null && (
+            {showResume && (
               <button
                 className="btn-primary text-sm font-semibold px-3 rounded-md"
                 style={{ height: 44 }}
@@ -277,6 +281,20 @@ function MiniNode({
   )
 }
 
+/** A centered window of track positions of `size`, clamped to [1, max]. */
+function windowRange(center: number, size: number, max: number): number[] {
+  const span = Math.min(size, max)
+  let start = center - Math.floor(span / 2)
+  if (start < 1) start = 1
+  if (start + span - 1 > max) start = max - span + 1
+  return Array.from({ length: span }, (_, i) => start + i)
+}
+
+/**
+ * Radar = a LOCAL view: a small window of sections around the current one (with
+ * their sub-cells), so you see where you are and what's right next to you. The
+ * whole shelf opens only on tap.
+ */
 function RadarStrip({
   shelf,
   cells,
@@ -290,39 +308,55 @@ function RadarStrip({
   visitedCellIds: Set<string>
   onOpen: () => void
 }) {
-  const baseCells = cells.filter((c) => c.parent_id === null)
   const byPos = new Map<string, Cell>()
-  for (const c of baseCells) {
-    if (c.row_index != null && c.col_index != null) {
+  for (const c of cells) {
+    if (c.parent_id === null && c.row_index != null && c.col_index != null) {
       byPos.set(`${c.row_index}:${c.col_index}`, c)
     }
   }
   const currentId = currentCell?.id ?? null
+  const section = currentCell ? getBaseAncestor(currentCell, cells) : null
+  const cr = section?.row_index ?? 1
+  const cc = section?.col_index ?? 1
+
+  const rowRange = windowRange(cr, 3, shelf.rows_count)
+  const colRange = windowRange(cc, 3, shelf.cols_count)
 
   return (
     <button
       onClick={onOpen}
       aria-label="Открыть карту стеллажа"
       className="w-full flex-shrink-0 border-b px-3 py-2 relative"
-      style={{ height: 96, borderColor: 'var(--border)', background: 'var(--background)' }}
+      style={{ height: 150, borderColor: 'var(--border)', background: 'var(--background)' }}
     >
       <div
-        className="w-full h-full rounded-md p-1.5"
+        className="w-full h-full rounded-md p-2"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
         <div
           className="grid w-full h-full"
           style={{
-            gap: 3,
-            gridTemplateColumns: `repeat(${shelf.cols_count}, 1fr)`,
-            gridTemplateRows: `repeat(${shelf.rows_count}, 1fr)`,
+            gap: 5,
+            gridTemplateColumns: `repeat(${colRange.length}, 1fr)`,
+            gridTemplateRows: `repeat(${rowRange.length}, 1fr)`,
           }}
         >
-          {Array.from({ length: shelf.rows_count }).flatMap((_, ri) =>
-            Array.from({ length: shelf.cols_count }).map((__, ci) => {
-              const c = byPos.get(`${ri + 1}:${ci + 1}`)
+          {rowRange.flatMap((r) =>
+            colRange.map((cl) => {
+              const c = byPos.get(`${r}:${cl}`)
+              const isCurrentSection = c && section && c.id === section.id
               return (
-                <div key={`${ri}:${ci}`} style={{ minWidth: 0, minHeight: 0 }}>
+                <div
+                  key={`${r}:${cl}`}
+                  className="rounded-sm"
+                  style={{
+                    minWidth: 0,
+                    minHeight: 0,
+                    padding: isCurrentSection ? 2 : 0,
+                    outline: isCurrentSection ? '2px solid var(--primary)' : undefined,
+                    opacity: c ? (isCurrentSection ? 1 : 0.55) : 0,
+                  }}
+                >
                   {c ? (
                     <MiniNode cell={c} cells={cells} currentId={currentId} visitedCellIds={visitedCellIds} />
                   ) : null}
@@ -332,7 +366,12 @@ function RadarStrip({
           )}
         </div>
       </div>
-      <Maximize2 size={13} className="absolute" style={{ top: 6, right: 6, color: 'var(--muted-foreground)' }} />
+      <span
+        className="absolute flex items-center gap-1 rounded px-1.5 py-0.5"
+        style={{ top: 6, right: 6, fontSize: 10, color: 'var(--muted-foreground)', background: 'var(--card)' }}
+      >
+        <Maximize2 size={11} /> вся карта
+      </span>
     </button>
   )
 }
