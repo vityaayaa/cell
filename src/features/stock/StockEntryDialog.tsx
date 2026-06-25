@@ -6,6 +6,7 @@ import { db } from '@/data/db'
 import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
+import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { motion } from 'motion/react'
 
-function buildCellAddress(cell: Cell, allCells: Cell[]): string {
+export function buildCellAddress(cell: Cell, allCells: Cell[]): string {
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   if (!cell.parent_id) {
     const row = cell.row_index != null ? (LETTERS[cell.row_index - 1] ?? String(cell.row_index)) : '?'
@@ -31,7 +32,7 @@ function buildCellAddress(cell: Cell, allCells: Cell[]): string {
   return parentAddr
 }
 
-function getCapacity(cell: Cell, product: Product): number {
+export function getCapacity(cell: Cell, product: Product): number {
   const dims: ProductDimensions =
     product.type === 'unit'
       ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
@@ -45,7 +46,7 @@ function getCapacity(cell: Cell, product: Product): number {
   )
 }
 
-function BulkFillMeter({
+export function BulkFillMeter({
   percent,
   onChange,
   capacity,
@@ -208,33 +209,22 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
   async function handleSave() {
     if (!canSave || !activeSessionId || !userId || !cellId) return
     const value = isBulk ? packsValue : numValue
-    const entry = {
-      id: crypto.randomUUID(),
-      cell_id: cellId,
-      session_id: activeSessionId,
-      user_id: userId,
-      value,
-      created_at: new Date().toISOString(),
-    }
     setSaving(true)
-    // Local write first — this is what the sweep progress + order generation read,
-    // so the sweep can proceed even if the cloud write is slow/unreachable.
     try {
-      await db.stock_entries.put(entry)
-      // Guard against a hung request so the button never freezes on "…".
-      const result = (await Promise.race([
-        supabase.from('stock_entries').insert(entry),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ])) as { error: unknown }
-      if (result.error) throw result.error
-      const msg = isBulk
-        ? `✓ Внесено: ${value} из ${packs(capacity)}`
-        : `✓ Внесено: ${value} из ${capacity} шт`
-      toastSuccess(msg)
-    } catch {
-      // Keep the local entry (don't roll back) so the sweep isn't blocked;
-      // the cloud copy will be reconciled on the next full sync.
-      toast.error('Сохранено локально — синхронизируется позже')
+      const outcome = await saveStockEntry({
+        cellId,
+        sessionId: activeSessionId,
+        userId,
+        value,
+      })
+      if (outcome === 'ok') {
+        const msg = isBulk
+          ? `✓ Внесено: ${value} из ${packs(capacity)}`
+          : `✓ Внесено: ${value} из ${capacity} шт`
+        toastSuccess(msg)
+      } else {
+        toast.error('Сохранено локально — синхронизируется позже')
+      }
     } finally {
       setSaving(false)
       onClose()

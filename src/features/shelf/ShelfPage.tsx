@@ -8,7 +8,7 @@ import { useAppStore } from '@/data/store'
 import { useShelfData } from './useShelfData'
 import { ShelfGrid } from './ShelfGrid'
 import { useSweepProgress } from './useSweepProgress'
-import { SweepProgressBar } from './SweepProgressBar'
+import { SweepView } from './SweepView'
 import { startSweep } from '@/features/sessions/startSweep'
 import { updateSessionStatus } from '@/features/order/updateSessionStatus'
 import {
@@ -125,14 +125,19 @@ export default function ShelfPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full">
-        {activeSessionId ? (
-          <SweepProgressBar
-            visited={visited}
-            total={total}
-            sessionId={activeSessionId}
-          />
-        ) : (
+      {activeSessionId ? (
+        <SweepView
+          shelf={shelf}
+          cells={cells}
+          products={products}
+          materials={materials}
+          sessionId={activeSessionId}
+          visited={visited}
+          total={total}
+          visitedCellIds={visitedCellIds}
+        />
+      ) : (
+        <div className="flex flex-col h-full">
           <div
             className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0"
             style={{ borderColor: 'var(--border)' }}
@@ -148,20 +153,19 @@ export default function ShelfPage() {
               {startingNewSweep ? '…' : 'Начать обход'}
             </button>
           </div>
-        )}
 
-        <ShelfGrid
-          mode="view"
-          shelf={shelf}
-          cells={cells}
-          products={products}
-          materials={materials}
-          sessionId={activeSessionId ?? undefined}
-          visitedCellIds={visitedCellIds}
-          subheaderHeight={48}
-          onLeafTap={handleLeafTap}
-        />
-      </div>
+          <ShelfGrid
+            mode="view"
+            shelf={shelf}
+            cells={cells}
+            products={products}
+            materials={materials}
+            visitedCellIds={visitedCellIds}
+            subheaderHeight={48}
+            onLeafTap={handleLeafTap}
+          />
+        </div>
+      )}
 
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent preventOutsideClose>
