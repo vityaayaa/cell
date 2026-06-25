@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -25,6 +25,7 @@ import { buildSweepOrder, getBaseAncestor } from './sweepOrder'
 import {
   getProductDisplayName,
   getMaterialForProduct,
+  getRootAddress,
 } from './cellUtils'
 
 interface SweepViewProps {
@@ -106,7 +107,7 @@ export function SweepView({
 
   if (order.length === 0) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="absolute inset-0 flex flex-col" style={{ background: 'var(--background)' }}>
         <SweepProgressBar visited={visited} total={total} sessionId={sessionId} />
         <div className="flex-1 flex items-center justify-center p-6">
           <p
@@ -121,9 +122,11 @@ export function SweepView({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="absolute inset-0 flex flex-col" style={{ background: 'var(--background)' }}>
       <SweepProgressBar visited={visited} total={total} sessionId={sessionId} />
 
+      {/* Radar fills the leftover space (and shrinks on small screens) so the
+          card + input below always fit without scrolling. */}
       <RadarStrip
         shelf={shelf}
         cells={cells}
@@ -132,8 +135,19 @@ export function SweepView({
         onOpen={() => setRadarOpen(true)}
       />
 
-      <div className="flex-1 min-h-0 flex flex-col">
-        {currentCell && (
+      {allVisited && (
+        <div
+          className="mx-4 mt-2 rounded-lg p-2 text-center flex-shrink-0"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-sm font-semibold" style={{ color: '#10B981' }}>
+            ✓ Обход завершён — перейдите к заявке кнопкой выше
+          </p>
+        </div>
+      )}
+
+      {currentCell && (
+        <div className="flex-shrink-0">
           <CurrentCellCard
             cell={currentCell}
             cells={cells}
@@ -147,23 +161,11 @@ export function SweepView({
             canPrev={currentIndex > 0}
             canNext={currentIndex < order.length - 1}
           />
-        )}
+        </div>
+      )}
 
-        {allVisited && (
-          <div
-            className="mx-4 mt-2 rounded-lg p-3 text-center"
-            style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-          >
-            <p className="text-sm font-semibold" style={{ color: '#10B981' }}>
-              ✓ Обход завершён
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-              Все ячейки внесены. Перейдите к заявке кнопкой выше.
-            </p>
-          </div>
-        )}
-
-        {currentCell && (
+      {currentCell && (
+        <div className="flex-shrink-0">
           <InputZone
             key={currentCell.id}
             cell={currentCell}
@@ -174,8 +176,8 @@ export function SweepView({
             onSaved={(cellId) => advanceAfterSave(cellId)}
             onSkip={() => step(1)}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <Dialog open={radarOpen} onOpenChange={setRadarOpen}>
         <DialogContent
@@ -282,19 +284,15 @@ function MiniNode({
   )
 }
 
-/** A centered window of track positions of `size`, clamped to [1, max]. */
-function windowRange(center: number, size: number, max: number): number[] {
-  const span = Math.min(size, max)
-  let start = center - Math.floor(span / 2)
-  if (start < 1) start = 1
-  if (start + span - 1 > max) start = max - span + 1
-  return Array.from({ length: span }, (_, i) => start + i)
+function clampN(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v))
 }
 
 /**
- * Radar = a LOCAL view: a small window of sections around the current one (with
- * their sub-cells), so you see where you are and what's right next to you. The
- * whole shelf opens only on tap.
+ * Radar = a GTA-style minimap: the whole shelf is laid out at a fixed zoom
+ * (~2.5 sections across) and panned so the current section stays centered, with
+ * a smooth transition as you move. At the edges it clamps (no empty void).
+ * Sections show their sub-cells, a faint orange address number, current accent.
  */
 function RadarStrip({
   shelf,
@@ -309,62 +307,87 @@ function RadarStrip({
   visitedCellIds: Set<string>
   onOpen: () => void
 }) {
-  const byPos = new Map<string, Cell>()
-  for (const c of cells) {
-    if (c.parent_id === null && c.row_index != null && c.col_index != null) {
-      byPos.set(`${c.row_index}:${c.col_index}`, c)
-    }
-  }
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  useLayoutEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+    const update = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const sections = cells.filter(
+    (c) => c.parent_id === null && c.row_index != null && c.col_index != null,
+  )
   const currentId = currentCell?.id ?? null
   const section = currentCell ? getBaseAncestor(currentCell, cells) : null
   const cr = section?.row_index ?? 1
   const cc = section?.col_index ?? 1
+  const C = shelf.cols_count
+  const R = shelf.rows_count
 
-  const rowRange = windowRange(cr, 3, shelf.rows_count)
-  const colRange = windowRange(cc, 3, shelf.cols_count)
+  // Fixed zoom: ~2.5 sections fit across the radar; square sections.
+  const sec = size.w > 0 ? size.w / 2.5 : 130
+  const mapW = C * sec
+  const mapH = R * sec
+  const cx = (cc - 0.5) * sec
+  const cy = (cr - 0.5) * sec
+  const tx = mapW <= size.w ? (size.w - mapW) / 2 : clampN(size.w / 2 - cx, size.w - mapW, 0)
+  const ty = mapH <= size.h ? (size.h - mapH) / 2 : clampN(size.h / 2 - cy, size.h - mapH, 0)
 
   return (
     <button
       onClick={onOpen}
       aria-label="Открыть карту стеллажа"
-      className="w-full flex-shrink-0 border-b px-3 py-2 relative"
-      style={{ height: 124, borderColor: 'var(--border)', background: 'var(--background)' }}
+      className="w-full flex-1 min-h-0 border-b px-3 py-2 relative"
+      style={{ borderColor: 'var(--border)', background: 'var(--background)' }}
     >
       <div
-        className="w-full h-full rounded-md p-2"
+        ref={viewportRef}
+        className="w-full h-full rounded-md overflow-hidden relative"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
         <div
-          className="grid w-full h-full"
+          className="absolute top-0 left-0"
           style={{
-            gap: 5,
-            gridTemplateColumns: `repeat(${colRange.length}, 1fr)`,
-            gridTemplateRows: `repeat(${rowRange.length}, 1fr)`,
+            width: mapW,
+            height: mapH,
+            transform: `translate(${tx}px, ${ty}px)`,
+            transition: 'transform 0.28s ease',
           }}
         >
-          {rowRange.flatMap((r) =>
-            colRange.map((cl) => {
-              const c = byPos.get(`${r}:${cl}`)
-              const isCurrentSection = c && section && c.id === section.id
-              return (
+          {sections.map((s) => {
+            const r = s.row_index!
+            const cl = s.col_index!
+            const isCurrent = section != null && s.id === section.id
+            return (
+              <div
+                key={s.id}
+                className="absolute"
+                style={{ left: (cl - 1) * sec, top: (r - 1) * sec, width: sec, height: sec, padding: 3 }}
+              >
                 <div
-                  key={`${r}:${cl}`}
-                  className="rounded-sm"
+                  className="relative w-full h-full rounded-sm overflow-hidden"
                   style={{
-                    minWidth: 0,
-                    minHeight: 0,
-                    padding: isCurrentSection ? 2 : 0,
-                    outline: isCurrentSection ? '2px solid var(--primary)' : undefined,
-                    opacity: c ? (isCurrentSection ? 1 : 0.55) : 0,
+                    outline: isCurrent ? '2px solid var(--primary)' : '1px solid var(--border)',
+                    opacity: isCurrent ? 1 : 0.72,
                   }}
                 >
-                  {c ? (
-                    <MiniNode cell={c} cells={cells} currentId={currentId} visitedCellIds={visitedCellIds} />
-                  ) : null}
+                  <MiniNode cell={s} cells={cells} currentId={currentId} visitedCellIds={visitedCellIds} />
+                  {/* faint orange address number, spanning the section */}
+                  <span
+                    className="absolute inset-0 flex items-center justify-center font-bold pointer-events-none"
+                    style={{ color: 'var(--primary)', opacity: 0.16, fontSize: sec * 0.4, lineHeight: 1 }}
+                  >
+                    {getRootAddress(s)}
+                  </span>
                 </div>
-              )
-            }),
-          )}
+              </div>
+            )
+          })}
         </div>
       </div>
       <span
