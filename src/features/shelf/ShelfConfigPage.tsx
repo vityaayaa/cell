@@ -172,6 +172,7 @@ export default function ShelfConfigPage() {
         cells={cells}
         products={products}
         materials={materials}
+        zoomable
         onEditTap={cell => setSelectedCell(cell)}
         onFlagTap={cell => {
           if (cell.needs_review) setReviewCell(cell)

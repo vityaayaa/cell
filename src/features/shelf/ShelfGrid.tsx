@@ -1,3 +1,4 @@
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import type { Cell, Material, Product, Shelf } from '@/data/db'
 import { CellCard } from './CellCard'
 import { getRootAddress } from './cellUtils'
@@ -20,6 +21,8 @@ export interface ShelfGridProps {
   subheaderHeight?: number
   /** Outline this leaf (e.g. the cell the sweep is currently on). */
   highlightCellId?: string
+  /** Enable pinch/wheel zoom + pan (for the big admin grid and the full map). */
+  zoomable?: boolean
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
@@ -108,6 +111,7 @@ export function ShelfGrid({
   visitedCellIds = new Set(),
   subheaderHeight = 0,
   highlightCellId,
+  zoomable = false,
   onLeafTap,
   onEditTap,
   onFlagTap,
@@ -162,11 +166,9 @@ export function ShelfGrid({
     padding: GAP,
   }
 
-  return (
-    <div className="flex flex-col h-full flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-auto">
-        <div style={gridStyle}>
-          {baseCells.map(cell => {
+  const gridInner = (
+    <div style={gridStyle}>
+      {baseCells.map(cell => {
             if (cell.row_index == null || cell.col_index == null) return null
             const subdivided = cells.some(c => c.parent_id === cell.id)
             const subtree = (
@@ -209,8 +211,31 @@ export function ShelfGrid({
               </div>
             )
           })}
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col h-full flex-1 min-h-0">
+      {zoomable ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.12}
+            maxScale={3}
+            limitToBounds
+            centerOnInit={false}
+            doubleClick={{ disabled: true }}
+            panning={{ velocityDisabled: true }}
+            wheel={{ step: 0.06 }}
+          >
+            <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+              {gridInner}
+            </TransformComponent>
+          </TransformWrapper>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-auto">{gridInner}</div>
+      )}
     </div>
   )
 }
