@@ -37,17 +37,10 @@ interface CellActionsSheetProps {
 
 /**
  * Split a leaf into N equal children along `direction`. The leaf becomes a
- * split node; children are computed by dividing its computed_* equally.
+ * split node; children are born EMPTY and inherit nothing from the parent.
  */
 async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
   const now = new Date().toISOString()
-
-  const childW = direction === 'V'
-    ? Math.floor(cell.computed_width_mm / count)
-    : cell.computed_width_mm
-  const childH = direction === 'H'
-    ? Math.floor(cell.computed_height_mm / count)
-    : cell.computed_height_mm
 
   const children: Cell[] = Array.from({ length: count }, (_, i) => ({
     id: crypto.randomUUID(),
@@ -59,8 +52,8 @@ async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
     child_index: i,
     width_mm: null,
     height_mm: null,
-    computed_width_mm: childW,
-    computed_height_mm: childH,
+    computed_width_mm: 0,
+    computed_height_mm: 0,
     product_id: null,
     capacity_override: null,
     rotation_allowed: true,
