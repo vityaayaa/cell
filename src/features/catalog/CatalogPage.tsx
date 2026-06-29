@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -29,86 +29,57 @@ function getProductDisplayName(p: Product): string {
 interface ProductRowProps {
   product: Product
   material: Material | undefined
-  onClick: () => void
-}
-
-function ProductRow({ product: p, material: mat, onClick }: ProductRowProps) {
-  return (
-    <button
-      className="w-full flex items-center gap-3 px-4 text-left"
-      style={{
-        minHeight: 64,
-        borderTop: '1px solid var(--border)',
-        background: 'var(--card)',
-      }}
-      onClick={onClick}
-      aria-label={`Действия с ${p.name}`}
-    >
-      {/* Material color dot */}
-      {mat && (
-        <div
-          className="flex-shrink-0 rounded-full"
-          style={{ width: 10, height: 10, background: mat.color }}
-          aria-hidden
-        />
-      )}
-      <div className="flex-1 min-w-0 py-3">
-        <p
-          className="text-sm font-medium truncate"
-          style={{ color: 'var(--foreground)' }}
-        >
-          {getProductDisplayName(p)}
-        </p>
-        <p
-          className="text-xs mt-0.5"
-          style={{ color: 'var(--muted-foreground)' }}
-        >
-          {mat?.name ?? '—'} · пачка: {p.pack_size} шт
-        </p>
-      </div>
-    </button>
-  )
-}
-
-interface ProductActionsSheetProps {
-  product: Product | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
   onEdit: () => void
   onDelete: () => void
 }
 
-function ProductActionsSheet({ product, open, onOpenChange, onEdit, onDelete }: ProductActionsSheetProps) {
-  if (!product) return null
+function ProductRow({ product: p, material: mat, onEdit, onDelete }: ProductRowProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle className="text-base">{getProductDisplayName(product)}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-2">
-          <button
-            className="w-full rounded-md font-medium text-base border"
-            style={{
-              height: 52,
-              color: 'var(--foreground)',
-              background: 'var(--background)',
-              borderColor: 'var(--border)',
-            }}
-            onClick={() => { onOpenChange(false); onEdit() }}
+    <div
+      className="flex items-center"
+      style={{ borderTop: '1px solid var(--border)', background: 'var(--card)' }}
+    >
+      {/* Tap the row → edit */}
+      <button
+        className="flex-1 min-w-0 flex items-center gap-3 px-4 text-left"
+        style={{ minHeight: 64 }}
+        onClick={onEdit}
+        aria-label={`Редактировать ${p.name}`}
+      >
+        {/* Material color dot */}
+        {mat && (
+          <div
+            className="flex-shrink-0 rounded-full"
+            style={{ width: 10, height: 10, background: mat.color }}
+            aria-hidden
+          />
+        )}
+        <div className="flex-1 min-w-0 py-3">
+          <p
+            className="text-sm font-medium truncate"
+            style={{ color: 'var(--foreground)' }}
           >
-            Редактировать
-          </button>
-          <button
-            className="w-full rounded-md font-medium text-base"
-            style={{ height: 52, color: '#EF4444', background: 'var(--muted)' }}
-            onClick={() => { onOpenChange(false); onDelete() }}
+            {getProductDisplayName(p)}
+          </p>
+          <p
+            className="text-xs mt-0.5"
+            style={{ color: 'var(--muted-foreground)' }}
           >
-            Удалить товар
-          </button>
+            {mat?.name ?? '—'} · пачка: {p.pack_size} шт
+          </p>
         </div>
-      </DialogContent>
-    </Dialog>
+      </button>
+
+      {/* Delete — same place as in the groups / materials blocks */}
+      <button
+        className="flex items-center justify-center flex-shrink-0"
+        style={{ width: 48, minHeight: 64, color: '#EF4444' }}
+        onClick={onDelete}
+        aria-label={`Удалить ${p.name}`}
+      >
+        <Trash2 size={16} strokeWidth={1.5} />
+      </button>
+    </div>
   )
 }
 
@@ -126,8 +97,6 @@ export default function CatalogPage() {
   const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
   const [formOpen, setFormOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
-  const [actionsOpen, setActionsOpen] = useState(false)
-  const [actionsProduct, setActionsProduct] = useState<Product | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -194,13 +163,8 @@ export default function CatalogPage() {
     setFormOpen(true)
   }
 
-  function openActions(p: Product) {
-    setActionsProduct(p)
-    setActionsOpen(true)
-  }
-
-  function openDeleteConfirm() {
-    setDeleteTarget(actionsProduct)
+  function openDeleteConfirm(p: Product) {
+    setDeleteTarget(p)
     setDeleteConfirmOpen(true)
   }
 
@@ -337,7 +301,8 @@ export default function CatalogPage() {
                     key={p.id}
                     product={p}
                     material={materialMap.get(p.material_id)}
-                    onClick={() => openActions(p)}
+                    onEdit={() => openEdit(p)}
+                    onDelete={() => openDeleteConfirm(p)}
                   />
                 ))}
               </div>
@@ -351,15 +316,6 @@ export default function CatalogPage() {
 
       {/* Materials section */}
       <MaterialsSection materials={materials} />
-
-      {/* Product actions sheet */}
-      <ProductActionsSheet
-        product={actionsProduct}
-        open={actionsOpen}
-        onOpenChange={setActionsOpen}
-        onEdit={() => openEdit(actionsProduct!)}
-        onDelete={openDeleteConfirm}
-      />
 
       {/* Product form sheet */}
       <ProductForm
