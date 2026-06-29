@@ -35,13 +35,11 @@ export function productUnitLabel(product: Product): string {
 }
 
 /**
- * True when stock should be entered as a piece count (editable number + ±
- * buttons): always for 'unit', and for 'round'/'bulk' when the product is set
- * to «поштучно». Otherwise a fill slider is shown.
+ * True when stock is entered as a piece count (editable number + ± buttons):
+ * 'unit' and 'round' (both counted in pieces). 'bulk' uses a fill slider.
  */
 export function isPiecesInput(product: Product): boolean {
-  if (product.type === 'unit') return true
-  return product.count_pieces === true
+  return product.type !== 'bulk'
 }
 
 export function getMaterialForProduct(

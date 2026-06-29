@@ -31,7 +31,6 @@ interface FormState {
   height_mm: string
   length_mm: string
   diameter_mm: string
-  count_pieces: boolean
 }
 
 const EMPTY: FormState = {
@@ -43,7 +42,6 @@ const EMPTY: FormState = {
   height_mm: '',
   length_mm: '',
   diameter_mm: '',
-  count_pieces: false,
 }
 
 type DimKey = 'width_mm' | 'height_mm' | 'length_mm' | 'diameter_mm'
@@ -86,7 +84,6 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           height_mm: product.height_mm != null ? String(product.height_mm) : '',
           length_mm: product.length_mm != null ? String(product.length_mm) : '',
           diameter_mm: product.diameter_mm != null ? String(product.diameter_mm) : '',
-          count_pieces: product.count_pieces ?? false,
         })
       } else {
         setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
@@ -119,8 +116,6 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       height_mm: (form.type === 'unit' || form.type === 'bulk') ? parseDecimalMm(form.height_mm) : null,
       length_mm: (form.type === 'unit' || form.type === 'round' || form.type === 'bulk') ? parseDecimalMm(form.length_mm) : null,
       diameter_mm: form.type === 'round' ? parseDecimalMm(form.diameter_mm) : null,
-      // «Учёт поштучно» only applies to round/bulk; unit is always pieces.
-      count_pieces: form.type === 'unit' ? false : form.count_pieces,
       created_at: product?.created_at ?? now,
       updated_at: now,
     }
@@ -264,7 +259,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           {(form.type === 'unit' || form.type === 'bulk') && (
             <div className="flex flex-col gap-2">
               <p className="ui-section-title">
-                {form.type === 'unit' ? 'Размеры сечения и длина' : 'Размеры и длина (необязательно)'}
+                {form.type === 'unit' ? 'Размеры' : 'Размеры (необязательно)'}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -302,7 +297,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           {form.type === 'round' && (
             <div className="flex flex-col gap-2">
               <p className="ui-section-title">
-                Диаметр и длина
+                Размеры
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -335,38 +330,6 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
             </div>
           )}
 
-          {/* Count mode — round & bulk only */}
-          {(form.type === 'round' || form.type === 'bulk') && (
-            <div className="flex flex-col gap-1.5">
-              <label className="ui-field-label">Учёт остатка</label>
-              <div className="flex gap-2">
-                {([
-                  { value: false, label: 'Слайдером' },
-                  { value: true, label: 'Поштучно' },
-                ] as const).map(({ value, label }) => (
-                  <button
-                    key={String(value)}
-                    type="button"
-                    className="flex-1 rounded-md border text-sm font-medium"
-                    style={{
-                      height: 44,
-                      background: form.count_pieces === value ? 'var(--primary)' : 'var(--background)',
-                      color: form.count_pieces === value ? 'var(--primary-foreground)' : 'var(--foreground)',
-                      borderColor: form.count_pieces === value ? 'var(--primary)' : 'var(--border)',
-                    }}
-                    onClick={() => set('count_pieces', value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="ui-hint">
-                {form.count_pieces
-                  ? 'Сотрудник вводит точное число штук'
-                  : 'Сотрудник отмечает заполненность пачками на слайдере'}
-              </p>
-            </div>
-          )}
 
         </div>
 

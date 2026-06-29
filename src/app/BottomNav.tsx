@@ -119,8 +119,6 @@ export function BottomNav() {
           <motion.button
             key={item.label}
             layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
             transition={
               prefersReduced
                 ? { duration: 0 }
