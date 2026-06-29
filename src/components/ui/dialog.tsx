@@ -47,6 +47,31 @@ function DialogOverlay({
   )
 }
 
+/**
+ * Height (px) the on-screen keyboard currently covers at the bottom of the
+ * viewport. 0 when no keyboard. Driven by visualViewport so it's exact and
+ * updates the moment the keyboard opens/closes — no timers.
+ */
+function useKeyboardInset(): number {
+  const [inset, setInset] = React.useState(0)
+  React.useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const covered = window.innerHeight - vv.height - vv.offsetTop
+      setInset(covered > 80 ? covered : 0) // ignore tiny address-bar shifts
+    }
+    update()
+    vv.addEventListener("resize", update)
+    vv.addEventListener("scroll", update)
+    return () => {
+      vv.removeEventListener("resize", update)
+      vv.removeEventListener("scroll", update)
+    }
+  }, [])
+  return inset
+}
+
 function DialogContent({
   className,
   children,
@@ -54,11 +79,13 @@ function DialogContent({
   preventOutsideClose = false,
   onInteractOutside,
   onOpenAutoFocus,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
   preventOutsideClose?: boolean
 }) {
+  const keyboardInset = useKeyboardInset()
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -68,6 +95,11 @@ function DialogContent({
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover supports-backdrop-filter:bg-popover/90 supports-backdrop-filter:backdrop-blur-2xl p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-150 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
+        // Lift the whole dialog above the keyboard: a bottom margin grows the
+        // box downward, so the top-1/2 + -translate-y-1/2 centring shifts the
+        // visible content up by half the keyboard height. transition keeps it
+        // smooth as the keyboard opens/closes.
+        style={{ marginBottom: keyboardInset, transition: "margin-bottom 150ms ease-out", ...style }}
         onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : onInteractOutside}
         // Don't pull focus into the first field on open — that pops the mobile
         // keyboard everywhere. Consumers that genuinely want it (stock entry)

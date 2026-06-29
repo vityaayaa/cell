@@ -1,48 +1,10 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { FocusEvent } from 'react'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Scroll a just-focused field into the centre of the view. Put on a form's
- * scroll container via onFocusCapture: when an input/select/textarea gains
- * focus, iOS doesn't reliably scroll it above the on-screen keyboard (the
- * dialog is position:fixed).
- *
- * The keyboard rises asynchronously, so a fixed timer races it (sometimes the
- * layout hasn't moved yet → no centring). Instead we listen for the next
- * visualViewport resize — which fires exactly when the keyboard changes the
- * usable height — and centre then. If no resize comes (keyboard was already
- * open), a short fallback timer centres anyway.
- */
-export function scrollFieldIntoView(e: FocusEvent<HTMLElement>) {
-  const target = e.target as HTMLElement
-  if (!target.matches('input, select, textarea')) return
-
-  const center = () => target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  const vv = typeof window !== 'undefined' ? window.visualViewport : null
-
-  if (!vv) {
-    setTimeout(center, 300)
-    return
-  }
-
-  let done = false
-  const run = () => {
-    if (done) return
-    done = true
-    vv.removeEventListener('resize', run)
-    clearTimeout(fallback)
-    center()
-  }
-  // Keyboard just opened → resize fires; centre right after it settles.
-  vv.addEventListener('resize', run, { once: true })
-  // Keyboard already open (no resize) → centre anyway.
-  const fallback = setTimeout(run, 350)
-}
 
 /** Parse a user-typed millimetre value that may use a comma or dot decimal
  *  separator («12,5» → 12.5). Returns null for empty / non-positive / invalid. */

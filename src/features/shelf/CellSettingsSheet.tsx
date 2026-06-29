@@ -12,7 +12,7 @@ import type { Cell, Product } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { getEffectiveCapacity } from '@/domain/capacity'
-import { parseDecimalMm, sanitizeDecimalInput, scrollFieldIntoView } from '@/lib/utils'
+import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
 interface CellSettingsSheetProps {
   cell: Cell | null
@@ -169,10 +169,7 @@ export function CellSettingsSheet({
           </div>
         </DialogHeader>
 
-        <div
-          className="flex flex-col gap-4 max-h-[60dvh] overflow-y-auto pr-1"
-          onFocusCapture={scrollFieldIntoView}
-        >
+        <div className="flex flex-col gap-4 max-h-[60dvh] overflow-y-auto pr-1">
           {/* Размеры ячейки — приоритетная секция, карточка */}
           <div
             className="flex flex-col gap-3 rounded-lg p-4"

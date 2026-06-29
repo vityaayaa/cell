@@ -10,7 +10,7 @@ import {
 import { db } from '@/data/db'
 import type { Product, Material, Group } from '@/data/db'
 import { supabase } from '@/data/supabase'
-import { parseDecimalMm, sanitizeDecimalInput, scrollFieldIntoView } from '@/lib/utils'
+import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
 type ProductType = 'unit' | 'round' | 'bulk'
 
@@ -162,10 +162,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
           <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
         </DialogHeader>
 
-        <div
-          className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-0"
-          onFocusCapture={scrollFieldIntoView}
-        >
+        <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-0">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="ui-field-label">
