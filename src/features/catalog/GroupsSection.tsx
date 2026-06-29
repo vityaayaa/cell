@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -25,11 +25,14 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
   const [error, setError] = useState('')
   const actorId = useAppStore((s) => s.userId)
 
-  // Reset on open
-  useState(() => {
-    setName(group?.name ?? '')
-    setError('')
-  })
+  // Reset fields each time the sheet opens (it stays mounted, only `open`
+  // toggles — so a one-time useState initializer wouldn't re-run).
+  useEffect(() => {
+    if (open) {
+      setName(group?.name ?? '')
+      setError('')
+    }
+  }, [open, group])
 
   async function handleSave() {
     if (!name.trim()) { setError('Введите название'); return }

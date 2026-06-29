@@ -1,8 +1,24 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { FocusEvent } from 'react'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Scroll a just-focused field into the centre of the view. Put on a form's
+ * scroll container via onFocusCapture: when an input/select/textarea gains
+ * focus, iOS doesn't reliably scroll it above the on-screen keyboard (the
+ * dialog is position:fixed), so we do it ourselves after the keyboard has had
+ * a moment to push the layout up.
+ */
+export function scrollFieldIntoView(e: FocusEvent<HTMLElement>) {
+  const target = e.target as HTMLElement
+  if (!target.matches('input, select, textarea')) return
+  setTimeout(() => {
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, 300)
 }
 
 /** Parse a user-typed millimetre value that may use a comma or dot decimal

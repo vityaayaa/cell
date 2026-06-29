@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -25,12 +25,15 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
   const [error, setError] = useState('')
   const actorId = useAppStore((s) => s.userId)
 
-  // Reset on open
-  useState(() => {
-    setName(material?.name ?? '')
-    setColor(material?.color ?? '#888888')
-    setError('')
-  })
+  // Reset fields each time the sheet opens (it stays mounted, only `open`
+  // toggles — so a one-time useState initializer wouldn't re-run).
+  useEffect(() => {
+    if (open) {
+      setName(material?.name ?? '')
+      setColor(material?.color ?? '#888888')
+      setError('')
+    }
+  }, [open, material])
 
   async function handleSave() {
     if (!name.trim()) { setError('Введите название'); return }
