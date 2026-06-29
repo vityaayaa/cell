@@ -13,6 +13,10 @@ interface AppStore {
 
   priorityMaterialId: string | null
 
+  /** Catalog accordion: groups the user has expanded. Lives only while the app
+   *  is open — restarting collapses everything. */
+  expandedGroupIds: Set<string>
+
   setOnline: (v: boolean) => void
   setSyncing: (v: boolean) => void
   setSyncQueueLength: (n: number) => void
@@ -21,6 +25,7 @@ interface AppStore {
   setActiveSession: (id: string | null) => void
   setSessionMode: (v: boolean) => void
   setPriorityMaterialId: (id: string | null) => void
+  toggleExpandedGroup: (id: string) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -36,6 +41,8 @@ export const useAppStore = create<AppStore>((set) => ({
 
   priorityMaterialId: null,
 
+  expandedGroupIds: new Set<string>(),
+
   setOnline: (v) => set({ isOnline: v }),
   setSyncing: (v) => set({ isSyncing: v }),
   setSyncQueueLength: (n) => set({ syncQueueLength: n }),
@@ -44,4 +51,11 @@ export const useAppStore = create<AppStore>((set) => ({
   setActiveSession: (id) => set({ activeSessionId: id }),
   setSessionMode: (v) => set({ isSessionMode: v }),
   setPriorityMaterialId: (id) => set({ priorityMaterialId: id }),
+  toggleExpandedGroup: (id) =>
+    set((s) => {
+      const next = new Set(s.expandedGroupIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { expandedGroupIds: next }
+    }),
 }))

@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { db } from '@/data/db'
-import type { Product, Material } from '@/data/db'
+import type { Product, Material, Group } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
@@ -19,6 +19,7 @@ interface ProductFormProps {
   onOpenChange: (open: boolean) => void
   product?: Product | null
   materials: Material[]
+  groups: Group[]
   actorId: string | null
 }
 
@@ -26,6 +27,7 @@ interface FormState {
   name: string
   type: ProductType
   material_id: string
+  group_id: string
   pack_size: string
   width_mm: string
   height_mm: string
@@ -37,6 +39,7 @@ const EMPTY: FormState = {
   name: '',
   type: 'unit',
   material_id: '',
+  group_id: '',
   pack_size: '',
   width_mm: '',
   height_mm: '',
@@ -54,6 +57,7 @@ function toInt(s: string): number | null {
 function validate(f: FormState): string | null {
   if (!f.name.trim()) return 'Введите название'
   if (!f.material_id) return 'Выберите материал'
+  if (!f.group_id) return 'Выберите группу'
   if (f.type === 'unit') {
     if (!parseDecimalMm(f.width_mm)) return 'Укажите ширину'
     if (!parseDecimalMm(f.height_mm)) return 'Укажите высоту'
@@ -66,7 +70,7 @@ function validate(f: FormState): string | null {
   return null
 }
 
-export function ProductForm({ open, onOpenChange, product, materials, actorId }: ProductFormProps) {
+export function ProductForm({ open, onOpenChange, product, materials, groups, actorId }: ProductFormProps) {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +83,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           name: product.name,
           type: product.type as ProductType,
           material_id: product.material_id,
+          group_id: product.group_id ?? '',
           pack_size: String(product.pack_size),
           width_mm: product.width_mm != null ? String(product.width_mm) : '',
           height_mm: product.height_mm != null ? String(product.height_mm) : '',
@@ -86,11 +91,11 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
           diameter_mm: product.diameter_mm != null ? String(product.diameter_mm) : '',
         })
       } else {
-        setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
+        setForm({ ...EMPTY, material_id: materials[0]?.id ?? '', group_id: groups[0]?.id ?? '' })
       }
       setError(null)
     }
-  }, [open, product, materials])
+  }, [open, product, materials, groups])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -111,6 +116,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       name: form.name.trim(),
       type: form.type,
       material_id: form.material_id,
+      group_id: form.group_id,
       pack_size: toInt(form.pack_size) ?? 1,
       width_mm: (form.type === 'unit' || form.type === 'bulk') ? parseDecimalMm(form.width_mm) : null,
       height_mm: (form.type === 'unit' || form.type === 'bulk') ? parseDecimalMm(form.height_mm) : null,
@@ -203,32 +209,60 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
             </div>
           </div>
 
-          {/* Material */}
-          <div className="flex flex-col gap-1.5">
-            <label className="ui-field-label">
-              Материал <span style={{ color: '#EF4444' }}>*</span>
-            </label>
-            <select
-              value={form.material_id}
-              onChange={(e) => set('material_id', e.target.value)}
-              className="rounded-md border px-3 text-base"
-              style={{
-                height: 44,
-                fontSize: 16,
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--foreground)',
-                outline: 'none',
-                appearance: 'auto',
-              }}
-            >
-              <option value="">Выбрать...</option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+          {/* Material + Group */}
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="ui-field-label">
+                Материал <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <select
+                value={form.material_id}
+                onChange={(e) => set('material_id', e.target.value)}
+                className="rounded-md border px-3 text-base"
+                style={{
+                  height: 44,
+                  fontSize: 16,
+                  background: 'var(--background)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                  outline: 'none',
+                  appearance: 'auto',
+                }}
+              >
+                <option value="">Выбрать...</option>
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="ui-field-label">
+                Группа <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <select
+                value={form.group_id}
+                onChange={(e) => set('group_id', e.target.value)}
+                className="rounded-md border px-3 text-base"
+                style={{
+                  height: 44,
+                  fontSize: 16,
+                  background: 'var(--background)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                  outline: 'none',
+                  appearance: 'auto',
+                }}
+              >
+                <option value="">Выбрать...</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Pack size */}

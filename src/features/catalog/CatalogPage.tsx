@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
@@ -8,6 +8,7 @@ import { useAppStore } from '@/data/store'
 import { supabase } from '@/data/supabase'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
+import { GroupsSection } from './GroupsSection'
 import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
 import {
   Dialog,
@@ -23,6 +24,50 @@ function getProductDisplayName(p: Product): string {
   if (p.type === 'round') return `${p.name} ⌀${p.diameter_mm}×${p.length_mm}`
   if (p.type === 'bulk' && p.width_mm && p.height_mm && p.length_mm) return `${p.name} ${p.height_mm}×${p.width_mm}×${p.length_mm}`
   return p.name
+}
+
+interface ProductRowProps {
+  product: Product
+  material: Material | undefined
+  onClick: () => void
+}
+
+function ProductRow({ product: p, material: mat, onClick }: ProductRowProps) {
+  return (
+    <button
+      className="w-full flex items-center gap-3 px-4 text-left"
+      style={{
+        minHeight: 64,
+        borderTop: '1px solid var(--border)',
+        background: 'var(--card)',
+      }}
+      onClick={onClick}
+      aria-label={`Действия с ${p.name}`}
+    >
+      {/* Material color dot */}
+      {mat && (
+        <div
+          className="flex-shrink-0 rounded-full"
+          style={{ width: 10, height: 10, background: mat.color }}
+          aria-hidden
+        />
+      )}
+      <div className="flex-1 min-w-0 py-3">
+        <p
+          className="text-sm font-medium truncate"
+          style={{ color: 'var(--foreground)' }}
+        >
+          {getProductDisplayName(p)}
+        </p>
+        <p
+          className="text-xs mt-0.5"
+          style={{ color: 'var(--muted-foreground)' }}
+        >
+          {mat?.name ?? '—'} · пачка: {p.pack_size} шт
+        </p>
+      </div>
+    </button>
+  )
 }
 
 interface ProductActionsSheetProps {
@@ -72,6 +117,10 @@ export default function CatalogPage() {
 
   const products = useLiveQuery(() => db.products.toArray())
   const materials = useLiveQuery(() => db.materials.orderBy('name').toArray())
+  const groups = useLiveQuery(() => db.groups.orderBy('name').toArray())
+
+  const expandedGroupIds = useAppStore((s) => s.expandedGroupIds)
+  const toggleExpandedGroup = useAppStore((s) => s.toggleExpandedGroup)
 
   const [materialId, setMaterialId] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
@@ -88,6 +137,11 @@ export default function CatalogPage() {
     [materials],
   )
 
+  const groupMap = useMemo(
+    () => new Map((groups ?? []).map((g) => [g.id, g])),
+    [groups],
+  )
+
   const filteredProducts = useMemo(() => {
     const base = materialId
       ? (products ?? []).filter((p) => p.material_id === materialId)
@@ -95,7 +149,31 @@ export default function CatalogPage() {
     return sortByMode(base, (p) => p, materialMap, sortMode)
   }, [products, materialId, sortMode, materialMap])
 
-  if (!products || !materials) {
+  // Group the (already filtered/sorted) products by group_id, preserving the
+  // alphabetical group order (`groups` is orderBy name). Products whose group
+  // no longer exists land under a trailing "Без группы" bucket — shouldn't
+  // happen since group_id is mandatory, but handle it safely.
+  const groupedProducts = useMemo(() => {
+    const byGroup = new Map<string, Product[]>()
+    for (const p of filteredProducts) {
+      const key = groupMap.has(p.group_id) ? p.group_id : '__none__'
+      const arr = byGroup.get(key)
+      if (arr) arr.push(p)
+      else byGroup.set(key, [p])
+    }
+    const sections: { id: string; name: string; items: Product[] }[] = []
+    for (const g of groups ?? []) {
+      const items = byGroup.get(g.id)
+      if (items && items.length > 0) sections.push({ id: g.id, name: g.name, items })
+    }
+    const orphan = byGroup.get('__none__')
+    if (orphan && orphan.length > 0) {
+      sections.push({ id: '__none__', name: 'Без группы', items: orphan })
+    }
+    return sections
+  }, [filteredProducts, groups, groupMap])
+
+  if (!products || !materials || !groups) {
     return (
       <div className="flex items-center justify-center" style={{ height: 200 }}>
         <div
@@ -217,7 +295,7 @@ export default function CatalogPage() {
         </button>
       </div>
 
-      {/* Product list */}
+      {/* Product list — accordion by group */}
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 px-8 py-12">
           <p className="text-base text-center" style={{ color: 'var(--muted-foreground)' }}>
@@ -225,48 +303,51 @@ export default function CatalogPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col mt-3 mx-4 rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-          {filteredProducts.map((p, i) => {
-            const mat: Material | undefined = materialMap.get(p.material_id)
+        <div className="flex flex-col mt-3 mx-4 gap-2">
+          {groupedProducts.map((section) => {
+            const isOpen = expandedGroupIds.has(section.id)
             return (
-              <button
-                key={p.id}
-                className="w-full flex items-center gap-3 px-4 text-left"
-                style={{
-                  minHeight: 64,
-                  borderBottom: i < filteredProducts.length - 1 ? '1px solid var(--border)' : undefined,
-                  background: 'var(--card)',
-                }}
-                onClick={() => openActions(p)}
-                aria-label={`Действия с ${p.name}`}
+              <div
+                key={section.id}
+                className="rounded-lg border overflow-hidden"
+                style={{ borderColor: 'var(--border)' }}
               >
-                {/* Material color dot */}
-                {mat && (
-                  <div
-                    className="flex-shrink-0 rounded-full"
-                    style={{ width: 10, height: 10, background: mat.color }}
-                    aria-hidden
+                {/* Group header */}
+                <button
+                  className="w-full flex items-center gap-2 px-4"
+                  style={{ height: 48, background: 'var(--muted)', textAlign: 'left' }}
+                  onClick={() => toggleExpandedGroup(section.id)}
+                  aria-expanded={isOpen}
+                  aria-label={`${section.name} (${section.items.length})`}
+                >
+                  {isOpen
+                    ? <ChevronDown size={18} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)' }} />
+                    : <ChevronRight size={18} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)' }} />}
+                  <span className="flex-1 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {section.name}{' '}
+                    <span style={{ color: 'var(--muted-foreground)', fontWeight: 400 }}>
+                      ({section.items.length})
+                    </span>
+                  </span>
+                </button>
+
+                {/* Products inside group */}
+                {isOpen && section.items.map((p) => (
+                  <ProductRow
+                    key={p.id}
+                    product={p}
+                    material={materialMap.get(p.material_id)}
+                    onClick={() => openActions(p)}
                   />
-                )}
-                <div className="flex-1 min-w-0 py-3">
-                  <p
-                    className="text-sm font-medium truncate"
-                    style={{ color: 'var(--foreground)' }}
-                  >
-                    {getProductDisplayName(p)}
-                  </p>
-                  <p
-                    className="text-xs mt-0.5"
-                    style={{ color: 'var(--muted-foreground)' }}
-                  >
-                    {mat?.name ?? '—'} · пачка: {p.pack_size} шт
-                  </p>
-                </div>
-              </button>
+                ))}
+              </div>
             )
           })}
         </div>
       )}
+
+      {/* Groups section */}
+      <GroupsSection groups={groups} />
 
       {/* Materials section */}
       <MaterialsSection materials={materials} />
@@ -286,6 +367,7 @@ export default function CatalogPage() {
         onOpenChange={setFormOpen}
         product={editProduct}
         materials={materials}
+        groups={groups}
         actorId={userId}
       />
 

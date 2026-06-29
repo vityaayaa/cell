@@ -178,6 +178,27 @@ export type Database = {
           },
         ]
       }
+      groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           color: string
@@ -298,6 +319,7 @@ export type Database = {
         Row: {
           created_at: string
           diameter_mm: number | null
+          group_id: string
           height_mm: number | null
           id: string
           length_mm: number | null
@@ -311,6 +333,7 @@ export type Database = {
         Insert: {
           created_at?: string
           diameter_mm?: number | null
+          group_id: string
           height_mm?: number | null
           id?: string
           length_mm?: number | null
@@ -324,6 +347,7 @@ export type Database = {
         Update: {
           created_at?: string
           diameter_mm?: number | null
+          group_id?: string
           height_mm?: number | null
           id?: string
           length_mm?: number | null
@@ -335,6 +359,13 @@ export type Database = {
           width_mm?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_material_id_fkey"
             columns: ["material_id"]

@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Tables } from './database.types'
 
 export type Material = Tables<'materials'>
+export type Group = Tables<'groups'>
 export type Product = Tables<'products'>
 export type Shelf = Tables<'shelves'>
 export type Cell = Tables<'cells'>
@@ -25,6 +26,7 @@ export interface SyncQueueItem {
 
 export const db = new Dexie('CellDB') as Dexie & {
   materials: EntityTable<Material, 'id'>
+  groups: EntityTable<Group, 'id'>
   products: EntityTable<Product, 'id'>
   shelves: EntityTable<Shelf, 'id'>
   cells: EntityTable<Cell, 'id'>
@@ -74,3 +76,15 @@ db.version(4).upgrade(async (tx) => {
     tx.table('checklist_entries').clear(),
   ])
 })
+
+// v5 — product groups (вид товара). New `groups` table; products gain a
+// mandatory group_id. Clear products so stale rows without a group_id don't
+// linger; they re-sync from Supabase on next load.
+db.version(5)
+  .stores({
+    groups: '&id, name, updated_at',
+    products: '&id, material_id, group_id, type, updated_at',
+  })
+  .upgrade(async (tx) => {
+    await tx.table('products').clear()
+  })

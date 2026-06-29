@@ -11,10 +11,11 @@ export async function initialLoad(): Promise<void> {
 
   try {
     const [
-      materialsRes, productsRes, shelvesRes, cellsRes,
+      materialsRes, groupsRes, productsRes, shelvesRes, cellsRes,
       sessionsRes, ordersRes, orderLinesRes, checklistRes, stockRes, profilesRes,
     ] = await Promise.all([
       supabase.from('materials').select('*'),
+      supabase.from('groups').select('*'),
       supabase.from('products').select('*'),
       supabase.from('shelves').select('*'),
       supabase.from('cells').select('*'),
@@ -27,11 +28,12 @@ export async function initialLoad(): Promise<void> {
     ])
 
     await db.transaction('rw', [
-      db.materials, db.products, db.shelves, db.cells,
+      db.materials, db.groups, db.products, db.shelves, db.cells,
       db.sessions, db.orders, db.order_lines, db.checklist_entries,
       db.stock_entries, db.user_profiles,
     ], async () => {
       if (materialsRes.data) await db.materials.bulkPut(materialsRes.data)
+      if (groupsRes.data) await db.groups.bulkPut(groupsRes.data)
       if (productsRes.data) await db.products.bulkPut(productsRes.data)
       if (shelvesRes.data) await db.shelves.bulkPut(shelvesRes.data)
       if (cellsRes.data) await db.cells.bulkPut(cellsRes.data)
