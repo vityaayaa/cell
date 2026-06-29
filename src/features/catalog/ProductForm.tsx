@@ -156,7 +156,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton preventOutsideClose className="max-h-[88dvh] !flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
         </DialogHeader>
 
@@ -373,7 +373,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
         {error && (
           <motion.p
             key={shakeKey}
-            className="text-sm"
+            className="text-sm flex-shrink-0"
             style={{ color: '#EF4444' }}
             animate={{ x: [0, -8, 8, -6, 6, 0] }}
             transition={{ duration: 0.3 }}
@@ -384,7 +384,7 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
         {/* Save */}
         <button
-          className="btn-primary w-full rounded-md font-semibold text-base"
+          className="btn-primary w-full rounded-md font-semibold text-base flex-shrink-0"
           style={{
             height: 56,
             opacity: saving ? 0.7 : 1,
