@@ -75,6 +75,8 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [shakeKey, setShakeKey] = useState(0)
+  // Once the user picks a group by hand, stop auto-filling it from the name.
+  const [groupTouched, setGroupTouched] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -91,8 +93,9 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
           diameter_mm: product.diameter_mm != null ? String(product.diameter_mm) : '',
         })
       } else {
-        setForm({ ...EMPTY, material_id: materials[0]?.id ?? '', group_id: groups[0]?.id ?? '' })
+        setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
       }
+      setGroupTouched(false)
       setError(null)
     }
   }, [open, product, materials, groups])
@@ -100,6 +103,25 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setError(null)
+  }
+
+  /** Auto-assign a group from the name's first word, matching an EXISTING group
+   *  (case-insensitive). Stops once the user has chosen a group manually. */
+  function setName(value: string) {
+    setError(null)
+    setForm((prev) => {
+      if (groupTouched) return { ...prev, name: value }
+      const firstWord = value.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
+      const match = firstWord
+        ? groups.find((g) => g.name.toLowerCase() === firstWord)
+        : undefined
+      return { ...prev, name: value, group_id: match ? match.id : prev.group_id }
+    })
+  }
+
+  function setGroup(value: string) {
+    setGroupTouched(true)
+    set('group_id', value)
   }
 
   async function handleSave() {
@@ -171,7 +193,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
             <input
               type="text"
               value={form.name}
-              onChange={(e) => set('name', e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Брусок, Труба ПВХ, Штапик..."
               className="rounded-md border px-3 text-base"
               style={{
@@ -243,7 +265,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
               </label>
               <select
                 value={form.group_id}
-                onChange={(e) => set('group_id', e.target.value)}
+                onChange={(e) => setGroup(e.target.value)}
                 className="rounded-md border px-3 text-base"
                 style={{
                   height: 44,

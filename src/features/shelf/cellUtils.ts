@@ -17,16 +17,19 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 export function getProductDisplayName(product: Product): string {
-  if (product.type === 'unit') {
-    return `${product.name} ${product.height_mm}×${product.width_mm}×${product.length_mm}`
-  }
   if (product.type === 'round') {
-    return `${product.name} ⌀${product.diameter_mm}×${product.length_mm}`
+    const parts = [
+      product.diameter_mm != null ? `⌀${product.diameter_mm}` : null,
+      product.length_mm,
+    ].filter((v) => v != null)
+    return parts.length ? `${product.name} ${parts.join('×')}` : product.name
   }
-  if (product.type === 'bulk' && product.width_mm && product.height_mm && product.length_mm) {
-    return `${product.name} ${product.height_mm}×${product.width_mm}×${product.length_mm}`
-  }
-  return product.name
+  // unit & bulk: show whatever dimensions are set, in height×width×length order
+  // (skip the missing ones). E.g. плинтус with only width+length → «Плинтус 26×2200».
+  const dims = [product.height_mm, product.width_mm, product.length_mm].filter(
+    (v): v is number => v != null,
+  )
+  return dims.length ? `${product.name} ${dims.join('×')}` : product.name
 }
 
 /** The unit word for a product's stock value: 'шт' for pieces, 'пачки' for bulk slider. */

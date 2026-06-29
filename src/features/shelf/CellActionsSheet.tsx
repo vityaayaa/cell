@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Package, Settings, Minus, Plus } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { motion, AnimatePresence } from 'motion/react'
+import { Package, Settings, Minus, Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -9,7 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
-import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
+import { ProductSortBar, compareByDimensions, type SortMode } from '@/features/catalog/ProductSortBar'
 import type { Cell, Product, Material } from '@/data/db'
 
 function getProductParts(p: Product): { name: string; dims: string | null } {
@@ -161,6 +163,9 @@ export function CellActionsSheet({
   const [pickerSearch, setPickerSearch] = useState('')
   const [pickerMaterialId, setPickerMaterialId] = useState<string | null>(null)
   const [pickerSort, setPickerSort] = useState<SortMode>('alpha-asc')
+  const [pickerOpenGroups, setPickerOpenGroups] = useState<Set<string>>(new Set())
+
+  const groups = useLiveQuery(() => db.groups.orderBy('name').toArray()) ?? []
 
   if (!cell) return null
 
@@ -172,18 +177,48 @@ export function CellActionsSheet({
     allCells.map(c => c.product_id).filter((id): id is string => id != null),
   )
 
-  // Product picker: same material/sort bar as everywhere + a name search.
-  const materialMap = new Map(materials.map(m => [m.id, m]))
-  const pickerProducts = sortByMode(
-    products.filter(p => {
-      if (pickerMaterialId && p.material_id !== pickerMaterialId) return false
-      const q = pickerSearch.trim().toLowerCase()
-      return q === '' || p.name.toLowerCase().includes(q)
-    }),
-    p => p,
-    materialMap,
-    pickerSort,
-  )
+  // Product picker: filter by material + name search, then group by group_id
+  // (groups in alphabetical order) like the catalog. Within each group items
+  // are ordered by cross-section (length desc → height → width).
+  const filteredPickerProducts = products.filter(p => {
+    if (pickerMaterialId && p.material_id !== pickerMaterialId) return false
+    const q = pickerSearch.trim().toLowerCase()
+    return q === '' || p.name.toLowerCase().includes(q)
+  })
+  const groupMap = new Map(groups.map(g => [g.id, g]))
+  const pickerByGroup = new Map<string, Product[]>()
+  for (const p of filteredPickerProducts) {
+    const key = groupMap.has(p.group_id) ? p.group_id : '__none__'
+    const arr = pickerByGroup.get(key)
+    if (arr) arr.push(p)
+    else pickerByGroup.set(key, [p])
+  }
+  // «Длина» toggle flips length order; alpha mode just uses the default
+  // section sort (within a group products are always ordered by cross-section).
+  const pickerLengthDesc = pickerSort !== 'length-asc'
+  const pickerSections: { id: string; name: string; items: Product[] }[] = []
+  for (const g of groups) {
+    const items = pickerByGroup.get(g.id)
+    if (items && items.length > 0) {
+      items.sort((a, b) => compareByDimensions(a, b, pickerLengthDesc))
+      pickerSections.push({ id: g.id, name: g.name, items })
+    }
+  }
+  const pickerOrphan = pickerByGroup.get('__none__')
+  if (pickerOrphan && pickerOrphan.length > 0) {
+    pickerOrphan.sort((a, b) => compareByDimensions(a, b, pickerLengthDesc))
+    pickerSections.push({ id: '__none__', name: 'Без группы', items: pickerOrphan })
+  }
+  const pickerHasResults = pickerSections.length > 0
+
+  function togglePickerGroup(id: string) {
+    setPickerOpenGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Parent context: if this leaf is a child of a split, we can collapse it.
   const parent = cell.parent_id ? allCells.find(c => c.id === cell.parent_id) ?? null : null
@@ -232,6 +267,33 @@ export function CellActionsSheet({
     setLoadingAction(null)
     setShowProductList(false)
     onClose()
+  }
+
+  function renderPickerButton(p: Product) {
+    const { name, dims } = getProductParts(p)
+    const material = materials.find(m => m.id === p.material_id)
+    const inShelf = assignedProductIds.has(p.id)
+    return (
+      <button
+        key={p.id}
+        className="w-full flex items-center justify-between rounded-md border px-4 gap-3 text-left"
+        style={{ minHeight: 56, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
+        onClick={() => handleSelectProduct(p)}
+        disabled={loadingAction === 'assign-product'}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {material && (
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ background: material.color }}
+            />
+          )}
+          <span className="text-sm font-medium truncate">{name}</span>
+          {inShelf && <span className="ui-hint flex-shrink-0">в стеллаже</span>}
+        </span>
+        {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
+      </button>
+    )
   }
 
   function closeAll() {
@@ -462,30 +524,57 @@ export function CellActionsSheet({
           />
 
           <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto px-4 py-3">
-            {pickerProducts.map(p => {
-              const { name, dims } = getProductParts(p)
-              const material = materials.find(m => m.id === p.material_id)
-              const inShelf = assignedProductIds.has(p.id)
+            {pickerSections.map(section => {
+              // Single-product group: render the choose button directly,
+              // without an accordion header (matches the catalog).
+              if (section.items.length === 1) {
+                return (
+                  <div key={section.id}>
+                    {renderPickerButton(section.items[0])}
+                  </div>
+                )
+              }
+              const isOpen = pickerOpenGroups.has(section.id)
               return (
-                <button
-                  key={p.id}
-                  className="w-full flex items-center justify-between rounded-md border px-4 gap-3 text-left"
-                  style={{ minHeight: 56, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
-                  onClick={() => handleSelectProduct(p)}
-                  disabled={loadingAction === 'assign-product'}
+                <div
+                  key={section.id}
+                  className="rounded-lg border overflow-hidden"
+                  style={{ borderColor: 'var(--border)' }}
                 >
-                  <span className="flex items-center gap-2 min-w-0">
-                    {material && (
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ background: material.color }}
-                      />
+                  <button
+                    className="w-full flex items-center gap-2 px-4"
+                    style={{ height: 48, background: 'var(--muted)', textAlign: 'left' }}
+                    onClick={() => togglePickerGroup(section.id)}
+                    aria-expanded={isOpen}
+                    aria-label={`${section.name} (${section.items.length})`}
+                  >
+                    {isOpen
+                      ? <ChevronDown size={18} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)' }} />
+                      : <ChevronRight size={18} strokeWidth={1.5} style={{ color: 'var(--muted-foreground)' }} />}
+                    <span className="flex-1 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                      {section.name}{' '}
+                      <span style={{ color: 'var(--muted-foreground)', fontWeight: 400 }}>
+                        ({section.items.length})
+                      </span>
+                    </span>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div className="flex flex-col gap-2 p-2">
+                          {section.items.map(p => renderPickerButton(p))}
+                        </div>
+                      </motion.div>
                     )}
-                    <span className="text-sm font-medium truncate">{name}</span>
-                    {inShelf && <span className="ui-hint flex-shrink-0">в стеллаже</span>}
-                  </span>
-                  {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
-                </button>
+                  </AnimatePresence>
+                </div>
               )
             })}
             {products.length === 0 && (
@@ -493,7 +582,7 @@ export function CellActionsSheet({
                 Каталог пуст. Добавьте товары в разделе Каталог.
               </p>
             )}
-            {products.length > 0 && pickerProducts.length === 0 && (
+            {products.length > 0 && !pickerHasResults && (
               <p className="text-sm text-center py-4" style={{ color: 'var(--muted-foreground)' }}>
                 Ничего не найдено.
               </p>

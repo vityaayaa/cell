@@ -27,6 +27,28 @@ export function sortByMode<T>(
   })
 }
 
+/**
+ * Sort products WITHIN a group by cross-section. Layers, outermost first:
+ * length → height → width. Height and width always ascending; length follows
+ * `lengthDesc` (the «Длина» toggle). For round products diameter stands in for
+ * width and there's no height. Missing dims sort as 0.
+ */
+export function compareByDimensions(
+  a: Product,
+  b: Product,
+  lengthDesc: boolean,
+): number {
+  const la = a.length_mm ?? 0
+  const lb = b.length_mm ?? 0
+  if (la !== lb) return lengthDesc ? lb - la : la - lb
+  const ha = a.height_mm ?? 0
+  const hb = b.height_mm ?? 0
+  if (ha !== hb) return ha - hb
+  const wa = a.width_mm ?? a.diameter_mm ?? 0
+  const wb = b.width_mm ?? b.diameter_mm ?? 0
+  return wa - wb
+}
+
 interface ProductSortBarProps {
   materials: Material[]
   /** currently selected material filter, or null for "all" */

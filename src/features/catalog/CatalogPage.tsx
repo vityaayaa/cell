@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { motion, AnimatePresence } from 'motion/react'
 import { Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
@@ -9,7 +10,7 @@ import { supabase } from '@/data/supabase'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
 import { GroupsSection } from './GroupsSection'
-import { ProductSortBar, sortByMode, type SortMode } from '@/features/catalog/ProductSortBar'
+import { ProductSortBar, sortByMode, compareByDimensions, type SortMode } from '@/features/catalog/ProductSortBar'
 import {
   Dialog,
   DialogContent,
@@ -18,13 +19,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog'
-
-function getProductDisplayName(p: Product): string {
-  if (p.type === 'unit') return `${p.name} ${p.height_mm}×${p.width_mm}×${p.length_mm}`
-  if (p.type === 'round') return `${p.name} ⌀${p.diameter_mm}×${p.length_mm}`
-  if (p.type === 'bulk' && p.width_mm && p.height_mm && p.length_mm) return `${p.name} ${p.height_mm}×${p.width_mm}×${p.length_mm}`
-  return p.name
-}
+import { getProductDisplayName } from '@/features/shelf/cellUtils'
 
 interface ProductRowProps {
   product: Product
@@ -118,11 +113,14 @@ export default function CatalogPage() {
     return sortByMode(base, (p) => p, materialMap, sortMode)
   }, [products, materialId, sortMode, materialMap])
 
-  // Group the (already filtered/sorted) products by group_id, preserving the
+  // Group the (already filtered) products by group_id, preserving the
   // alphabetical group order (`groups` is orderBy name). Products whose group
   // no longer exists land under a trailing "Без группы" bucket — shouldn't
-  // happen since group_id is mandatory, but handle it safely.
+  // happen since group_id is mandatory, but handle it safely. Within each
+  // group items are ordered by cross-section (compareByDimensions); the
+  // «Длина» toggle only flips the length axis.
   const groupedProducts = useMemo(() => {
+    const lengthDesc = sortMode !== 'length-asc'
     const byGroup = new Map<string, Product[]>()
     for (const p of filteredProducts) {
       const key = groupMap.has(p.group_id) ? p.group_id : '__none__'
@@ -133,14 +131,18 @@ export default function CatalogPage() {
     const sections: { id: string; name: string; items: Product[] }[] = []
     for (const g of groups ?? []) {
       const items = byGroup.get(g.id)
-      if (items && items.length > 0) sections.push({ id: g.id, name: g.name, items })
+      if (items && items.length > 0) {
+        items.sort((a, b) => compareByDimensions(a, b, lengthDesc))
+        sections.push({ id: g.id, name: g.name, items })
+      }
     }
     const orphan = byGroup.get('__none__')
     if (orphan && orphan.length > 0) {
+      orphan.sort((a, b) => compareByDimensions(a, b, lengthDesc))
       sections.push({ id: '__none__', name: 'Без группы', items: orphan })
     }
     return sections
-  }, [filteredProducts, groups, groupMap])
+  }, [filteredProducts, groups, groupMap, sortMode])
 
   if (!products || !materials || !groups) {
     return (
@@ -269,6 +271,26 @@ export default function CatalogPage() {
       ) : (
         <div className="flex flex-col mt-3 mx-4 gap-2">
           {groupedProducts.map((section) => {
+            // Group of a single product: no accordion header, render the
+            // product directly as a plain row (tap → edit, trash → delete).
+            if (section.items.length === 1) {
+              const p = section.items[0]
+              return (
+                <div
+                  key={section.id}
+                  className="rounded-lg border overflow-hidden"
+                  style={{ borderColor: 'var(--border)' }}
+                >
+                  <ProductRow
+                    product={p}
+                    material={materialMap.get(p.material_id)}
+                    onEdit={() => openEdit(p)}
+                    onDelete={() => openDeleteConfirm(p)}
+                  />
+                </div>
+              )
+            }
+
             const isOpen = expandedGroupIds.has(section.id)
             return (
               <div
@@ -295,16 +317,30 @@ export default function CatalogPage() {
                   </span>
                 </button>
 
-                {/* Products inside group */}
-                {isOpen && section.items.map((p) => (
-                  <ProductRow
-                    key={p.id}
-                    product={p}
-                    material={materialMap.get(p.material_id)}
-                    onEdit={() => openEdit(p)}
-                    onDelete={() => openDeleteConfirm(p)}
-                  />
-                ))}
+                {/* Products inside group — animated open/close */}
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div>
+                        {section.items.map((p) => (
+                          <ProductRow
+                            key={p.id}
+                            product={p}
+                            material={materialMap.get(p.material_id)}
+                            onEdit={() => openEdit(p)}
+                            onDelete={() => openDeleteConfirm(p)}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )
           })}
