@@ -155,12 +155,12 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton preventOutsideClose>
+      <DialogContent showCloseButton preventOutsideClose className="max-h-[88dvh] !flex flex-col">
         <DialogHeader>
           <DialogTitle>{product ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: 'calc(88dvh - 130px)' }}>
+        <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-0">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="ui-field-label">
