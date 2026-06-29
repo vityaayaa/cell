@@ -531,7 +531,7 @@ export function CellActionsSheet({
               // without an accordion header (matches the catalog).
               if (section.items.length === 1) {
                 return (
-                  <div key={section.id}>
+                  <div key={section.id} className="flex-shrink-0">
                     {renderPickerButton(section.items[0])}
                   </div>
                 )
@@ -540,7 +540,7 @@ export function CellActionsSheet({
               return (
                 <div
                   key={section.id}
-                  className="rounded-lg border overflow-hidden"
+                  className="rounded-lg border overflow-hidden flex-shrink-0"
                   style={{ borderColor: 'var(--border)' }}
                 >
                   <button
