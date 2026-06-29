@@ -12,6 +12,7 @@ import type { Cell, Product } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { getEffectiveCapacity } from '@/domain/capacity'
+import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
 interface CellSettingsSheetProps {
   cell: Cell | null
@@ -79,17 +80,17 @@ export function CellSettingsSheet({
       updated_at: now,
     }
 
-    const newWidth = parseInt(widthInput)
-    const newHeight = parseInt(heightInput)
+    const newWidth = parseDecimalMm(widthInput)
+    const newHeight = parseDecimalMm(heightInput)
 
     // Each compartment is fully independent: write size only to THIS cell.
     // Since nothing is divided, the given size equals the computed size.
     const updates: Partial<Cell> = { ...cellUpdates }
-    if (!isNaN(newWidth) && newWidth > 0) {
+    if (newWidth != null) {
       updates.width_mm = newWidth
       updates.computed_width_mm = newWidth
     }
-    if (!isNaN(newHeight) && newHeight > 0) {
+    if (newHeight != null) {
       updates.height_mm = newHeight
       updates.computed_height_mm = newHeight
     }
@@ -182,9 +183,9 @@ export function CellSettingsSheet({
                 <Input
                   id="height"
                   type="text"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   value={heightInput}
-                  onChange={e => setHeightInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={e => setHeightInput(sanitizeDecimalInput(e.target.value))}
                   className="text-base"
                 />
               </div>
@@ -193,9 +194,9 @@ export function CellSettingsSheet({
                 <Input
                   id="width"
                   type="text"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   value={widthInput}
-                  onChange={e => setWidthInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={e => setWidthInput(sanitizeDecimalInput(e.target.value))}
                   className="text-base"
                 />
               </div>

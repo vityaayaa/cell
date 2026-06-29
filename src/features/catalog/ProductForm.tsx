@@ -10,6 +10,7 @@ import {
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
 import { supabase } from '@/data/supabase'
+import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
 type ProductType = 'unit' | 'round' | 'bulk'
 
@@ -56,13 +57,13 @@ function validate(f: FormState): string | null {
   if (!f.name.trim()) return 'Введите название'
   if (!f.material_id) return 'Выберите материал'
   if (f.type === 'unit') {
-    if (!toInt(f.width_mm)) return 'Укажите ширину'
-    if (!toInt(f.height_mm)) return 'Укажите высоту'
-    if (!toInt(f.length_mm)) return 'Укажите длину'
+    if (!parseDecimalMm(f.width_mm)) return 'Укажите ширину'
+    if (!parseDecimalMm(f.height_mm)) return 'Укажите высоту'
+    if (!parseDecimalMm(f.length_mm)) return 'Укажите длину'
   }
   if (f.type === 'round') {
-    if (!toInt(f.diameter_mm)) return 'Укажите диаметр'
-    if (!toInt(f.length_mm)) return 'Укажите длину'
+    if (!parseDecimalMm(f.diameter_mm)) return 'Укажите диаметр'
+    if (!parseDecimalMm(f.length_mm)) return 'Укажите длину'
   }
   return null
 }
@@ -114,10 +115,10 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
       type: form.type,
       material_id: form.material_id,
       pack_size: toInt(form.pack_size) ?? 1,
-      width_mm: (form.type === 'unit' || form.type === 'bulk') ? toInt(form.width_mm) : null,
-      height_mm: (form.type === 'unit' || form.type === 'bulk') ? toInt(form.height_mm) : null,
-      length_mm: (form.type === 'unit' || form.type === 'round' || form.type === 'bulk') ? toInt(form.length_mm) : null,
-      diameter_mm: form.type === 'round' ? toInt(form.diameter_mm) : null,
+      width_mm: (form.type === 'unit' || form.type === 'bulk') ? parseDecimalMm(form.width_mm) : null,
+      height_mm: (form.type === 'unit' || form.type === 'bulk') ? parseDecimalMm(form.height_mm) : null,
+      length_mm: (form.type === 'unit' || form.type === 'round' || form.type === 'bulk') ? parseDecimalMm(form.length_mm) : null,
+      diameter_mm: form.type === 'round' ? parseDecimalMm(form.diameter_mm) : null,
       // «Учёт поштучно» only applies to round/bulk; unit is always pieces.
       count_pieces: form.type === 'unit' ? false : form.count_pieces,
       created_at: product?.created_at ?? now,
@@ -276,10 +277,10 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       {label}{form.type === 'unit' && <span style={{ color: '#EF4444' }}> *</span>}
                     </label>
                     <input
-                      type="number"
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={form[key as DimKey]}
-                      onChange={(e) => set(key as DimKey, e.target.value)}
+                      onChange={(e) => set(key as DimKey, sanitizeDecimalInput(e.target.value))}
                       placeholder={placeholder}
                       className="rounded-md border px-2 text-base text-center"
                       style={{
@@ -313,10 +314,10 @@ export function ProductForm({ open, onOpenChange, product, materials, actorId }:
                       {label} <span style={{ color: '#EF4444' }}>*</span>
                     </label>
                     <input
-                      type="number"
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={form[key as DimKey]}
-                      onChange={(e) => set(key as DimKey, e.target.value)}
+                      onChange={(e) => set(key as DimKey, sanitizeDecimalInput(e.target.value))}
                       placeholder={placeholder}
                       className="rounded-md border px-2 text-base text-center"
                       style={{
