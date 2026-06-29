@@ -118,11 +118,11 @@ export function BottomNav() {
         return (
           <motion.button
             key={item.label}
-            layout="position"
+            layout
             transition={
               prefersReduced
                 ? { duration: 0 }
-                : { type: 'tween', duration: 0.2, ease: 'easeOut' }
+                : { type: 'spring', stiffness: 500, damping: 35, mass: 0.6 }
             }
             onClick={() => handleTap(item)}
             disabled={isDisabled}
@@ -137,7 +137,7 @@ export function BottomNav() {
                 transition={
                   prefersReduced
                     ? { duration: 0 }
-                    : { type: 'tween', duration: 0.2, ease: 'easeOut' }
+                    : { type: 'spring', stiffness: 500, damping: 35, mass: 0.6 }
                 }
                 className="absolute rounded-2xl"
                 style={{
@@ -173,9 +173,7 @@ export function BottomNav() {
                     ? 'var(--primary)'
                     : 'var(--muted-foreground)',
                 opacity: isDisabled ? 0.38 : 1,
-                // Constant weight: switching 400↔600 changed the text width,
-                // which made `layout` nudge the icon sideways on every tap.
-                fontWeight: 500,
+                fontWeight: isActive ? 600 : 400,
               }}
             >
               {item.label}

@@ -27,20 +27,25 @@ export function sortByMode<T>(
   })
 }
 
+export type LengthMode = false | 'asc' | 'desc'
+
 /**
- * Sort products WITHIN a group by cross-section. Layers, outermost first:
- * length → height → width. Height and width always ascending; length follows
- * `lengthDesc` (the «Длина» toggle). For round products diameter stands in for
- * width and there's no height. Missing dims sort as 0.
+ * Sort products WITHIN a group by cross-section: height ascending, then width
+ * ascending (e.g. 20×28, 20×40, 30×28, 30×40). Length is IGNORED by default.
+ * Only when `lengthMode` is 'asc'/'desc' (the «Длина» toggle is on) does length
+ * become the outermost layer, in that direction. For round products diameter
+ * stands in for width and there's no height. Missing dims sort as 0.
  */
 export function compareByDimensions(
   a: Product,
   b: Product,
-  lengthDesc: boolean,
+  lengthMode: LengthMode = false,
 ): number {
-  const la = a.length_mm ?? 0
-  const lb = b.length_mm ?? 0
-  if (la !== lb) return lengthDesc ? lb - la : la - lb
+  if (lengthMode) {
+    const la = a.length_mm ?? 0
+    const lb = b.length_mm ?? 0
+    if (la !== lb) return lengthMode === 'desc' ? lb - la : la - lb
+  }
   const ha = a.height_mm ?? 0
   const hb = b.height_mm ?? 0
   if (ha !== hb) return ha - hb

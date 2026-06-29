@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
-import { ProductSortBar, compareByDimensions, type SortMode } from '@/features/catalog/ProductSortBar'
+import { ProductSortBar, compareByDimensions, type SortMode, type LengthMode } from '@/features/catalog/ProductSortBar'
+import { accordionDuration } from '@/lib/utils'
 import type { Cell, Product, Material } from '@/data/db'
 
 function getProductParts(p: Product): { name: string; dims: string | null } {
@@ -193,20 +194,21 @@ export function CellActionsSheet({
     if (arr) arr.push(p)
     else pickerByGroup.set(key, [p])
   }
-  // «Длина» toggle flips length order; alpha mode just uses the default
-  // section sort (within a group products are always ordered by cross-section).
-  const pickerLengthDesc = pickerSort !== 'length-asc'
+  // Length only participates when the «Длина» sort is active; otherwise sort
+  // by cross-section (height → width) and ignore length.
+  const pickerLengthMode: LengthMode =
+    pickerSort === 'length-asc' ? 'asc' : pickerSort === 'length-desc' ? 'desc' : false
   const pickerSections: { id: string; name: string; items: Product[] }[] = []
   for (const g of groups) {
     const items = pickerByGroup.get(g.id)
     if (items && items.length > 0) {
-      items.sort((a, b) => compareByDimensions(a, b, pickerLengthDesc))
+      items.sort((a, b) => compareByDimensions(a, b, pickerLengthMode))
       pickerSections.push({ id: g.id, name: g.name, items })
     }
   }
   const pickerOrphan = pickerByGroup.get('__none__')
   if (pickerOrphan && pickerOrphan.length > 0) {
-    pickerOrphan.sort((a, b) => compareByDimensions(a, b, pickerLengthDesc))
+    pickerOrphan.sort((a, b) => compareByDimensions(a, b, pickerLengthMode))
     pickerSections.push({ id: '__none__', name: 'Без группы', items: pickerOrphan })
   }
   const pickerHasResults = pickerSections.length > 0
@@ -565,7 +567,7 @@ export function CellActionsSheet({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        transition={{ duration: accordionDuration(section.items.length), ease: 'easeOut' }}
                         style={{ overflow: 'hidden' }}
                       >
                         <div className="flex flex-col gap-2 p-2">

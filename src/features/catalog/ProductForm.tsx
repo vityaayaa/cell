@@ -10,7 +10,7 @@ import {
 import { db } from '@/data/db'
 import type { Product, Material, Group } from '@/data/db'
 import { supabase } from '@/data/supabase'
-import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
+import { parseDecimalMm, sanitizeDecimalInput, matchGroupByName } from '@/lib/utils'
 
 type ProductType = 'unit' | 'round' | 'bulk'
 
@@ -106,16 +106,14 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   }
 
   /** Auto-assign a group from the name's first word, matching an EXISTING group
-   *  (case-insensitive). Stops once the user has chosen a group manually. */
+   *  (tolerant of singular/plural — see matchGroupByName). Stops once the user
+   *  has chosen a group manually. */
   function setName(value: string) {
     setError(null)
     setForm((prev) => {
       if (groupTouched) return { ...prev, name: value }
-      const firstWord = value.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
-      const match = firstWord
-        ? groups.find((g) => g.name.toLowerCase() === firstWord)
-        : undefined
-      return { ...prev, name: value, group_id: match ? match.id : prev.group_id }
+      const matchId = matchGroupByName(value, groups)
+      return { ...prev, name: value, group_id: matchId ?? prev.group_id }
     })
   }
 

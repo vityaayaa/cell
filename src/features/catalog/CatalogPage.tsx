@@ -10,7 +10,7 @@ import { supabase } from '@/data/supabase'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
 import { GroupsSection } from './GroupsSection'
-import { ProductSortBar, sortByMode, compareByDimensions, type SortMode } from '@/features/catalog/ProductSortBar'
+import { ProductSortBar, sortByMode, compareByDimensions, type SortMode, type LengthMode } from '@/features/catalog/ProductSortBar'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { getProductDisplayName } from '@/features/shelf/cellUtils'
+import { accordionDuration } from '@/lib/utils'
 
 interface ProductRowProps {
   product: Product
@@ -120,7 +121,10 @@ export default function CatalogPage() {
   // group items are ordered by cross-section (compareByDimensions); the
   // «Длина» toggle only flips the length axis.
   const groupedProducts = useMemo(() => {
-    const lengthDesc = sortMode !== 'length-asc'
+    // Length only participates when the «Длина» sort is active; otherwise sort
+    // by cross-section (height → width) and ignore length.
+    const lengthMode: LengthMode =
+      sortMode === 'length-asc' ? 'asc' : sortMode === 'length-desc' ? 'desc' : false
     const byGroup = new Map<string, Product[]>()
     for (const p of filteredProducts) {
       const key = groupMap.has(p.group_id) ? p.group_id : '__none__'
@@ -132,13 +136,13 @@ export default function CatalogPage() {
     for (const g of groups ?? []) {
       const items = byGroup.get(g.id)
       if (items && items.length > 0) {
-        items.sort((a, b) => compareByDimensions(a, b, lengthDesc))
+        items.sort((a, b) => compareByDimensions(a, b, lengthMode))
         sections.push({ id: g.id, name: g.name, items })
       }
     }
     const orphan = byGroup.get('__none__')
     if (orphan && orphan.length > 0) {
-      orphan.sort((a, b) => compareByDimensions(a, b, lengthDesc))
+      orphan.sort((a, b) => compareByDimensions(a, b, lengthMode))
       sections.push({ id: '__none__', name: 'Без группы', items: orphan })
     }
     return sections
@@ -324,7 +328,7 @@ export default function CatalogPage() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      transition={{ duration: accordionDuration(section.items.length), ease: 'easeOut' }}
                       style={{ overflow: 'hidden' }}
                     >
                       <div>
