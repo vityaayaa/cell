@@ -14,7 +14,7 @@ import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
-import { getProductDisplayName } from '@/features/shelf/cellUtils'
+import { getProductShortName } from '@/features/shelf/cellUtils'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 
@@ -185,7 +185,7 @@ export default function StockEntryPage() {
         {/* Product info */}
         <div className="flex flex-col gap-1">
           <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-            {getProductDisplayName(product)}
+            {getProductShortName(product)}
           </p>
           <p className="ui-hint">
             Вместимость:{' '}

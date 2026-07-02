@@ -16,6 +16,16 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+/**
+ * The name shown to employees on the WORKING screens (shelf, sweep, order,
+ * checklist): the manual «отображаемое название» if set, else the full auto
+ * name. The catalog always uses getProductDisplayName (the full one).
+ */
+export function getProductShortName(product: Product): string {
+  const custom = product.display_name?.trim()
+  return custom ? custom : getProductDisplayName(product)
+}
+
 export function getProductDisplayName(product: Product): string {
   if (product.type === 'round') {
     const parts = [

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion, AnimatePresence } from 'motion/react'
-import { Package, Settings, Minus, Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Package, Settings, Minus, Plus, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -14,10 +14,21 @@ import { ProductSortBar, compareByDimensions, type SortMode, type LengthMode } f
 import { accordionDuration } from '@/lib/utils'
 import type { Cell, Product, Material } from '@/data/db'
 
+// Full dimensions for the product picker (admin assigns a product and needs the
+// exact sizes). Shows whatever is set for ALL types, incl. bulk and partials.
 function getProductParts(p: Product): { name: string; dims: string | null } {
-  if (p.type === 'unit') return { name: p.name, dims: `${p.height_mm}×${p.width_mm}×${p.length_mm}` }
-  if (p.type === 'round') return { name: p.name, dims: `⌀${p.diameter_mm}×${p.length_mm}` }
-  return { name: p.name, dims: null }
+  if (p.type === 'round') {
+    const parts = [
+      p.diameter_mm != null ? `⌀${p.diameter_mm}` : null,
+      p.length_mm != null ? String(p.length_mm) : null,
+    ].filter((v): v is string => v != null)
+    return { name: p.name, dims: parts.length ? parts.join('×') : null }
+  }
+  // unit & bulk: height×width×length, skipping any that are not set.
+  const dims = [p.height_mm, p.width_mm, p.length_mm].filter(
+    (v): v is number => v != null,
+  )
+  return { name: p.name, dims: dims.length ? dims.join('×') : null }
 }
 import { db } from '@/data/db'
 import { mutateUpsertMany, mutateUpdate, mutateDelete } from '@/data/mutate'
@@ -258,7 +269,11 @@ export function CellActionsSheet({
             />
           )}
           <span className="text-sm font-medium truncate">{name}</span>
-          {inShelf && <span className="ui-hint flex-shrink-0">в стеллаже</span>}
+          {inShelf && (
+            <span title="Уже в стеллаже" className="flex-shrink-0 flex items-center">
+              <Check size={16} strokeWidth={2} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            </span>
+          )}
         </span>
         {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
       </button>

@@ -319,6 +319,7 @@ export type Database = {
         Row: {
           created_at: string
           diameter_mm: number | null
+          display_name: string | null
           group_id: string
           height_mm: number | null
           id: string
@@ -333,6 +334,7 @@ export type Database = {
         Insert: {
           created_at?: string
           diameter_mm?: number | null
+          display_name?: string | null
           group_id: string
           height_mm?: number | null
           id?: string
@@ -347,6 +349,7 @@ export type Database = {
         Update: {
           created_at?: string
           diameter_mm?: number | null
+          display_name?: string | null
           group_id?: string
           height_mm?: number | null
           id?: string

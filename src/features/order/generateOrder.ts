@@ -5,7 +5,7 @@ import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
 import { buildOrderLines } from '@/domain/request'
 import type { CellStock } from '@/domain/request'
-import { getProductDisplayName } from '@/features/shelf/cellUtils'
+import { getProductShortName } from '@/features/shelf/cellUtils'
 import { updateSessionStatus } from './updateSessionStatus'
 
 function productDimensions(product: Product): ProductDimensions {
@@ -67,7 +67,7 @@ export async function generateOrder(sessionId: string): Promise<string> {
   const lines = await Promise.all(
     orderLines.map(async (l) => {
       const product = await db.products.get(l.product_id)
-      const product_name = product ? getProductDisplayName(product) : 'Неизвестный товар'
+      const product_name = product ? getProductShortName(product) : 'Неизвестный товар'
       return {
         id: crypto.randomUUID(),
         order_id: orderId,

@@ -7,7 +7,7 @@ import { packs } from '@/lib/plural'
 import {
   getRootAddress,
   hexToRgba,
-  getProductDisplayName,
+  getProductShortName,
   getMaterialForProduct,
 } from './cellUtils'
 
@@ -170,7 +170,7 @@ export function CellCard({
     : 'var(--muted)'
 
   const leafLabel = product
-    ? getProductDisplayName(product)
+    ? getProductShortName(product)
     : mode === 'edit'
       ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0 ? 'Назначьте товар' : 'Задайте размеры')
       : '—'

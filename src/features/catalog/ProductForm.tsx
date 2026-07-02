@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
+import { Tag } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ interface ProductFormProps {
 
 interface FormState {
   name: string
+  display_name: string
   type: ProductType
   material_id: string
   group_id: string
@@ -37,6 +39,7 @@ interface FormState {
 
 const EMPTY: FormState = {
   name: '',
+  display_name: '',
   type: 'unit',
   material_id: '',
   group_id: '',
@@ -77,12 +80,16 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   const [shakeKey, setShakeKey] = useState(0)
   // Once the user picks a group by hand, stop auto-filling it from the name.
   const [groupTouched, setGroupTouched] = useState(false)
+  // The «отображаемое название» input is collapsed by default; a square toggle
+  // to the right of the name reveals it. Auto-open in edit mode when it's set.
+  const [showDisplayName, setShowDisplayName] = useState(false)
 
   useEffect(() => {
     if (open) {
       if (product) {
         setForm({
           name: product.name,
+          display_name: product.display_name ?? '',
           type: product.type as ProductType,
           material_id: product.material_id,
           group_id: product.group_id ?? '',
@@ -96,6 +103,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
         setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
       }
       setGroupTouched(false)
+      setShowDisplayName(Boolean(product?.display_name))
       setError(null)
     }
   }, [open, product, materials, groups])
@@ -134,6 +142,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
     const record: Product = {
       id,
       name: form.name.trim(),
+      display_name: form.display_name.trim() || null,
       type: form.type,
       material_id: form.material_id,
       group_id: form.group_id,
@@ -184,21 +193,60 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
             <label className="ui-field-label">
               Название <span style={{ color: '#EF4444' }}>*</span>
             </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Брусок, Труба ПВХ, Штапик..."
-              className="rounded-md border px-3 text-base"
-              style={{
-                height: 44,
-                fontSize: 16,
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--foreground)',
-                outline: 'none',
-              }}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Брусок, Труба ПВХ, Штапик..."
+                className="flex-1 min-w-0 rounded-md border px-3 text-base"
+                style={{
+                  height: 44,
+                  fontSize: 16,
+                  background: 'var(--background)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowDisplayName((v) => !v)}
+                aria-label="Отображаемое название"
+                className="flex items-center justify-center rounded-md border flex-shrink-0"
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: showDisplayName ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--background)',
+                  borderColor: showDisplayName ? 'var(--primary)' : 'var(--border)',
+                  color: showDisplayName ? 'var(--primary)' : 'var(--foreground)',
+                }}
+              >
+                <Tag size={18} strokeWidth={1.5} />
+              </button>
+            </div>
+            {showDisplayName && (
+              <div className="flex flex-col gap-1 mt-0.5">
+                <input
+                  type="text"
+                  value={form.display_name}
+                  onChange={(e) => set('display_name', e.target.value)}
+                  placeholder="Отображаемое название (необязательно)"
+                  className="rounded-md border px-3 text-base"
+                  style={{
+                    height: 44,
+                    fontSize: 16,
+                    background: 'var(--background)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                    outline: 'none',
+                  }}
+                />
+                <p className="ui-hint">
+                  Как товар показывается сотрудникам в стеллаже, заявке и т.д. Пусто — показывается полное имя.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Type */}

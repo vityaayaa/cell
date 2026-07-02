@@ -10,7 +10,7 @@ import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
-import { getProductDisplayName, isPiecesInput, productUnitLabel } from '@/features/shelf/cellUtils'
+import { getProductShortName, isPiecesInput, productUnitLabel } from '@/features/shelf/cellUtils'
 import { packs } from '@/lib/plural'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -244,7 +244,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
 
         <div className="flex flex-col gap-1 mb-2">
           <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-            {getProductDisplayName(product)}
+            {getProductShortName(product)}
           </p>
           <p className="ui-hint">
             Вместимость: {capacityLabel}

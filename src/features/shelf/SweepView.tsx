@@ -22,7 +22,7 @@ import { ShelfGrid } from './ShelfGrid'
 import { SweepProgressBar } from './SweepProgressBar'
 import { buildSweepOrder, getBaseAncestor } from './sweepOrder'
 import {
-  getProductDisplayName,
+  getProductShortName,
   getMaterialForProduct,
   getRootAddress,
   isPiecesInput,
@@ -523,7 +523,7 @@ function CurrentCellCard({
               />
             )}
             <span className="text-base font-semibold leading-tight" style={{ color: 'var(--foreground)' }}>
-              {product ? getProductDisplayName(product) : '—'}
+              {product ? getProductShortName(product) : '—'}
             </span>
           </div>
 

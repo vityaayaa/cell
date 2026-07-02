@@ -245,13 +245,8 @@ export default function OrderDraftPage() {
         <div className="mx-4 border-t mb-4" style={{ borderColor: 'var(--border)' }} />
         <div className="px-4 pb-6">
           <button
-            className="w-full rounded-md font-medium text-sm disabled:opacity-40"
-            style={{
-              height: '48px',
-              background: 'var(--muted)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-            }}
+            className="btn-primary w-full rounded-md font-medium text-sm disabled:opacity-40"
+            style={{ height: '48px' }}
             onClick={() => setFinalizeOpen(true)}
             disabled={mainLines.length === 0}
           >
