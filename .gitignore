@@ -30,3 +30,6 @@ dist-ssr/
 pnpm-debug.log*
 .vercel
 @/
+
+# Playwright MCP artifacts
+.playwright-mcp/

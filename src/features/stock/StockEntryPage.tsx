@@ -10,7 +10,7 @@ import { db } from '@/data/db'
 import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
-import { mutateInsert } from '@/data/mutate'
+import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
@@ -143,18 +143,15 @@ export default function StockEntryPage() {
   async function handleSave() {
     if (!canSave || !activeSessionId || !userId || !cellId) return
     const value = isBulk ? packsValue : numValue
-    const entry = {
-      id: crypto.randomUUID(),
-      cell_id: cellId,
-      session_id: activeSessionId,
-      user_id: userId,
-      value,
-      created_at: new Date().toISOString(),
-    }
     setSaving(true)
-    const result = await mutateInsert('stock_entries', db.stock_entries, entry)
+    const result = await saveStockEntry({
+      cellId,
+      sessionId: activeSessionId,
+      userId,
+      value,
+    })
 
-    if (result === 'queued') {
+    if (result === 'local') {
       toastSuccess('Сохранено офлайн — синхронизируется позже')
       navigate(-1)
       return

@@ -13,6 +13,7 @@ export async function initialLoad(): Promise<void> {
     const [
       materialsRes, groupsRes, productsRes, shelvesRes, cellsRes,
       sessionsRes, ordersRes, orderLinesRes, checklistRes, stockRes, profilesRes,
+      auditRes,
     ] = await Promise.all([
       supabase.from('materials').select('*'),
       supabase.from('groups').select('*'),
@@ -25,12 +26,15 @@ export async function initialLoad(): Promise<void> {
       supabase.from('checklist_entries').select('*'),
       supabase.from('stock_entries').select('*'),
       supabase.from('user_profiles').select('*'),
+      // Журнал аудита растёт вечно — грузим только последние 500 записей, а не
+      // всю таблицу, чтобы не тянуть тысячи строк на телефон при каждом старте.
+      supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(500),
     ])
 
     await db.transaction('rw', [
       db.materials, db.groups, db.products, db.shelves, db.cells,
       db.sessions, db.orders, db.order_lines, db.checklist_entries,
-      db.stock_entries, db.user_profiles,
+      db.stock_entries, db.user_profiles, db.audit_log,
     ], async () => {
       if (materialsRes.data) await db.materials.bulkPut(materialsRes.data)
       if (groupsRes.data) await db.groups.bulkPut(groupsRes.data)
@@ -43,6 +47,12 @@ export async function initialLoad(): Promise<void> {
       if (checklistRes.data) await db.checklist_entries.bulkPut(checklistRes.data)
       if (stockRes.data) await db.stock_entries.bulkPut(stockRes.data)
       if (profilesRes.data) await db.user_profiles.bulkPut(profilesRes.data)
+      // Журнал заменяем целиком последними 500 с сервера (а не bulkPut поверх),
+      // иначе локально накопленные старые записи никогда не вытеснятся.
+      if (auditRes.data) {
+        await db.audit_log.clear()
+        await db.audit_log.bulkPut(auditRes.data)
+      }
     })
   } finally {
     store.setSyncing(false)
@@ -75,11 +85,12 @@ export async function flushQueue(): Promise<void> {
 
   try {
     for (const item of items) {
-      // Лимит ретраев: запись, которая 5 раз не прошла (например RLS-запрет),
-      // больше не пытаемся досылать — не удаляем, но и не блокируем остальную
-      // очередь. Так «мусор» не крутится вечно.
+      // Лимит ретраев: запись, которая 5 раз не прошла (например RLS-запрет или
+      // битые данные), удаляется из очереди — иначе «ядовитый» мусор копился бы
+      // вечно и проверялся при каждом flush. Логируем, чтобы факт не потерялся.
       if (item.retry_count >= 5) {
-        console.warn('[sync] пропускаем запись очереди после 5 попыток', item.table_name, item.record_id)
+        console.warn('[sync] удаляем запись очереди после 5 неудачных попыток', item.table_name, item.record_id, item.payload)
+        await db.sync_queue.delete(item.id)
         continue
       }
       try {
