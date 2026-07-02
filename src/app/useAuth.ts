@@ -53,6 +53,15 @@ export function useAuth(): {
       await db.user_profiles.put(data)
       setUser(data.id, data.role)
       setUserProfile(data)
+    } else {
+      // Офлайн/ошибка сети: сетевой запрос пуст → восстанавливаем профиль (и роль)
+      // из Dexie-кэша прошлой сессии, иначе роль не проставится и приложение
+      // будет вести себя как без прав.
+      const cached = await db.user_profiles.get(userId)
+      if (cached) {
+        setUser(cached.id, cached.role)
+        setUserProfile(cached)
+      }
     }
     setIsLoading(false)
   }

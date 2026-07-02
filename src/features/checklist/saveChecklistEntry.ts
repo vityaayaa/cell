@@ -1,6 +1,6 @@
 import { db } from '@/data/db'
 import type { ChecklistEntry } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpdate } from '@/data/mutate'
 import { toast } from 'sonner'
 import { updateSessionStatus } from '@/features/order/updateSessionStatus'
 
@@ -15,22 +15,12 @@ export async function saveChecklistEntry(
   if (!prev) return
 
   const now = new Date().toISOString()
-  await db.checklist_entries.update(entryId, { ...update, updated_at: now })
+  const updated: ChecklistEntry = { ...prev, ...update, updated_at: now }
+  await db.checklist_entries.put(updated)
 
-  const { error } = await supabase
-    .from('checklist_entries')
-    .update({ ...update, updated_at: now })
-    .eq('id', entryId)
-
-  if (error) {
-    await db.checklist_entries.update(entryId, {
-      status: prev.status,
-      actual_packs: prev.actual_packs,
-      updated_at: prev.updated_at,
-    })
-    toast.error('Не сохранилось. Попробуйте ещё раз.')
-    return
-  }
+  // При офлайне запись не теряется — уходит в очередь. Красную ошибку не
+  // показываем: данные сохранены.
+  await mutateUpdate('checklist_entries', db.checklist_entries, updated)
 
   await checkSessionCompletion(sessionId)
 }

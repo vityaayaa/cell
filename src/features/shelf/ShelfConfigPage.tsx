@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
+import { mutateUpdate, mutateInsertMany, mutateDelete } from '@/data/mutate'
 import { useRegisterHeaderAction } from '@/app/HeaderActionContext'
 import { useShelfData } from './useShelfData'
 import { ShelfSetupPage } from './ShelfSetupPage'
@@ -78,18 +78,12 @@ export default function ShelfConfigPage() {
       updated_at: now,
     }))
 
-    const { error: shelfErr } = await supabase
-      .from('shelves')
-      .update({ rows_count: newRow, updated_at: now })
-      .eq('id', shelf.id)
-    const { error: cellsErr } = await supabase.from('cells').insert(newCells)
+    // Локальная запись + облако через mutate; при офлайне уходит в очередь.
+    await db.shelves.update(shelf.id, { rows_count: newRow, updated_at: now })
+    const updatedShelf = await db.shelves.get(shelf.id)
+    if (updatedShelf) await mutateUpdate('shelves', db.shelves, updatedShelf)
+    await mutateInsertMany('cells', db.cells, newCells)
 
-    if (shelfErr || cellsErr) {
-      toast.error('Не удалось добавить ряд.')
-    } else {
-      await db.shelves.update(shelf.id, { rows_count: newRow, updated_at: now })
-      await db.cells.bulkPut(newCells)
-    }
     setAddingRow(false)
     setShelfActionsOpen(false)
   }
@@ -119,18 +113,11 @@ export default function ShelfConfigPage() {
       updated_at: now,
     }))
 
-    const { error: shelfErr } = await supabase
-      .from('shelves')
-      .update({ cols_count: newCol, updated_at: now })
-      .eq('id', shelf.id)
-    const { error: cellsErr } = await supabase.from('cells').insert(newCells)
+    await db.shelves.update(shelf.id, { cols_count: newCol, updated_at: now })
+    const updatedShelf = await db.shelves.get(shelf.id)
+    if (updatedShelf) await mutateUpdate('shelves', db.shelves, updatedShelf)
+    await mutateInsertMany('cells', db.cells, newCells)
 
-    if (shelfErr || cellsErr) {
-      toast.error('Не удалось добавить столбец.')
-    } else {
-      await db.shelves.update(shelf.id, { cols_count: newCol, updated_at: now })
-      await db.cells.bulkPut(newCells)
-    }
     setAddingCol(false)
     setShelfActionsOpen(false)
   }
@@ -139,20 +126,18 @@ export default function ShelfConfigPage() {
     if (!shelf) return
     setRecreating(true)
     try {
-      // Server delete cascades cells → stock_entries (migration 005). Order /
-      // checklist history doesn't reference cells, so it stays.
-      const { error } = await supabase.from('shelves').delete().eq('id', shelf.id)
-      if (error) throw error
       const cellRows = await db.cells.where('shelf_id').equals(shelf.id).toArray()
       const cellIds = cellRows.map((c) => c.id)
-      await db.transaction('rw', [db.shelves, db.cells, db.stock_entries], async () => {
-        await db.shelves.delete(shelf.id)
+      // Локальный каскад: сервер сам каскадит cells → stock_entries (миграция
+      // 005), здесь зеркалим это в Dexie. История заявок/обходов не ссылается на
+      // ячейки, поэтому сохраняется.
+      await db.transaction('rw', [db.cells, db.stock_entries], async () => {
         await db.cells.where('shelf_id').equals(shelf.id).delete()
         if (cellIds.length) await db.stock_entries.where('cell_id').anyOf(cellIds).delete()
       })
+      // Удаление стеллажа через очередь: при офлайне не теряется.
+      await mutateDelete('shelves', db.shelves, shelf.id)
       // shelf is now null → ShelfSetupPage renders, asking for the new size.
-    } catch {
-      toast.error('Не удалось пересоздать. Попробуйте ещё раз.')
     } finally {
       setRecreating(false)
       setConfirmRecreate(false)

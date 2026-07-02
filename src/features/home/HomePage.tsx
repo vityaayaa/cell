@@ -9,7 +9,7 @@ import { startSweep } from '@/features/sessions/startSweep'
 import { exportAggregatesExcel } from '@/features/admin/exportExcel'
 import type { ProductAggregate } from '@/features/admin/exportExcel'
 import { SessionCard } from './SessionCard'
-import { supabase } from '@/data/supabase'
+import { mutateDelete } from '@/data/mutate'
 import {
   Dialog,
   DialogContent,
@@ -144,13 +144,8 @@ export default function HomePage() {
     if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
-      // Delete on the server first — if RLS/network blocks it, we must NOT
-      // remove it locally, otherwise it reappears on the next sync.
-      const { error } = await supabase.from('sessions').delete().eq('id', deleteTarget)
-      if (error) throw error
-
-      // Server FKs cascade-delete the children; mirror that in Dexie so they
-      // don't linger locally.
+      // Локальный каскад: сервер сам каскадит по FK, здесь зеркалим удаление
+      // детей в Dexie, чтобы они не остались локально.
       const orders = await db.orders.where('session_id').equals(deleteTarget).toArray()
       const orderIds = orders.map((o) => o.id)
       const lines = orderIds.length
@@ -159,9 +154,8 @@ export default function HomePage() {
       const lineIds = lines.map((l) => l.id)
       await db.transaction(
         'rw',
-        [db.sessions, db.orders, db.order_lines, db.checklist_entries, db.stock_entries],
+        [db.orders, db.order_lines, db.checklist_entries, db.stock_entries],
         async () => {
-          await db.sessions.delete(deleteTarget)
           await db.stock_entries.where('session_id').equals(deleteTarget).delete()
           if (orderIds.length) await db.orders.bulkDelete(orderIds)
           if (lineIds.length) {
@@ -170,9 +164,11 @@ export default function HomePage() {
           }
         },
       )
-      toast.success('Обход удалён')
-    } catch {
-      toast.error('Не удалось удалить')
+      // Удаление обхода через очередь: при офлайне не теряется, дошлётся при
+      // восстановлении связи (flushQueue выполняется до initialLoad, поэтому
+      // удалённый обход не «воскреснет» при следующей синхронизации).
+      const outcome = await mutateDelete('sessions', db.sessions, deleteTarget)
+      toast.success(outcome === 'queued' ? 'Обход удалён офлайн — синхронизируется позже' : 'Обход удалён')
     } finally {
       setDeleting(false)
       setDeleteTarget(null)

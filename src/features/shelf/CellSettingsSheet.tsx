@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Cell, Product } from '@/data/db'
 import { db } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpdate } from '@/data/mutate'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import { parseDecimalMm, sanitizeDecimalInput } from '@/lib/utils'
 
@@ -95,16 +94,11 @@ export function CellSettingsSheet({
       updates.computed_height_mm = newHeight
     }
 
-    try {
-      await db.cells.update(cell.id, updates)
-      const { error } = await supabase.from('cells').update(updates).eq('id', cell.id)
-      if (error) throw error
-    } catch {
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
-    } finally {
-      setSaving(false)
-      onClose()
-    }
+    await db.cells.update(cell.id, updates)
+    const updated = await db.cells.get(cell.id)
+    if (updated) await mutateUpdate('cells', db.cells, updated)
+    setSaving(false)
+    onClose()
   }
 
   async function handleReset() {
@@ -127,16 +121,11 @@ export function CellSettingsSheet({
     }
     if (!hasChildren) updates.product_id = null
 
-    try {
-      await db.cells.update(cell.id, updates)
-      const { error } = await supabase.from('cells').update(updates).eq('id', cell.id)
-      if (error) throw error
-    } catch {
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
-    } finally {
-      setSaving(false)
-      onClose()
-    }
+    await db.cells.update(cell.id, updates)
+    const updated = await db.cells.get(cell.id)
+    if (updated) await mutateUpdate('cells', db.cells, updated)
+    setSaving(false)
+    onClose()
   }
 
   return (

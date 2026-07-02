@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Plus } from 'lucide-react'
 import { db } from '@/data/db'
 import type { Order, OrderLine, Product, Material } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateInsertMany, mutateUpdate } from '@/data/mutate'
 import { useAppStore } from '@/data/store'
 import { updateSessionStatus } from './updateSessionStatus'
 import { packs } from '@/lib/plural'
@@ -93,11 +93,11 @@ export default function OrderDraftPage() {
     const lines = await db.order_lines.where('order_id').equals(order.id).toArray()
     const now = new Date().toISOString()
 
-    await db.orders.update(order.id, { finalized_at: now, updated_at: now })
-    await supabase
-      .from('orders')
-      .update({ finalized_at: now, updated_at: now })
-      .eq('id', order.id)
+    // Пишем через mutate: и офлайн-надёжность, и проверка ошибок разом (раньше
+    // handleFinalize вообще не проверял ответ Supabase). Локальные строки уже
+    // есть, поэтому чеклист отрисуется из Dexie даже при офлайне.
+    const finalizedOrder: Order = { ...order, finalized_at: now, updated_at: now }
+    await mutateUpdate('orders', db.orders, finalizedOrder)
 
     const checklistEntries = lines.map((l) => ({
       id: crypto.randomUUID(),
@@ -107,8 +107,7 @@ export default function OrderDraftPage() {
       updated_at: now,
       user_id: userId,
     }))
-    await db.checklist_entries.bulkPut(checklistEntries)
-    await supabase.from('checklist_entries').insert(checklistEntries)
+    await mutateInsertMany('checklist_entries', db.checklist_entries, checklistEntries)
 
     await updateSessionStatus(activeSessionId, 'fulfilling')
     navigate(`/app/checklist/${activeSessionId}`)

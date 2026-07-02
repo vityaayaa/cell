@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { db } from '@/data/db'
 import type { Material } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpsert, mutateInsert, mutateDelete } from '@/data/mutate'
 import { useAppStore } from '@/data/store'
 
 interface MaterialFormSheetProps {
@@ -51,14 +51,7 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
       updated_at: now,
     }
 
-    await db.materials.put(record)
-    const { error: sbErr } = await supabase.from('materials').upsert(record)
-    if (sbErr) {
-      await db.materials.delete(id)
-      toast.error('Не сохранилось — нет связи')
-      setSaving(false)
-      return
-    }
+    const outcome = await mutateUpsert('materials', db.materials, record)
 
     if (actorId) {
       const logEntry = {
@@ -71,11 +64,14 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
         new_value: { name: record.name, color: record.color },
         created_at: now,
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success(isNew ? 'Материал добавлен' : 'Материал обновлён')
+    if (outcome === 'queued') {
+      toast.success('Сохранено офлайн — синхронизируется позже')
+    } else {
+      toast.success(isNew ? 'Материал добавлен' : 'Материал обновлён')
+    }
     setSaving(false)
     onOpenChange(false)
   }
@@ -171,14 +167,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
   async function handleDelete(m: Material) {
     if (!m.is_custom) return
     setDeletingId(m.id)
-    await db.materials.delete(m.id)
-    const { error } = await supabase.from('materials').delete().eq('id', m.id)
-    if (error) {
-      await db.materials.put(m)
-      toast.error('Не удалилось — нет связи')
-      setDeletingId(null)
-      return
-    }
+    const outcome = await mutateDelete('materials', db.materials, m.id)
 
     if (actorId) {
       const logEntry = {
@@ -191,11 +180,10 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
         new_value: null,
         created_at: new Date().toISOString(),
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success('Материал удалён')
+    toast.success(outcome === 'queued' ? 'Удалено офлайн — синхронизируется позже' : 'Материал удалён')
     setDeletingId(null)
   }
 

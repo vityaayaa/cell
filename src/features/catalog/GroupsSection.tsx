@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { db } from '@/data/db'
 import type { Group } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpsert, mutateInsert, mutateDelete } from '@/data/mutate'
 import { useAppStore } from '@/data/store'
 import { plural } from '@/lib/plural'
 
@@ -48,14 +48,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
       updated_at: now,
     }
 
-    await db.groups.put(record)
-    const { error: sbErr } = await supabase.from('groups').upsert(record)
-    if (sbErr) {
-      await db.groups.delete(id)
-      toast.error('Не сохранилось — нет связи')
-      setSaving(false)
-      return
-    }
+    const outcome = await mutateUpsert('groups', db.groups, record)
 
     if (actorId) {
       const logEntry = {
@@ -68,11 +61,14 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
         new_value: { name: record.name },
         created_at: now,
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success(isNew ? 'Группа добавлена' : 'Группа обновлена')
+    if (outcome === 'queued') {
+      toast.success('Сохранено офлайн — синхронизируется позже')
+    } else {
+      toast.success(isNew ? 'Группа добавлена' : 'Группа обновлена')
+    }
     setSaving(false)
     onOpenChange(false)
   }
@@ -152,14 +148,7 @@ export function GroupsSection({ groups }: GroupsSectionProps) {
     }
 
     setDeletingId(g.id)
-    await db.groups.delete(g.id)
-    const { error } = await supabase.from('groups').delete().eq('id', g.id)
-    if (error) {
-      await db.groups.put(g)
-      toast.error('Не удалилось — нет связи')
-      setDeletingId(null)
-      return
-    }
+    const outcome = await mutateDelete('groups', db.groups, g.id)
 
     if (actorId) {
       const logEntry = {
@@ -172,11 +161,10 @@ export function GroupsSection({ groups }: GroupsSectionProps) {
         new_value: null,
         created_at: new Date().toISOString(),
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success('Группа удалена')
+    toast.success(outcome === 'queued' ? 'Удалено офлайн — синхронизируется позже' : 'Группа удалена')
     setDeletingId(null)
   }
 

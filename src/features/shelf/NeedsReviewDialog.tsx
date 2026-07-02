@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpdate } from '@/data/mutate'
 
 interface NeedsReviewDialogProps {
   cell: Cell | null
@@ -28,14 +27,8 @@ export function NeedsReviewDialog({
     setLoading(true)
     const now = new Date().toISOString()
     await db.cells.update(cell.id, { needs_review: false, updated_at: now })
-    const { error } = await supabase
-      .from('cells')
-      .update({ needs_review: false, updated_at: now })
-      .eq('id', cell.id)
-    if (error) {
-      await db.cells.update(cell.id, { needs_review: true, updated_at: now })
-      toast.error('Не сохранилось. Попробуйте ещё раз.')
-    }
+    const updated = await db.cells.get(cell.id)
+    if (updated) await mutateUpdate('cells', db.cells, updated)
     setLoading(false)
     onClose()
   }

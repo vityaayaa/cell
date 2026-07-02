@@ -1,3 +1,11 @@
+-- ПРЕДУПРЕЖДЕНИЕ (на будущее): `add column group_id not null references ...`
+-- БЕЗ default упадёт на НЕПУСТОЙ таблице products — существующим строкам нечем
+-- заполнить обязательную колонку. Здесь это сработало только потому, что таблица
+-- products была пуста на момент миграции. Для breaking-миграций на непустых
+-- таблицах нужна data-migration стратегия: сначала добавить колонку nullable →
+-- backfill значениями → только потом set not null. НЕ повторять этот паттерн
+-- вслепую на живых данных.
+
 -- Product groups (вид товара: Брусок, Наличник, Вагонка…). Like materials but
 -- no colour. Assigning a product to a group is mandatory.
 create table groups (

@@ -7,6 +7,7 @@ import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
 import { useAppStore } from '@/data/store'
 import { supabase } from '@/data/supabase'
+import { mutateDelete, mutateInsert } from '@/data/mutate'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
 import { GroupsSection } from './GroupsSection'
@@ -178,10 +179,8 @@ export default function CatalogPage() {
     if (!deleteTarget) return
     setDeleting(true)
 
-    // Remove from Dexie
-    await db.products.delete(deleteTarget.id)
-
-    // Unassign from cells + set needs_review
+    // Отвязать товар от ячеек + пометить needs_review. Это серверная операция
+    // (нужно найти ячейки по product_id), выполняется best-effort только онлайн.
     const { data: assignedCells } = await supabase
       .from('cells')
       .select('id')
@@ -205,15 +204,8 @@ export default function CatalogPage() {
       }
     }
 
-    const { error } = await supabase.from('products').delete().eq('id', deleteTarget.id)
-    if (error) {
-      // Rollback
-      await db.products.put(deleteTarget)
-      toast.error('Не удалилось — нет связи')
-      setDeleting(false)
-      setDeleteConfirmOpen(false)
-      return
-    }
+    // Удаление товара — через очередь: при офлайне не теряется, дошлётся позже.
+    const outcome = await mutateDelete('products', db.products, deleteTarget.id)
 
     // Audit log
     if (userId) {
@@ -227,11 +219,10 @@ export default function CatalogPage() {
         new_value: null,
         created_at: new Date().toISOString(),
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success('Товар удалён')
+    toast.success(outcome === 'queued' ? 'Удалено офлайн — синхронизируется позже' : 'Товар удалён')
     setDeleting(false)
     setDeleteConfirmOpen(false)
     setDeleteTarget(null)

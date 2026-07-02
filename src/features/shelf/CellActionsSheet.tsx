@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion, AnimatePresence } from 'motion/react'
 import { Package, Settings, Minus, Plus, ChevronDown, ChevronRight } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,7 @@ function getProductParts(p: Product): { name: string; dims: string | null } {
   return { name: p.name, dims: null }
 }
 import { db } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpsertMany, mutateUpdate, mutateDelete } from '@/data/mutate'
 import { isLeaf } from '@/domain/bsp'
 
 const MIN_SPLIT = 2
@@ -72,19 +71,8 @@ async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
     updated_at: now,
   }
 
-  await db.transaction('rw', [db.cells], async () => {
-    await db.cells.put(updatedCell)
-    await db.cells.bulkPut(children)
-  })
-
-  const { error } = await supabase.from('cells').upsert([updatedCell, ...children])
-  if (error) {
-    await db.transaction('rw', [db.cells], async () => {
-      await db.cells.put(cell)
-      await db.cells.bulkDelete(children.map(c => c.id))
-    })
-    toast.error('Не сохранилось. Попробуйте ещё раз.')
-  }
+  // Dexie-запись делает mutateUpsertMany; при офлайне уходит в очередь без отката.
+  await mutateUpsertMany('cells', db.cells, [updatedCell, ...children])
 }
 
 /**
@@ -102,47 +90,26 @@ async function collapseParent(parent: Cell, children: Cell[]) {
   }
   const childIds = children.map(c => c.id)
 
-  await db.transaction('rw', [db.cells], async () => {
-    await db.cells.put(restoredParent)
-    await db.cells.bulkDelete(childIds)
-  })
-
-  const { error } = await supabase.from('cells').upsert([restoredParent])
-  if (!error) {
-    await supabase.from('cells').delete().in('id', childIds)
-  } else {
-    await db.transaction('rw', [db.cells], async () => {
-      await db.cells.put(parent)
-      await db.cells.bulkPut(children)
-    })
-    toast.error('Не сохранилось. Попробуйте ещё раз.')
+  // Родитель снова становится листом (upsert), дети удаляются. Через mutate:
+  // Dexie-запись + облако, при офлайне обе операции уходят в очередь.
+  await mutateUpsertMany('cells', db.cells, [restoredParent])
+  for (const childId of childIds) {
+    await mutateDelete('cells', db.cells, childId)
   }
 }
 
 async function assignProduct(cellId: string, productId: string) {
   const now = new Date().toISOString()
   await db.cells.update(cellId, { product_id: productId, capacity_override: null, updated_at: now })
-  const { error } = await supabase
-    .from('cells')
-    .update({ product_id: productId, capacity_override: null, updated_at: now })
-    .eq('id', cellId)
-  if (error) {
-    await db.cells.update(cellId, { product_id: null, updated_at: now })
-    toast.error('Не сохранилось. Попробуйте ещё раз.')
-  }
+  const updated = await db.cells.get(cellId)
+  if (updated) await mutateUpdate('cells', db.cells, updated)
 }
 
 async function removeProduct(cell: Cell) {
   const now = new Date().toISOString()
   await db.cells.update(cell.id, { product_id: null, updated_at: now })
-  const { error } = await supabase
-    .from('cells')
-    .update({ product_id: null, updated_at: now })
-    .eq('id', cell.id)
-  if (error) {
-    await db.cells.update(cell.id, { product_id: cell.product_id, updated_at: now })
-    toast.error('Не сохранилось. Попробуйте ещё раз.')
-  }
+  const updated = await db.cells.get(cell.id)
+  if (updated) await mutateUpdate('cells', db.cells, updated)
 }
 
 export function CellActionsSheet({

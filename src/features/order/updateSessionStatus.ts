@@ -1,6 +1,6 @@
 import { db } from '@/data/db'
 import type { Session } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpdate } from '@/data/mutate'
 
 export async function updateSessionStatus(
   sessionId: string,
@@ -15,8 +15,10 @@ export async function updateSessionStatus(
     ...(isTerminal ? { finished_at: now } : {}),
   })
 
-  await supabase
-    .from('sessions')
-    .update({ status, updated_at: now, ...(isTerminal ? { finished_at: now } : {}) })
-    .eq('id', sessionId)
+  // Читаем полную строку после локального обновления — в очередь нужен весь
+  // объект, чтобы досылка через upsert была корректной.
+  const updated = await db.sessions.get(sessionId)
+  if (updated) {
+    await mutateUpdate('sessions', db.sessions, updated)
+  }
 }

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { db } from '@/data/db'
 import type { Product, Material, Group } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpsert, mutateInsert } from '@/data/mutate'
 import { parseDecimalMm, sanitizeDecimalInput, matchGroupByName } from '@/lib/utils'
 
 type ProductType = 'unit' | 'round' | 'bulk'
@@ -146,14 +146,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
       updated_at: now,
     }
 
-    await db.products.put(record)
-    const { error: sbErr } = await supabase.from('products').upsert(record)
-    if (sbErr) {
-      await db.products.delete(id)
-      toast.error('Не сохранилось — нет связи')
-      setSaving(false)
-      return
-    }
+    const outcome = await mutateUpsert('products', db.products, record)
 
     if (actorId) {
       const logEntry = {
@@ -166,11 +159,14 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
         new_value: { name: record.name },
         created_at: now,
       }
-      await db.audit_log.add(logEntry)
-      await supabase.from('audit_log').insert(logEntry)
+      await mutateInsert('audit_log', db.audit_log, logEntry)
     }
 
-    toast.success(isNew ? 'Товар добавлен' : 'Товар обновлён')
+    if (outcome === 'queued') {
+      toast.success('Сохранено офлайн — синхронизируется позже')
+    } else {
+      toast.success(isNew ? 'Товар добавлен' : 'Товар обновлён')
+    }
     setSaving(false)
     onOpenChange(false)
   }

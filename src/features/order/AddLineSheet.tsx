@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Search } from 'lucide-react'
 import { db } from '@/data/db'
 import type { OrderLine, Product } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateInsert } from '@/data/mutate'
 import { getProductDisplayName } from '@/features/shelf/cellUtils'
 import {
   Dialog,
@@ -78,8 +78,7 @@ export function AddLineSheet({
       created_at: now,
       updated_at: now,
     }
-    await db.order_lines.put(line)
-    await supabase.from('order_lines').insert(line)
+    await mutateInsert('order_lines', db.order_lines, line)
     setSaving(false)
     handleClose()
   }

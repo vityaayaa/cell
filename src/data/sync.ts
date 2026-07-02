@@ -75,6 +75,13 @@ export async function flushQueue(): Promise<void> {
 
   try {
     for (const item of items) {
+      // Лимит ретраев: запись, которая 5 раз не прошла (например RLS-запрет),
+      // больше не пытаемся досылать — не удаляем, но и не блокируем остальную
+      // очередь. Так «мусор» не крутится вечно.
+      if (item.retry_count >= 5) {
+        console.warn('[sync] пропускаем запись очереди после 5 попыток', item.table_name, item.record_id)
+        continue
+      }
       try {
         if (item.operation === 'upsert') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

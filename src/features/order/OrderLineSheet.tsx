@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '@/data/db'
 import type { OrderLine } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateUpdate, mutateDelete } from '@/data/mutate'
 import {
   Dialog,
   DialogContent,
@@ -44,15 +44,13 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
     const packCount = count
     const newUnits = packCount * packSize
     const now = new Date().toISOString()
-    await db.order_lines.update(line.id, {
+    const updated: OrderLine = {
+      ...line,
       quantity_packs: packCount,
       quantity_units: newUnits,
       updated_at: now,
-    })
-    await supabase
-      .from('order_lines')
-      .update({ quantity_packs: packCount, quantity_units: newUnits, updated_at: now })
-      .eq('id', line.id)
+    }
+    await mutateUpdate('order_lines', db.order_lines, updated)
     setSaving(false)
     onOpenChange(false)
   }
@@ -60,8 +58,7 @@ export function OrderLineSheet({ line, open, onOpenChange }: OrderLineSheetProps
   async function handleDelete() {
     if (!line) return
     setSaving(true)
-    await db.order_lines.delete(line.id)
-    await supabase.from('order_lines').delete().eq('id', line.id)
+    await mutateDelete('order_lines', db.order_lines, line.id)
     setSaving(false)
     onOpenChange(false)
   }
@@ -157,15 +154,7 @@ export function BoundaryLineSheet({
       quantity_units: 1 * (line.quantity_units > 0 ? Math.round(line.quantity_units / Math.max(line.quantity_packs, 1)) : 1),
       updated_at: now,
     }
-    await db.order_lines.update(line.id, {
-      is_boundary: false,
-      quantity_packs: 1,
-      updated_at: now,
-    })
-    await supabase
-      .from('order_lines')
-      .update({ is_boundary: false, quantity_packs: 1, updated_at: now })
-      .eq('id', line.id)
+    await mutateUpdate('order_lines', db.order_lines, updated)
     setSaving(false)
     onOpenChange(false)
     onIncluded(updated)

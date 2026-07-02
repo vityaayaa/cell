@@ -225,7 +225,7 @@ export function StockEntryDialog({ cellId, onClose }: StockEntryDialogProps) {
       if (outcome === 'ok') {
         toastSuccess(`✓ Внесено: ${value} из ${capacity} ${unitLabel}`)
       } else {
-        toast.error('Сохранено локально — синхронизируется позже')
+        toastSuccess('Сохранено офлайн — синхронизируется позже')
       }
     } finally {
       setSaving(false)

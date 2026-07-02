@@ -9,7 +9,10 @@ export function AppShell() {
   const setOnline = useAppStore((s) => s.setOnline)
 
   useEffect(() => {
-    initialLoad()
+    // При офлайне initialLoad зарежектит (нет сети) — ловим ошибку, чтобы
+    // необработанный rejection не ронял приложение. Данные всё равно покажутся
+    // из Dexie-кэша через useLiveQuery.
+    initialLoad().catch(() => {})
     navigator.storage?.persist?.()
   }, [])
 

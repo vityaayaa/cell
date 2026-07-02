@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { supabase } from '@/data/supabase'
+import { mutateInsert, mutateInsertMany } from '@/data/mutate'
 import { db } from '@/data/db'
 import type { Cell } from '@/data/db'
 
@@ -49,18 +48,10 @@ export function ShelfSetupPage() {
         }
       }
 
-      const { error: shelfError } = await supabase.from('shelves').insert(shelf)
-      if (shelfError) throw shelfError
-
-      const { error: cellsError } = await supabase.from('cells').insert(cells)
-      if (cellsError) throw cellsError
-
-      await db.transaction('rw', [db.shelves, db.cells], async () => {
-        await db.shelves.put(shelf)
-        await db.cells.bulkPut(cells)
-      })
-    } catch {
-      toast.error('Не удалось создать стеллаж. Попробуйте ещё раз.')
+      // Локальная запись + облако через mutate; при офлайне уходит в очередь и
+      // не теряется, стеллаж сразу виден из Dexie.
+      await mutateInsert('shelves', db.shelves, shelf)
+      await mutateInsertMany('cells', db.cells, cells)
     } finally {
       setLoading(false)
     }

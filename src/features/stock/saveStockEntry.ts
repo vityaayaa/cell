@@ -1,5 +1,5 @@
 import { db } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateInsert } from '@/data/mutate'
 
 export interface SaveStockEntryArgs {
   cellId: string
@@ -9,10 +9,10 @@ export interface SaveStockEntryArgs {
 }
 
 /**
- * Local-first stock save. Writes to Dexie immediately (this is what sweep
- * progress + order generation read), then races a Supabase insert against an 8s
- * timeout. Returns 'ok' when the cloud write succeeds, 'local' when it fails or
- * times out — the local entry is kept either way so the sweep is never blocked.
+ * Local-first stock save. Пишет в Dexie сразу (это читают прогресс обхода и
+ * генерация заявки), затем через mutateInsert шлёт в облако. При неудаче/офлайне
+ * запись НЕ теряется — уходит в sync_queue. Возвращает 'ok' если облако приняло
+ * сразу, 'local' если запись ушла в очередь (досошлётся позже).
  */
 export async function saveStockEntry({
   cellId,
@@ -28,15 +28,6 @@ export async function saveStockEntry({
     value,
     created_at: new Date().toISOString(),
   }
-  await db.stock_entries.put(entry)
-  try {
-    const result = (await Promise.race([
-      supabase.from('stock_entries').insert(entry),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-    ])) as { error: unknown }
-    if (result.error) throw result.error
-    return 'ok'
-  } catch {
-    return 'local'
-  }
+  const result = await mutateInsert('stock_entries', db.stock_entries, entry)
+  return result === 'ok' ? 'ok' : 'local'
 }

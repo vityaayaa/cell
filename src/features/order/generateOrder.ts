@@ -1,6 +1,6 @@
 import { db } from '@/data/db'
 import type { Product } from '@/data/db'
-import { supabase } from '@/data/supabase'
+import { mutateInsert, mutateInsertMany } from '@/data/mutate'
 import { getEffectiveCapacity } from '@/domain/capacity'
 import type { ProductDimensions } from '@/domain/capacity'
 import { buildOrderLines } from '@/domain/request'
@@ -84,26 +84,10 @@ export async function generateOrder(sessionId: string): Promise<string> {
     }),
   )
 
-  // Optimistic write
-  await db.orders.put(order)
-  await db.order_lines.bulkPut(lines)
-
-  // Server write — rollback Dexie on error so the caller receives the failure
-  const { error: orderError } = await supabase.from('orders').insert(order)
-  if (orderError) {
-    await db.orders.delete(orderId)
-    await db.order_lines.bulkDelete(lines.map((l) => l.id))
-    throw orderError
-  }
-
-  if (lines.length > 0) {
-    const { error: linesError } = await supabase.from('order_lines').insert(lines)
-    if (linesError) {
-      await db.orders.delete(orderId)
-      await db.order_lines.bulkDelete(lines.map((l) => l.id))
-      throw linesError
-    }
-  }
+  // Пишем в Dexie + облако; при офлайне записи уходят в очередь и НЕ теряются.
+  // Локальные строки уже есть, поэтому страница заявки отрисуется из Dexie.
+  await mutateInsert('orders', db.orders, order)
+  await mutateInsertMany('order_lines', db.order_lines, lines)
 
   await updateSessionStatus(sessionId, 'ordering')
 
