@@ -55,8 +55,10 @@ export function CellSettingsSheet({
     product.height_mm != null &&
     product.width_mm !== product.height_mm
 
-  const isPackUnit = product?.type === 'bulk' || product?.type === 'round'
-  const overrideUnitLabel = isPackUnit ? 'пачек' : product?.type === 'unit' ? 'шт' : 'ед.'
+  // Only bulk is counted in packs; round & unit are counted in pieces (round
+  // auto-computes capacity from its diameter, so its manual override is «шт»).
+  const isBulk = product?.type === 'bulk'
+  const overrideUnitLabel = isBulk ? 'пачек' : product ? 'шт' : 'ед.'
 
   const calculatedCapacity =
     product?.type === 'unit'
@@ -205,15 +207,15 @@ export function CellSettingsSheet({
           >
             <p className="ui-section-title">Указать вручную, {overrideUnitLabel}</p>
             <p className="ui-hint">
-              {isPackUnit
-                ? 'Для навалом и круглых товаров вместимость в пачках задаётся вручную — приложение её не считает.'
+              {isBulk
+                ? 'Для навалом вместимость в пачках задаётся вручную — приложение её не считает.'
                 : 'Обычно приложение само считает вместимость по размерам ячейки и товара. Заполните это поле, только если нужно задать число вручную.'}
             </p>
             <Input
               id="override"
               type="text"
               inputMode="numeric"
-              placeholder={isPackUnit ? 'число пачек' : 'по желанию'}
+              placeholder={isBulk ? 'число пачек' : 'по желанию'}
               value={overrideInput}
               onChange={e => setOverrideInput(e.target.value.replace(/[^0-9]/g, ''))}
               className="text-base"

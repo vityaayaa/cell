@@ -35,7 +35,9 @@ export function SweepProgressBar({ visited, total, sessionId }: SweepProgressBar
   }
 
   async function handleGoToOrderClick() {
-    if (total > 0 && visited / total < 0.5) {
+    // Confirm whenever the sweep isn't fully done — any un-entered cell won't
+    // make it into the order.
+    if (total > 0 && visited < total) {
       setShowConfirm(true)
       return
     }

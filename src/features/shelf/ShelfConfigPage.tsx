@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
+import { useAppStore } from '@/data/store'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,12 @@ export default function ShelfConfigPage() {
   const [addingCol, setAddingCol] = useState(false)
   const [confirmRecreate, setConfirmRecreate] = useState(false)
   const [recreating, setRecreating] = useState(false)
+
+  // Restore zoom/pan on mount only — read the stored value ONCE (via a ref) so a
+  // fresh onTransformChange never re-inits the grid. Subscribing to the setter
+  // alone keeps this page from re-rendering on every pan/zoom tick.
+  const setShelfTransform = useAppStore((s) => s.setShelfTransform)
+  const initialTransformRef = useRef(useAppStore.getState().shelfTransform)
 
   useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true) })
 
@@ -149,8 +156,30 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
+  // Leaf = a cell with no children. The status bar counts only leaves.
+  const leaves = cells.filter(c => !cells.some(x => x.parent_id === c.id))
+  const withProduct = leaves.filter(l => l.product_id != null).length
+  const empty = leaves.length - withProduct
+  const flagged = leaves.filter(l => l.needs_review === true).length
+
   return (
     <div className="flex flex-col h-full">
+      <div
+        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-xs border-b flex-shrink-0"
+        style={{ color: 'var(--muted-foreground)', background: 'var(--card)', borderColor: 'var(--border)' }}
+      >
+        <span>Ячеек: <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{leaves.length}</span></span>
+        <span aria-hidden>·</span>
+        <span>С товаром: <span style={{ color: '#10B981', fontWeight: 600 }}>{withProduct}</span></span>
+        <span aria-hidden>·</span>
+        <span>Пустых: <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{empty}</span></span>
+        <span aria-hidden>·</span>
+        <span>
+          <span aria-hidden>⚠</span>{' '}
+          <span style={{ color: flagged > 0 ? '#F59E0B' : 'var(--muted-foreground)', fontWeight: 600 }}>{flagged}</span>
+        </span>
+      </div>
+
       <ShelfGrid
         mode="edit"
         shelf={shelf}
@@ -158,6 +187,8 @@ export default function ShelfConfigPage() {
         products={products}
         materials={materials}
         zoomable
+        initialTransform={initialTransformRef.current}
+        onTransformChange={setShelfTransform}
         onEditTap={cell => setSelectedCell(cell)}
         onFlagTap={cell => {
           if (cell.needs_review) setReviewCell(cell)

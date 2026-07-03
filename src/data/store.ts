@@ -17,6 +17,10 @@ interface AppStore {
    *  is open — restarting collapses everything. */
   expandedGroupIds: Set<string>
 
+  /** Admin shelf zoom/pan, kept while the app is open so leaving and returning
+   *  to the constructor restores the same view. */
+  shelfTransform: { scale: number; positionX: number; positionY: number } | null
+
   setOnline: (v: boolean) => void
   setSyncing: (v: boolean) => void
   setSyncQueueLength: (n: number) => void
@@ -26,6 +30,7 @@ interface AppStore {
   setSessionMode: (v: boolean) => void
   setPriorityMaterialId: (id: string | null) => void
   toggleExpandedGroup: (id: string) => void
+  setShelfTransform: (t: { scale: number; positionX: number; positionY: number }) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -43,6 +48,8 @@ export const useAppStore = create<AppStore>((set) => ({
 
   expandedGroupIds: new Set<string>(),
 
+  shelfTransform: null,
+
   setOnline: (v) => set({ isOnline: v }),
   setSyncing: (v) => set({ isSyncing: v }),
   setSyncQueueLength: (n) => set({ syncQueueLength: n }),
@@ -58,4 +65,5 @@ export const useAppStore = create<AppStore>((set) => ({
       else next.add(id)
       return { expandedGroupIds: next }
     }),
+  setShelfTransform: (t) => set({ shelfTransform: t }),
 }))

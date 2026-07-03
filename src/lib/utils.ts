@@ -1,5 +1,16 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { FocusEvent } from 'react'
+
+/** On focus, move the caret to the END of existing text (iOS sometimes puts it
+ *  at the start). Use as onFocus on text/number inputs. */
+export function caretToEnd(e: FocusEvent<HTMLInputElement>) {
+  const el = e.target
+  // Only for inputs that support selection (text/search/url/tel/password).
+  requestAnimationFrame(() => {
+    try { const len = el.value.length; el.setSelectionRange(len, len) } catch { /* type may not support selection */ }
+  })
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

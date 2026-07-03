@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -154,7 +154,6 @@ export function SweepView({
             cells={cells}
             products={products}
             materials={materials}
-            sessionId={sessionId}
             positionNo={currentIndex + 1}
             total={order.length}
             onPrev={() => step(-1)}
@@ -173,6 +172,11 @@ export function SweepView({
             products={products}
             sessionId={sessionId}
             userId={userId}
+            address={buildCellAddress(currentCell, cells)}
+            productName={(() => {
+              const p = products.find((pr) => pr.id === currentCell.product_id)
+              return p ? getProductShortName(p) : '—'
+            })()}
             alreadyVisited={visitedCellIds.has(currentCell.id)}
             onSaved={(cellId) => advanceAfterSave(cellId)}
             onSkip={() => step(1)}
@@ -453,7 +457,6 @@ function CurrentCellCard({
   cells,
   products,
   materials,
-  sessionId,
   positionNo,
   total,
   onPrev,
@@ -465,7 +468,6 @@ function CurrentCellCard({
   cells: Cell[]
   products: Product[]
   materials: Material[]
-  sessionId: string
   positionNo: number
   total: number
   onPrev: () => void
@@ -483,8 +485,6 @@ function CurrentCellCard({
       ? packs(capacity)
       : `${capacity} ${productUnitLabel(product)}`
     : '—'
-
-  const entered = useEnteredValue(sessionId, cell.id)
 
   const arrowBtn =
     'flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30'
@@ -530,12 +530,6 @@ function CurrentCellCard({
           <p className="text-sm mt-2" style={{ color: 'var(--muted-foreground)' }}>
             Вместимость: {capacityLabel}
           </p>
-
-          {entered != null && (
-            <p className="text-sm mt-1" style={{ color: '#10B981' }}>
-              Внесено: {entered}
-            </p>
-          )}
         </div>
 
         <button
@@ -553,60 +547,94 @@ function CurrentCellCard({
 }
 
 /**
- * A thin horizontal fill bar (slider-mode stock entry). Tap or drag anywhere
- * along its width to set the value; snaps to whole units in 0..capacity.
+ * Vertical "beaker" fill meter for bulk stock entry. Fills bottom-up like the
+ * cell itself; tap or drag along its height to set the value. Works directly in
+ * units (packs) — value/capacity — and snaps to whole packs in 0..capacity.
+ * Cell info (address, product name, capacity) sits inside so no duplicate card
+ * is needed above.
  */
-function HorizontalFillBar({
+function BulkFillMeter({
   value,
   capacity,
   onChange,
+  address,
+  productName,
 }: {
   value: number
   capacity: number
   onChange: (v: number) => void
+  address: string
+  productName: string
 }) {
-  const trackRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  function valueFromClientX(clientX: number): number {
-    const rect = trackRef.current?.getBoundingClientRect()
-    if (!rect || rect.width === 0 || capacity <= 0) return 0
-    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    return Math.round(frac * capacity)
+  function valueFromClientY(clientY: number): number {
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect || rect.height === 0 || capacity <= 0) return 0
+    const rel = (clientY - rect.top) / rect.height
+    const frac = Math.max(0, Math.min(1, 1 - rel))
+    return Math.max(0, Math.min(capacity, Math.round(frac * capacity)))
   }
 
   function handlePointer(e: React.PointerEvent) {
     if (e.type === 'pointermove' && e.buttons === 0) return
-    onChange(valueFromClientX(e.clientX))
+    onChange(valueFromClientY(e.clientY))
   }
 
-  const fillPct = capacity > 0 ? (value / capacity) * 100 : 0
+  const percent = capacity > 0 ? (value / capacity) * 100 : 0
+  const light = percent >= 50
 
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      ref={containerRef}
+      className="w-full rounded-xl border overflow-hidden relative select-none"
+      style={{
+        flex: 1,
+        minHeight: 180,
+        maxHeight: 300,
+        touchAction: 'none',
+        cursor: 'ns-resize',
+        borderColor: 'var(--border)',
+      }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        handlePointer(e)
+      }}
+      onPointerMove={handlePointer}
+    >
       <div
-        ref={trackRef}
-        className="rounded-lg border overflow-hidden relative select-none"
-        style={{
-          height: 44,
-          touchAction: 'none',
-          cursor: 'ew-resize',
-          background: 'var(--muted)',
-          borderColor: 'var(--border)',
-        }}
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId)
-          handlePointer(e)
-        }}
-        onPointerMove={handlePointer}
-      >
+        className="absolute top-0 left-0 right-0"
+        style={{ height: `${100 - percent}%`, background: 'var(--muted)' }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
+      />
+      {percent > 2 && percent < 98 && (
         <div
-          className="absolute top-0 left-0 bottom-0"
-          style={{ width: `${fillPct}%`, background: 'var(--primary)', opacity: 0.85 }}
+          className="absolute left-0 right-0"
+          style={{ top: `${100 - percent}%`, height: 2, background: 'var(--primary)' }}
         />
-      </div>
-      <div className="flex justify-between text-xs" style={{ color: 'var(--muted-foreground)' }}>
-        <span>0</span>
-        <span>{capacity}</span>
+      )}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3 pointer-events-none text-center">
+        <span
+          className="font-bold leading-none"
+          style={{ fontSize: 40, color: light ? 'white' : 'var(--foreground)' }}
+        >
+          {packs(value)}
+        </span>
+        <span
+          className="text-sm"
+          style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}
+        >
+          из {packs(capacity)}
+        </span>
+        <span
+          className="text-sm font-medium mt-1"
+          style={{ color: light ? 'rgba(255,255,255,0.9)' : 'var(--foreground)' }}
+        >
+          {address} · {productName}
+        </span>
       </div>
     </div>
   )
@@ -617,6 +645,8 @@ function InputZone({
   products,
   sessionId,
   userId,
+  address,
+  productName,
   alreadyVisited,
   onSaved,
   onSkip,
@@ -625,6 +655,8 @@ function InputZone({
   products: Product[]
   sessionId: string
   userId: string | null
+  address: string
+  productName: string
   alreadyVisited: boolean
   onSaved: (cellId: string) => void
   onSkip: () => void
@@ -632,12 +664,21 @@ function InputZone({
   const product = products.find((p) => p.id === cell.product_id)
   const capacity = product ? getCapacity(cell, product) : 0
   const pieces = product ? isPiecesInput(product) : true
+  const isBulk = product?.type === 'bulk'
   const unitLabel = product ? productUnitLabel(product) : 'шт'
   // Unit products may exceed capacity (warned, but allowed); slider/packs clamp.
   const clampToCapacity = product?.type !== 'unit'
 
   const [value, setValue] = useState(0)
   const [saving, setSaving] = useState(false)
+
+  // Prefill with the value already entered for this cell in this session.
+  // InputZone is keyed by cell id, so `entered` resolves once per cell; the
+  // user's later edits stay because `entered` doesn't change until they save.
+  const entered = useEnteredValue(sessionId, cell.id)
+  useEffect(() => {
+    if (entered != null) setValue(entered)
+  }, [entered])
 
   const isOverCapacity = product?.type === 'unit' && value > capacity
 
@@ -677,58 +718,60 @@ function InputZone({
   const bumpStyle = { height: 46, background: 'var(--card)', border: '1px solid var(--border)' }
 
   return (
-    <div className="px-4 pt-3 pb-4 mt-auto">
-      {/* Big current-value readout */}
-      <div
-        className="rounded-lg flex items-center justify-center gap-1"
-        style={{
-          height: 56,
-          background: 'var(--card)',
-          border: `1px solid ${isOverCapacity ? 'var(--destructive)' : 'var(--border)'}`,
-        }}
-      >
-        {pieces ? (
-          <>
-            <input
-              type="text"
-              inputMode="numeric"
-              aria-label={`Количество, ${unitLabel}`}
-              placeholder="0"
-              value={value === 0 ? '' : String(value)}
-              onChange={(e) => {
-                const n = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10)
-                setClamped(isNaN(n) ? 0 : n)
-              }}
-              className="text-center font-bold bg-transparent outline-none"
-              style={{ fontSize: 30, width: '5ch', color: 'var(--foreground)' }}
-            />
-            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
-          </>
-        ) : product?.type === 'bulk' ? (
-          <span className="text-center font-bold" style={{ fontSize: 30, color: 'var(--foreground)' }}>
-            {packs(value)}
-          </span>
-        ) : (
-          <>
-            <span className="text-center font-bold" style={{ fontSize: 30, color: 'var(--foreground)' }}>
-              {value}
-            </span>
-            <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
-          </>
-        )}
-      </div>
+    <div className="px-4 pt-3 pb-4 mt-auto flex flex-col min-h-0">
+      {isBulk ? (
+        /* Bulk: vertical beaker meter fills the space, value + cell info inside */
+        <div className="flex-1 min-h-0 flex flex-col">
+          <BulkFillMeter
+            value={value}
+            capacity={capacity}
+            onChange={setClamped}
+            address={address}
+            productName={productName}
+          />
+        </div>
+      ) : (
+        /* Pieces / round: big numeric readout */
+        <div
+          className="rounded-lg flex items-center justify-center gap-1"
+          style={{
+            height: 56,
+            background: 'var(--card)',
+            border: `1px solid ${isOverCapacity ? 'var(--destructive)' : 'var(--border)'}`,
+          }}
+        >
+          {pieces ? (
+            <>
+              <input
+                type="text"
+                inputMode="numeric"
+                aria-label={`Количество, ${unitLabel}`}
+                placeholder="0"
+                value={value === 0 ? '' : String(value)}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10)
+                  setClamped(isNaN(n) ? 0 : n)
+                }}
+                className="text-center font-bold bg-transparent outline-none"
+                style={{ fontSize: 30, width: '5ch', color: 'var(--foreground)' }}
+              />
+              <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-center font-bold" style={{ fontSize: 30, color: 'var(--foreground)' }}>
+                {value}
+              </span>
+              <span className="text-base" style={{ color: 'var(--muted-foreground)' }}>{unitLabel}</span>
+            </>
+          )}
+        </div>
+      )}
 
       {isOverCapacity && (
         <p className="text-xs text-center mt-1" style={{ color: 'var(--destructive)' }}>
           Больше вместимости ({capacity} {unitLabel})
         </p>
-      )}
-
-      {/* Slider mode: thin horizontal fill bar */}
-      {!pieces && (
-        <div className="mt-2">
-          <HorizontalFillBar value={value} capacity={capacity} onChange={setClamped} />
-        </div>
       )}
 
       {/* ± buttons (all modes) */}

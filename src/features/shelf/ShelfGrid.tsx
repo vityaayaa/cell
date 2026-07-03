@@ -23,6 +23,10 @@ export interface ShelfGridProps {
   highlightCellId?: string
   /** Enable pinch/wheel zoom + pan (for the big admin grid and the full map). */
   zoomable?: boolean
+  /** Restore zoom/pan on mount (read ONCE at mount, not a live prop). */
+  initialTransform?: { scale: number; positionX: number; positionY: number } | null
+  /** Fired on every zoom/pan change so the caller can persist the transform. */
+  onTransformChange?: (t: { scale: number; positionX: number; positionY: number }) => void
   onLeafTap?: (cell: Cell) => void
   onEditTap?: (cell: Cell) => void
   onFlagTap?: (cell: Cell) => void
@@ -112,6 +116,8 @@ export function ShelfGrid({
   subheaderHeight = 0,
   highlightCellId,
   zoomable = false,
+  initialTransform = null,
+  onTransformChange,
   onLeafTap,
   onEditTap,
   onFlagTap,
@@ -219,7 +225,9 @@ export function ShelfGrid({
       {zoomable ? (
         <div className="flex-1 min-h-0 overflow-hidden">
           <TransformWrapper
-            initialScale={1}
+            initialScale={initialTransform?.scale ?? 1}
+            initialPositionX={initialTransform?.positionX}
+            initialPositionY={initialTransform?.positionY}
             minScale={0.12}
             maxScale={3}
             limitToBounds={false}
@@ -227,6 +235,9 @@ export function ShelfGrid({
             doubleClick={{ disabled: true }}
             panning={{ velocityDisabled: true }}
             wheel={{ step: 0.06 }}
+            onTransform={(_ref, state) =>
+              onTransformChange?.({ scale: state.scale, positionX: state.positionX, positionY: state.positionY })
+            }
           >
             <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
               {gridInner}

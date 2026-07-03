@@ -12,6 +12,7 @@ import type { Group } from '@/data/db'
 import { mutateUpsert, mutateInsert, mutateDelete } from '@/data/mutate'
 import { useAppStore } from '@/data/store'
 import { plural } from '@/lib/plural'
+import { caretToEnd } from '@/lib/utils'
 
 interface GroupFormSheetProps {
   open: boolean
@@ -88,6 +89,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError('') }}
+              onFocus={caretToEnd}
               placeholder="Брусок, Наличник, Плинтус..."
               className="rounded-md border px-3 text-base"
               style={{

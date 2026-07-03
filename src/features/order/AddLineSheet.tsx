@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { db } from '@/data/db'
 import type { OrderLine, Product } from '@/data/db'
 import { mutateInsert } from '@/data/mutate'
 import { getProductShortName } from '@/features/shelf/cellUtils'
-import { compareByDimensions } from '@/features/catalog/ProductSortBar'
+import {
+  ProductSortBar,
+  compareByDimensions,
+  type SortMode,
+  type LengthMode,
+} from '@/features/catalog/ProductSortBar'
 import { accordionDuration } from '@/lib/utils'
 import {
   Dialog,
@@ -18,6 +23,21 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { packsWord } from '@/lib/plural'
+
+// Full dimensions shown on the right of a product row (all types, partials ok).
+function getProductDims(p: Product): string | null {
+  if (p.type === 'round') {
+    const parts = [
+      p.diameter_mm != null ? `⌀${p.diameter_mm}` : null,
+      p.length_mm != null ? String(p.length_mm) : null,
+    ].filter((v): v is string => v != null)
+    return parts.length ? parts.join('×') : null
+  }
+  const dims = [p.height_mm, p.width_mm, p.length_mm].filter(
+    (v): v is number => v != null,
+  )
+  return dims.length ? dims.join('×') : null
+}
 
 interface AddLineSheetProps {
   open: boolean
@@ -37,6 +57,8 @@ export function AddLineSheet({
   const [packCount, setPackCount] = useState(1)
   const [saving, setSaving] = useState(false)
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<SortMode>('alpha-asc')
 
   // Sort in JS — `name` is not a Dexie index, so .orderBy('name') would throw.
   const products = useLiveQuery(
@@ -44,19 +66,24 @@ export function AddLineSheet({
     [],
   )
   const groups = useLiveQuery(() => db.groups.orderBy('name').toArray()) ?? []
+  const materials = useLiveQuery(() => db.materials.toArray()) ?? []
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase()
     return (products ?? []).filter((p) => {
       if (existingProductIds.has(p.id)) return false
+      if (materialId && p.material_id !== materialId) return false
       if (!q) return true
       return getProductShortName(p).toLowerCase().includes(q)
     })
-  }, [products, query, existingProductIds])
+  }, [products, query, existingProductIds, materialId])
 
   // Group the filtered products by group_id (groups alphabetical, like the
-  // catalog). Items inside a group are ordered by cross-section.
+  // catalog). Items inside a group are ordered by cross-section; length only
+  // participates when the «Длина» sort is on.
   const sections = useMemo(() => {
+    const lengthMode: LengthMode =
+      sortMode === 'length-asc' ? 'asc' : sortMode === 'length-desc' ? 'desc' : false
     const groupMap = new Map(groups.map((g) => [g.id, g]))
     const byGroup = new Map<string, Product[]>()
     for (const p of filtered) {
@@ -69,17 +96,17 @@ export function AddLineSheet({
     for (const g of groups) {
       const items = byGroup.get(g.id)
       if (items && items.length > 0) {
-        items.sort((a, b) => compareByDimensions(a, b, false))
+        items.sort((a, b) => compareByDimensions(a, b, lengthMode))
         out.push({ id: g.id, name: g.name, items })
       }
     }
     const orphan = byGroup.get('__none__')
     if (orphan && orphan.length > 0) {
-      orphan.sort((a, b) => compareByDimensions(a, b, false))
+      orphan.sort((a, b) => compareByDimensions(a, b, lengthMode))
       out.push({ id: '__none__', name: 'Без группы', items: orphan })
     }
     return out
-  }, [filtered, groups])
+  }, [filtered, groups, sortMode])
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) => {
@@ -125,19 +152,25 @@ export function AddLineSheet({
   }
 
   function renderProductRow(product: Product) {
+    const dims = getProductDims(product)
+    const material = materials.find((m) => m.id === product.material_id)
     return (
       <button
         key={product.id}
-        className="w-full text-left py-3 border-b"
-        style={{ borderColor: 'var(--border)' }}
+        className="w-full flex items-center justify-between rounded-md border px-4 gap-3 text-left"
+        style={{ minHeight: 56, color: 'var(--foreground)', borderColor: 'var(--border)', background: 'var(--background)' }}
         onClick={() => handleSelect(product)}
       >
-        <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-          {getProductShortName(product)}
-        </p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-          {product.pack_size} шт/пачка
-        </p>
+        <span className="flex items-center gap-2 min-w-0">
+          {material && (
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ background: material.color }}
+            />
+          )}
+          <span className="text-sm font-medium truncate">{getProductShortName(product)}</span>
+        </span>
+        {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
       </button>
     )
   }
@@ -208,30 +241,24 @@ export function AddLineSheet({
             </button>
           </div>
         ) : (
-          /* Step 1: search + list */
-          <div className="flex flex-col gap-3">
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--muted-foreground)' }}
-              />
-              <input
-                type="text"
-                placeholder="Поиск товара..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full rounded-md border pl-9 pr-3 text-sm"
-                style={{
-                  height: 44,
-                  fontSize: '16px',
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--foreground)',
-                  outline: 'none',
-                }}
-              />
-            </div>
+          /* Step 1: search + sort bar + grouped list (like the cell picker) */
+          <div className="flex flex-col gap-2">
+            <Input
+              type="text"
+              inputMode="search"
+              placeholder="Поиск по названию"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="text-base"
+            />
+
+            <ProductSortBar
+              materials={materials}
+              materialId={materialId}
+              sortMode={sortMode}
+              onMaterialId={setMaterialId}
+              onSortMode={setSortMode}
+            />
 
             <div className="flex flex-col gap-2 max-h-[45dvh] overflow-y-auto">
               {sections.length === 0 ? (
@@ -285,7 +312,7 @@ export function AddLineSheet({
                             transition={{ duration: accordionDuration(section.items.length), ease: 'easeOut' }}
                             style={{ overflow: 'hidden' }}
                           >
-                            <div className="flex flex-col px-2 pb-1">
+                            <div className="flex flex-col gap-2 p-2">
                               {section.items.map((p) => renderProductRow(p))}
                             </div>
                           </motion.div>

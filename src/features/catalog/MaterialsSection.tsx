@@ -11,6 +11,7 @@ import { db } from '@/data/db'
 import type { Material } from '@/data/db'
 import { mutateUpsert, mutateInsert, mutateDelete } from '@/data/mutate'
 import { useAppStore } from '@/data/store'
+import { caretToEnd } from '@/lib/utils'
 
 interface MaterialFormSheetProps {
   open: boolean
@@ -91,6 +92,7 @@ function MaterialFormSheet({ open, onOpenChange, material }: MaterialFormSheetPr
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError('') }}
+              onFocus={caretToEnd}
               placeholder="Дерево, Пластик, Металл..."
               className="rounded-md border px-3 text-base"
               style={{

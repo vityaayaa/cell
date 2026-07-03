@@ -11,7 +11,7 @@ import {
 import { db } from '@/data/db'
 import type { Product, Material, Group } from '@/data/db'
 import { mutateUpsert, mutateInsert } from '@/data/mutate'
-import { parseDecimalMm, sanitizeDecimalInput, matchGroupByName } from '@/lib/utils'
+import { parseDecimalMm, sanitizeDecimalInput, matchGroupByName, caretToEnd } from '@/lib/utils'
 
 type ProductType = 'unit' | 'round' | 'bulk'
 
@@ -80,9 +80,9 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   const [shakeKey, setShakeKey] = useState(0)
   // Once the user picks a group by hand, stop auto-filling it from the name.
   const [groupTouched, setGroupTouched] = useState(false)
-  // The «отображаемое название» input is collapsed by default; a square toggle
-  // to the right of the name reveals it. Auto-open in edit mode when it's set.
-  const [showDisplayName, setShowDisplayName] = useState(false)
+  // The «отображаемое название» is edited in a separate dialog opened by the
+  // square Tag button to the right of the name.
+  const [displayNameDialogOpen, setDisplayNameDialogOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -103,7 +103,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
         setForm({ ...EMPTY, material_id: materials[0]?.id ?? '' })
       }
       setGroupTouched(false)
-      setShowDisplayName(Boolean(product?.display_name))
+      setDisplayNameDialogOpen(false)
       setError(null)
     }
   }, [open, product, materials, groups])
@@ -198,6 +198,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
                 type="text"
                 value={form.name}
                 onChange={(e) => setName(e.target.value)}
+                onFocus={caretToEnd}
                 placeholder="Брусок, Труба ПВХ, Штапик..."
                 className="flex-1 min-w-0 rounded-md border px-3 text-base"
                 style={{
@@ -211,42 +212,20 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
               />
               <button
                 type="button"
-                onClick={() => setShowDisplayName((v) => !v)}
+                onClick={() => setDisplayNameDialogOpen(true)}
                 aria-label="Отображаемое название"
                 className="flex items-center justify-center rounded-md border flex-shrink-0"
                 style={{
                   width: 44,
                   height: 44,
-                  background: showDisplayName ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--background)',
-                  borderColor: showDisplayName ? 'var(--primary)' : 'var(--border)',
-                  color: showDisplayName ? 'var(--primary)' : 'var(--foreground)',
+                  background: form.display_name ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--background)',
+                  borderColor: form.display_name ? 'var(--primary)' : 'var(--border)',
+                  color: form.display_name ? 'var(--primary)' : 'var(--foreground)',
                 }}
               >
                 <Tag size={18} strokeWidth={1.5} />
               </button>
             </div>
-            {showDisplayName && (
-              <div className="flex flex-col gap-1 mt-0.5">
-                <input
-                  type="text"
-                  value={form.display_name}
-                  onChange={(e) => set('display_name', e.target.value)}
-                  placeholder="Отображаемое название (необязательно)"
-                  className="rounded-md border px-3 text-base"
-                  style={{
-                    height: 44,
-                    fontSize: 16,
-                    background: 'var(--background)',
-                    borderColor: 'var(--border)',
-                    color: 'var(--foreground)',
-                    outline: 'none',
-                  }}
-                />
-                <p className="ui-hint">
-                  Как товар показывается сотрудникам в стеллаже, заявке и т.д. Пусто — показывается полное имя.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Type */}
@@ -457,6 +436,43 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
           {saving ? '…' : product ? 'Сохранить' : 'Добавить'}
         </button>
       </DialogContent>
+
+      {/* Display name — edited in its own dialog. Value already lives in `form`. */}
+      <Dialog open={displayNameDialogOpen} onOpenChange={setDisplayNameDialogOpen}>
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Отображаемое название</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              value={form.display_name}
+              onChange={(e) => set('display_name', e.target.value)}
+              onFocus={caretToEnd}
+              placeholder="Отображаемое название"
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 44,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+              }}
+            />
+            <p className="ui-hint">
+              Как товар показывается сотрудникам в стеллаже, заявке и т.д. Пусто — показывается полное имя.
+            </p>
+            <button
+              className="btn-primary w-full rounded-md font-semibold text-base"
+              style={{ height: 52 }}
+              onClick={() => setDisplayNameDialogOpen(false)}
+            >
+              Готово
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
