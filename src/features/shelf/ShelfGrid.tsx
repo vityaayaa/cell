@@ -1,4 +1,5 @@
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import { useEffect, useRef } from 'react'
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { Cell, Material, Product, Shelf } from '@/data/db'
 import { CellCard } from './CellCard'
 import { getRootAddress } from './cellUtils'
@@ -21,6 +22,9 @@ export interface ShelfGridProps {
   subheaderHeight?: number
   /** Outline this leaf (e.g. the cell the sweep is currently on). */
   highlightCellId?: string
+  /** On mount, zoom/pan so this cell's base section is centred (full-map view
+   *  opens on the current sweep cell instead of the top-left corner). */
+  centerOnCellId?: string
   /** Enable pinch/wheel zoom + pan (for the big admin grid and the full map). */
   zoomable?: boolean
   /** Restore zoom/pan on mount (read ONCE at mount, not a live prop). */
@@ -115,6 +119,7 @@ export function ShelfGrid({
   visitedCellIds = new Set(),
   subheaderHeight = 0,
   highlightCellId,
+  centerOnCellId,
   zoomable = false,
   initialTransform = null,
   onTransformChange,
@@ -128,6 +133,26 @@ export function ShelfGrid({
   }
 
   const baseCells = cells.filter(c => c.parent_id === null)
+
+  // Base (top-level) ancestor of the cell to centre on — the full-map view
+  // opens focused there instead of the top-left corner.
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
+  let centerBaseId: string | undefined
+  if (centerOnCellId) {
+    let cur = cells.find(c => c.id === centerOnCellId)
+    while (cur?.parent_id) cur = cells.find(c => c.id === cur!.parent_id)
+    centerBaseId = cur?.id
+  }
+  useEffect(() => {
+    if (!zoomable || !centerBaseId) return
+    // Let the grid lay out and the dialog finish opening, then centre on that
+    // section (zoomToElement needs the element measured).
+    const t = setTimeout(() => {
+      transformRef.current?.zoomToElement(`cellwrap-${centerBaseId}`, 1)
+    }, 80)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Position base cells by row/col so we can find each grid track's max footprint.
   const cols = shelf.cols_count
@@ -195,6 +220,7 @@ export function ShelfGrid({
             return (
               <div
                 key={cell.id}
+                id={`cellwrap-${cell.id}`}
                 style={{ gridColumn: cell.col_index, gridRow: cell.row_index, minWidth: 0, minHeight: 0 }}
               >
                 {subdivided ? (
@@ -225,6 +251,7 @@ export function ShelfGrid({
       {zoomable ? (
         <div className="flex-1 min-h-0 overflow-hidden">
           <TransformWrapper
+            ref={transformRef}
             initialScale={initialTransform?.scale ?? 1}
             initialPositionX={initialTransform?.positionX}
             initialPositionY={initialTransform?.positionY}

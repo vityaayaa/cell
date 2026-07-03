@@ -239,6 +239,7 @@ export function SweepView({
               sessionId={sessionId}
               visitedCellIds={visitedCellIds}
               highlightCellId={currentCell?.id}
+              centerOnCellId={currentCell?.id}
               zoomable
               onLeafTap={(cell) => {
                 setCurrentCellId(cell.id)
