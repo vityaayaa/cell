@@ -1,7 +1,5 @@
 import { AlertTriangle, RotateCcwSquare, Pencil } from 'lucide-react'
 import type { Cell, Material, Product } from '@/data/db'
-import { getEffectiveCapacity } from '@/domain/capacity'
-import type { ProductDimensions } from '@/domain/capacity'
 import { toastInfo } from '@/lib/toast'
 import { packs } from '@/lib/plural'
 import {
@@ -9,6 +7,7 @@ import {
   hexToRgba,
   getProductShortName,
   getMaterialForProduct,
+  isCapacityMissing,
 } from './cellUtils'
 
 export interface CellCardProps {
@@ -144,20 +143,7 @@ export function CellCard({
   const product = products.find(p => p.id === cell.product_id)
   const material = getMaterialForProduct(product, materials)
 
-  const capacityMissing = (() => {
-    if (!product) return false
-    const dims: ProductDimensions =
-      product.type === 'unit'
-        ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
-        : product.type === 'round'
-          ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
-          : { type: 'bulk' }
-    return getEffectiveCapacity(
-      { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
-      dims,
-      { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
-    ) === 0
-  })()
+  const capacityMissing = isCapacityMissing(cell, product)
 
   const capacityUnit = product
     ? product.type === 'unit'

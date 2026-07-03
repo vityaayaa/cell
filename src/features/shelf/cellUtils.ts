@@ -1,6 +1,24 @@
 import type { Cell, Material, Product } from '@/data/db'
+import { getEffectiveCapacity, type ProductDimensions } from '@/domain/capacity'
 
 const ROW_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/** True when a cell HAS a product but its effective capacity works out to 0 —
+ *  i.e. the red «вместимость не задана» flag on the cell card. */
+export function isCapacityMissing(cell: Cell, product: Product | undefined): boolean {
+  if (!product) return false
+  const dims: ProductDimensions =
+    product.type === 'unit'
+      ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
+      : product.type === 'round'
+        ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
+        : { type: 'bulk' }
+  return getEffectiveCapacity(
+    { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
+    dims,
+    { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
+  ) === 0
+}
 
 export function getRootAddress(cell: Cell): string {
   const row = cell.row_index != null ? ROW_LETTERS[cell.row_index - 1] ?? cell.row_index : '?'

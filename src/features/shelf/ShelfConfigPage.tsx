@@ -20,7 +20,7 @@ import { ShelfGrid } from './ShelfGrid'
 import { CellActionsSheet } from './CellActionsSheet'
 import { CellSettingsSheet } from './CellSettingsSheet'
 import { NeedsReviewDialog } from './NeedsReviewDialog'
-import { getRootAddress } from './cellUtils'
+import { getRootAddress, isCapacityMissing } from './cellUtils'
 
 export default function ShelfConfigPage() {
   const { shelf, cells, products, materials } = useShelfData()
@@ -39,9 +39,14 @@ export default function ShelfConfigPage() {
   const setShelfTransform = useAppStore((s) => s.setShelfTransform)
   const initialTransformRef = useRef(useAppStore.getState().shelfTransform)
 
-  const flaggedCount = cells.filter(
-    l => !cells.some(x => x.parent_id === l.id) && l.needs_review === true,
-  ).length
+  // A leaf «has a warning» if it needs review OR its capacity works out to 0
+  // (the red flag on the card) — both must feed the badge / stats.
+  const productById = new Map(products.map(p => [p.id, p]))
+  function leafHasWarning(l: Cell): boolean {
+    if (cells.some(x => x.parent_id === l.id)) return false // not a leaf
+    return l.needs_review === true || isCapacityMissing(l, productById.get(l.product_id ?? ''))
+  }
+  const flaggedCount = cells.filter(leafHasWarning).length
   useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true), badge: flaggedCount })
 
   useEffect(() => {
@@ -159,11 +164,12 @@ export default function ShelfConfigPage() {
     return getRootAddress(cell)
   }
 
-  // Leaf = a cell with no children. The status bar counts only leaves.
+  // Leaf = a cell with no children. The stats count only leaves.
   const leaves = cells.filter(c => !cells.some(x => x.parent_id === c.id))
   const withProduct = leaves.filter(l => l.product_id != null).length
   const empty = leaves.length - withProduct
-  const flagged = leaves.filter(l => l.needs_review === true).length
+  // Same «warning» rule as the badge: needs review OR capacity missing.
+  const flagged = flaggedCount
 
   return (
     <div className="flex flex-col h-full">
