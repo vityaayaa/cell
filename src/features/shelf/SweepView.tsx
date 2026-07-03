@@ -68,6 +68,9 @@ export function SweepView({
     ? order.findIndex((c) => c.id === currentCell.id)
     : -1
 
+  const currentIsBulk =
+    products.find((p) => p.id === currentCell?.product_id)?.type === 'bulk'
+
   const allVisited = order.length > 0 && order.every((c) => visitedCellIds.has(c.id))
 
   // 1-based position of the next unvisited cell (for "вернуться к обходу → №N").
@@ -147,7 +150,10 @@ export function SweepView({
         </div>
       )}
 
-      {currentCell && (
+      {/* Bulk: the card is redundant (address + product + value all live inside
+          the meter), so it's hidden and the meter grows to fill the space.
+          Pieces/round keep the info card above the numeric input. */}
+      {currentCell && !currentIsBulk && (
         <div className="flex-shrink-0">
           <CurrentCellCard
             cell={currentCell}
@@ -165,7 +171,7 @@ export function SweepView({
       )}
 
       {currentCell && (
-        <div className="flex-shrink-0">
+        <div className={currentIsBulk ? 'flex-1 min-h-0 flex flex-col max-h-[340px]' : 'flex-shrink-0'}>
           <InputZone
             key={currentCell.id}
             cell={currentCell}
@@ -177,6 +183,12 @@ export function SweepView({
               const p = products.find((pr) => pr.id === currentCell.product_id)
               return p ? getProductShortName(p) : '—'
             })()}
+            positionNo={currentIndex + 1}
+            total={order.length}
+            onPrev={() => step(-1)}
+            onNext={() => step(1)}
+            canPrev={currentIndex > 0}
+            canNext={currentIndex < order.length - 1}
             alreadyVisited={visitedCellIds.has(currentCell.id)}
             onSaved={(cellId) => advanceAfterSave(cellId)}
             onSkip={() => step(1)}
@@ -647,6 +659,12 @@ function InputZone({
   userId,
   address,
   productName,
+  positionNo,
+  total,
+  onPrev,
+  onNext,
+  canPrev,
+  canNext,
   alreadyVisited,
   onSaved,
   onSkip,
@@ -657,6 +675,12 @@ function InputZone({
   userId: string | null
   address: string
   productName: string
+  positionNo: number
+  total: number
+  onPrev: () => void
+  onNext: () => void
+  canPrev: boolean
+  canNext: boolean
   alreadyVisited: boolean
   onSaved: (cellId: string) => void
   onSkip: () => void
@@ -720,15 +744,41 @@ function InputZone({
   return (
     <div className="px-4 pt-3 pb-4 mt-auto flex flex-col min-h-0">
       {isBulk ? (
-        /* Bulk: vertical beaker meter fills the space, value + cell info inside */
+        /* Bulk: vertical beaker meter fills the space; value + cell info live
+           inside it, and prev/next arrows flank it (the info card is hidden). */
         <div className="flex-1 min-h-0 flex flex-col">
-          <BulkFillMeter
-            value={value}
-            capacity={capacity}
-            onChange={setClamped}
-            address={address}
-            productName={productName}
-          />
+          <div className="text-center text-xs mb-1 flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>
+            №{positionNo} из {total}
+          </div>
+          <div className="flex-1 min-h-0 flex items-stretch gap-2">
+            <button
+              onClick={onPrev}
+              disabled={!canPrev}
+              aria-label="Предыдущая ячейка"
+              className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+              style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <div className="flex-1 min-h-0">
+              <BulkFillMeter
+                value={value}
+                capacity={capacity}
+                onChange={setClamped}
+                address={address}
+                productName={productName}
+              />
+            </div>
+            <button
+              onClick={onNext}
+              disabled={!canNext}
+              aria-label="Следующая ячейка"
+              className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+              style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
         </div>
       ) : (
         /* Pieces / round: big numeric readout */
@@ -774,13 +824,15 @@ function InputZone({
         </p>
       )}
 
-      {/* ± buttons (all modes) */}
-      <div className="flex gap-2 mt-2">
-        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-10)}>−10</button>
-        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-1)}>−1</button>
-        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(1)}>+1</button>
-        <button className={bumpBtn} style={bumpStyle} onClick={() => bump(10)}>+10</button>
-      </div>
+      {/* ± buttons — pieces / round only; bulk uses the slider to set packs. */}
+      {!isBulk && (
+        <div className="flex gap-2 mt-2">
+          <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-10)}>−10</button>
+          <button className={bumpBtn} style={bumpStyle} onClick={() => bump(-1)}>−1</button>
+          <button className={bumpBtn} style={bumpStyle} onClick={() => bump(1)}>+1</button>
+          <button className={bumpBtn} style={bumpStyle} onClick={() => bump(10)}>+10</button>
+        </div>
+      )}
 
       <motion.button
         className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40"
