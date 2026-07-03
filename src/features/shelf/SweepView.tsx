@@ -171,7 +171,7 @@ export function SweepView({
       )}
 
       {currentCell && (
-        <div className={currentIsBulk ? 'flex-1 min-h-0 flex flex-col' : 'flex-shrink-0'}>
+        <div className="flex-shrink-0">
           <InputZone
             key={currentCell.id}
             cell={currentCell}
@@ -746,11 +746,12 @@ function InputZone({
   const bumpStyle = { height: 46, background: 'var(--card)', border: '1px solid var(--border)' }
 
   return (
-    <div className={`px-4 pt-3 pb-4 flex flex-col min-h-0 ${isBulk ? 'flex-1' : 'mt-auto'}`}>
+    <div className="px-4 pt-3 pb-4 mt-auto flex flex-col min-h-0">
       {isBulk ? (
-        /* Bulk: the meter is the whole thing — cell info + value live inside it,
-           prev/next arrows flank it (no separate card). Grows to fill space. */
-        <div className="flex-1 min-h-0 flex items-stretch gap-2">
+        /* Bulk: fill meter in place of the card + numeric input. Cell info +
+           value live inside it; prev/next arrows flank it. Fixed height so the
+           radar above keeps the same size as on pieces cells. */
+        <div className="flex items-stretch gap-2" style={{ height: 260 }}>
           <button
             onClick={onPrev}
             disabled={!canPrev}
@@ -760,7 +761,7 @@ function InputZone({
           >
             <ChevronLeft size={22} />
           </button>
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-w-0">
             <BulkFillMeter
               value={value}
               capacity={capacity}
@@ -836,7 +837,7 @@ function InputZone({
       )}
 
       <motion.button
-        className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40"
+        className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40 flex-shrink-0"
         style={{ height: 52 }}
         whileTap={!saving ? { scale: 0.97 } : undefined}
         onClick={handleSaveAndNext}
@@ -846,7 +847,7 @@ function InputZone({
       </motion.button>
 
       <button
-        className="w-full py-3 text-sm text-center rounded-md mt-1"
+        className="w-full py-3 text-sm text-center rounded-md mt-1 flex-shrink-0"
         style={{ color: 'var(--muted-foreground)' }}
         onClick={onSkip}
       >
