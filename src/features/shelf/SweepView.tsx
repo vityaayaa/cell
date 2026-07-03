@@ -751,17 +751,17 @@ function InputZone({
         /* Bulk: fill meter in place of the card + numeric input. Cell info +
            value live inside it; prev/next arrows flank it. Fixed height so the
            radar above keeps the same size as on pieces cells. */
-        <div className="flex items-stretch gap-2" style={{ height: 260 }}>
+        <div className="flex items-center gap-2" style={{ height: 240 }}>
           <button
             onClick={onPrev}
             disabled={!canPrev}
             aria-label="Предыдущая ячейка"
             className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 40, background: 'var(--card)', border: '1px solid var(--border)' }}
+            style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
           >
-            <ChevronLeft size={22} />
+            <ChevronLeft size={24} />
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 h-full">
             <BulkFillMeter
               value={value}
               capacity={capacity}
@@ -777,9 +777,9 @@ function InputZone({
             disabled={!canNext}
             aria-label="Следующая ячейка"
             className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 40, background: 'var(--card)', border: '1px solid var(--border)' }}
+            style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
           >
-            <ChevronRight size={22} />
+            <ChevronRight size={24} />
           </button>
         </div>
       ) : (
