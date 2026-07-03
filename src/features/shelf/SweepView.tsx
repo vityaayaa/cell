@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsUpDown, Maximize2, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
@@ -620,12 +620,27 @@ function BulkFillMeter({
         className="absolute bottom-0 left-0 right-0"
         style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
       />
-      {percent > 1 && percent < 99 && (
-        <div
-          className="absolute left-0 right-0"
-          style={{ bottom: `${percent}%`, height: 2, background: 'var(--primary)' }}
-        />
+      {/* Pack tick marks along the right edge — shows this is a scale to fill. */}
+      {capacity > 0 && capacity <= 20 && (
+        <div className="absolute top-0 bottom-0 right-0 flex flex-col justify-between py-1 pointer-events-none">
+          {Array.from({ length: capacity + 1 }, (_, i) => (
+            <div key={i} style={{ width: 10, height: 2, background: 'var(--muted-foreground)', opacity: 0.5 }} />
+          ))}
+        </div>
       )}
+      {/* Fill line + drag handle — makes it obvious you drag to fill. */}
+      <div
+        className="absolute left-0 right-0 flex items-center justify-center"
+        style={{ bottom: `calc(${percent}% - 11px)`, height: 22, pointerEvents: 'none' }}
+      >
+        <div className="absolute left-0 right-0" style={{ top: 10, height: 2, background: 'var(--primary)' }} />
+        <div
+          className="relative flex items-center justify-center rounded-full"
+          style={{ width: 34, height: 22, background: 'var(--primary)', color: 'white' }}
+        >
+          <ChevronsUpDown size={16} strokeWidth={2.5} />
+        </div>
+      </div>
       {/* Cell info at the top, the fill value centred below it. */}
       <div className="absolute inset-0 flex flex-col items-center px-3 pt-4 pb-4 pointer-events-none text-center">
         <span className="text-xs" style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}>
@@ -648,7 +663,7 @@ function BulkFillMeter({
             className="text-sm"
             style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}
           >
-            из {packs(capacity)}
+            из {capacity}
           </span>
         </div>
       </div>
@@ -751,13 +766,13 @@ function InputZone({
         /* Bulk: fill meter in place of the card + numeric input. Cell info +
            value live inside it; prev/next arrows flank it. Fixed height so the
            radar above keeps the same size as on pieces cells. */
-        <div className="flex items-center gap-2" style={{ height: 240 }}>
+        <div className="flex items-start gap-2" style={{ height: 240 }}>
           <button
             onClick={onPrev}
             disabled={!canPrev}
             aria-label="Предыдущая ячейка"
             className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            style={{ width: 44, height: 44, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border)' }}
           >
             <ChevronLeft size={24} />
           </button>
@@ -777,7 +792,7 @@ function InputZone({
             disabled={!canNext}
             aria-label="Следующая ячейка"
             className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            style={{ width: 44, height: 44, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border)' }}
           >
             <ChevronRight size={24} />
           </button>
