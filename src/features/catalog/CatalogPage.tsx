@@ -141,6 +141,9 @@ export default function CatalogPage() {
         sections.push({ id: g.id, name: g.name, items })
       }
     }
+    // «Я-А» flips the order of NAMED groups; length modes keep A-Z. The
+    // «Без группы» bucket always stays last, so reverse before appending it.
+    if (sortMode === 'alpha-desc') sections.reverse()
     const orphan = byGroup.get('__none__')
     if (orphan && orphan.length > 0) {
       orphan.sort((a, b) => compareByDimensions(a, b, lengthMode))
@@ -266,26 +269,6 @@ export default function CatalogPage() {
       ) : (
         <div className="flex flex-col mt-3 mx-4 gap-2">
           {groupedProducts.map((section) => {
-            // Group of a single product: no accordion header, render the
-            // product directly as a plain row (tap → edit, trash → delete).
-            if (section.items.length === 1) {
-              const p = section.items[0]
-              return (
-                <div
-                  key={section.id}
-                  className="rounded-lg border overflow-hidden"
-                  style={{ borderColor: 'var(--border)' }}
-                >
-                  <ProductRow
-                    product={p}
-                    material={materialMap.get(p.material_id)}
-                    onEdit={() => openEdit(p)}
-                    onDelete={() => openDeleteConfirm(p)}
-                  />
-                </div>
-              )
-            }
-
             const isOpen = expandedGroupIds.has(section.id)
             return (
               <div

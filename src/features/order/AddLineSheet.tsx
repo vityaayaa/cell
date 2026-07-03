@@ -100,6 +100,8 @@ export function AddLineSheet({
         out.push({ id: g.id, name: g.name, items })
       }
     }
+    // «Я-А» flips the order of NAMED groups; «Без группы» stays last.
+    if (sortMode === 'alpha-desc') out.reverse()
     const orphan = byGroup.get('__none__')
     if (orphan && orphan.length > 0) {
       orphan.sort((a, b) => compareByDimensions(a, b, lengthMode))
@@ -270,14 +272,6 @@ export function AddLineSheet({
                 </p>
               ) : (
                 sections.map((section) => {
-                  // Single-product group: render the row directly (matches catalog).
-                  if (section.items.length === 1) {
-                    return (
-                      <div key={section.id} className="flex-shrink-0">
-                        {renderProductRow(section.items[0])}
-                      </div>
-                    )
-                  }
                   const isOpen = openGroups.has(section.id)
                   return (
                     <div

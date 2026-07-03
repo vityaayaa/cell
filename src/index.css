@@ -147,3 +147,14 @@ select {
 .btn-primary:disabled {
   opacity: 0.5;
 }
+
+/* Running dashed outline for the "К заявке" button once the sweep is complete —
+   an accent dash chasing around the button's perimeter to draw the eye. */
+@keyframes sweep-run-outline {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+.sweep-run-outline rect {
+  animation: sweep-run-outline 1s linear infinite;
+}

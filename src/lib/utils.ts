@@ -33,19 +33,26 @@ export function accordionDuration(itemCount: number): number {
  */
 export function matchGroupByName(
   name: string,
-  groups: { id: string; name: string }[],
+  groups: { id: string; name: string; match_word?: string | null }[],
 ): string | null {
   const word = name.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
+  if (!word) return null
+  // 1) Explicit match word wins: group «Бруски» with match_word «брусок» claims
+  //    a product whose first word is exactly «брусок».
+  for (const g of groups) {
+    const mw = g.match_word?.trim().toLowerCase()
+    if (mw && mw === word) return g.id
+  }
+  // 2) Otherwise a shared stem with the group NAME (RU plural quirks).
   if (word.length < 4) return null
   for (const g of groups) {
     const gname = g.name.trim().toLowerCase()
     if (gname.length < 4) continue
-    // Length of the common leading run of letters.
     let i = 0
     while (i < word.length && i < gname.length && word[i] === gname[i]) i++
-    // Match when the shared stem is long enough AND covers most of the shorter
-    // word — so «труба»/«трубы», «наличник»/«наличники», «брус»/«брусок» match,
-    // but a 4-letter coincidence with a long unrelated word doesn't.
+    // Long-enough stem AND covering most of the shorter word — «труба»/«трубы»,
+    // «наличник»/«наличники», «брус»/«брусок» match; a 4-letter coincidence
+    // with a long unrelated word doesn't.
     const shorter = Math.min(word.length, gname.length)
     if (i >= 4 && i >= shorter - 2) return g.id
   }

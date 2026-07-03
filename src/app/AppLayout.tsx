@@ -51,12 +51,28 @@ function AppLayoutInner() {
           {headerAction && (
             <button
               onClick={headerAction.onClick}
-              className="flex items-center gap-1.5 rounded-md px-2"
+              className="relative flex items-center gap-1.5 rounded-md px-2"
               style={{ minHeight: 44, color: 'var(--foreground)', fontSize: 13, fontWeight: 500 }}
               aria-label={headerAction.label}
             >
               <headerAction.icon size={16} strokeWidth={1.5} />
               <span>{headerAction.label}</span>
+              {headerAction.badge != null && headerAction.badge > 0 && (
+                <span
+                  className="flex items-center justify-center rounded-full font-semibold"
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    padding: '0 5px',
+                    background: '#F59E0B',
+                    color: '#fff',
+                    fontSize: 11,
+                    lineHeight: 1,
+                  }}
+                >
+                  {headerAction.badge}
+                </span>
+              )}
             </button>
           )}
           <button

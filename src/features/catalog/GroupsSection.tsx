@@ -22,6 +22,7 @@ interface GroupFormSheetProps {
 
 function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
   const [name, setName] = useState(group?.name ?? '')
+  const [matchWord, setMatchWord] = useState(group?.match_word ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const actorId = useAppStore((s) => s.userId)
@@ -31,6 +32,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
   useEffect(() => {
     if (open) {
       setName(group?.name ?? '')
+      setMatchWord(group?.match_word ?? '')
       setError('')
     }
   }, [open, group])
@@ -45,6 +47,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
     const record: Group = {
       id,
       name: name.trim(),
+      match_word: matchWord.trim() || null,
       created_at: group?.created_at ?? now,
       updated_at: now,
     }
@@ -101,6 +104,30 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
                 outline: 'none',
               }}
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="ui-field-label">
+              Название товара (необязательно)
+            </label>
+            <input
+              type="text"
+              value={matchWord}
+              onChange={(e) => { setMatchWord(e.target.value); setError('') }}
+              onFocus={caretToEnd}
+              placeholder="брусок"
+              className="rounded-md border px-3 text-base"
+              style={{
+                height: 48,
+                fontSize: 16,
+                background: 'var(--background)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                outline: 'none',
+              }}
+            />
+            <p className="ui-hint">
+              Если название группы во множественном числе (Бруски), впишите форму товара (брусок) — так товар сам попадёт в группу.
+            </p>
           </div>
           {error && <p className="text-sm" style={{ color: '#EF4444' }}>{error}</p>}
           <button

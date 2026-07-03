@@ -168,37 +168,35 @@ export default function OrderDraftPage() {
           onSortMode={setSortMode}
         />
 
-        {/* Main lines */}
+        {/* Main lines — cards */}
         {mainLines.length > 0 ? (
-          <ul>
+          <div className="flex flex-col gap-2 px-4 pt-1">
             {mainLines.map((line) => (
-              <li key={line.id}>
-                <button
-                  className="w-full flex items-center justify-between px-4 py-3 text-left"
-                  onClick={() => openEditLine(line)}
-                >
-                  <span className="text-sm font-medium mr-4" style={{ color: 'var(--foreground)' }}>
+              <button
+                key={line.id}
+                className="w-full rounded-lg border text-left px-3 py-2.5"
+                style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                onClick={() => openEditLine(line)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                     {line.product_name}
-                    {line.is_manual && (
-                      <span
-                        className="ml-1.5 text-xs rounded-full px-1.5 py-0.5"
-                        style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}
-                      >
-                        вручную
-                      </span>
-                    )}
                   </span>
-                  <span
-                    className="text-sm flex-shrink-0"
-                    style={{ color: 'var(--muted-foreground)' }}
-                  >
-                    {packs(line.quantity_packs)} · {line.quantity_units} шт
-                  </span>
-                </button>
-                <div className="mx-4 border-t" style={{ borderColor: 'var(--border)' }} />
-              </li>
+                  {line.is_manual && (
+                    <span
+                      className="text-xs rounded-full px-1.5 py-0.5 flex-shrink-0"
+                      style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}
+                    >
+                      вручную
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                  {packs(line.quantity_packs)} · {line.quantity_units} шт
+                </div>
+              </button>
             ))}
-          </ul>
+          </div>
         ) : (
           <div className="px-4 py-6">
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
@@ -207,36 +205,36 @@ export default function OrderDraftPage() {
           </div>
         )}
 
-        {/* Boundary lines */}
+        {/* Boundary lines — cards, visually separated with an amber accent */}
         {boundaryLines.length > 0 && (
           <>
-            <div className="mx-4 mt-2 mb-1">
-              <p className="ui-section-title">
+            <div className="flex items-center gap-2 px-4 mt-4 mb-2">
+              <span aria-hidden style={{ color: '#F59E0B', fontSize: 16 }}>⚠</span>
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                 Пограничные позиции
-              </p>
+              </h2>
             </div>
-            <div className="mx-4 border-t" style={{ borderColor: 'var(--border)' }} />
-            <ul>
+            <div className="flex flex-col gap-2 px-4">
               {boundaryLines.map((line) => (
-                <li key={line.id}>
-                  <button
-                    className="w-full flex items-center justify-between px-4 py-3 text-left"
-                    onClick={() => openBoundaryLine(line)}
-                  >
-                    <span
-                      className="text-sm font-medium mr-4"
-                      style={{ color: 'var(--foreground)' }}
-                    >
-                      {line.product_name}
-                    </span>
-                    <span className="text-sm flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>
-                      дефицит {line.deficit_units} шт &lt; пачки
-                    </span>
-                  </button>
-                  <div className="mx-4 border-t" style={{ borderColor: 'var(--border)' }} />
-                </li>
+                <button
+                  key={line.id}
+                  className="w-full rounded-lg border text-left px-3 py-2.5"
+                  style={{
+                    background: 'color-mix(in oklab, #F59E0B 8%, var(--card))',
+                    borderColor: 'var(--border)',
+                    borderLeft: '3px solid #F59E0B',
+                  }}
+                  onClick={() => openBoundaryLine(line)}
+                >
+                  <div className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {line.product_name}
+                  </div>
+                  <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                    дефицит {line.deficit_units} шт &lt; пачки
+                  </div>
+                </button>
               ))}
-            </ul>
+            </div>
           </>
         )}
 

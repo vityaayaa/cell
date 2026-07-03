@@ -21,6 +21,7 @@ export function SweepProgressBar({ visited, total, sessionId }: SweepProgressBar
   const navigate = useNavigate()
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const completed = total > 0 && visited >= total
 
   async function goToOrder() {
     setLoading(true)
@@ -57,13 +58,35 @@ export function SweepProgressBar({ visited, total, sessionId }: SweepProgressBar
           </span>{' '}
           <span style={{ color: '#10B981' }}>✓</span>
         </span>
-        <button
-          className="btn-primary text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
-          onClick={handleGoToOrderClick}
-          disabled={loading || total === 0}
-        >
-          {loading ? '…' : '→ К заявке'}
-        </button>
+        <div className="relative flex-shrink-0">
+          <button
+            className="btn-primary text-sm font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
+            onClick={handleGoToOrderClick}
+            disabled={loading || total === 0}
+          >
+            {loading ? '…' : '→ К заявке'}
+          </button>
+          {completed && (
+            <svg
+              className="sweep-run-outline absolute inset-0 w-full h-full"
+              style={{ pointerEvents: 'none', overflow: 'visible' }}
+              aria-hidden
+            >
+              <rect
+                x="1"
+                y="1"
+                width="calc(100% - 2px)"
+                height="calc(100% - 2px)"
+                rx="6"
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="2"
+                strokeDasharray="14 10"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+        </div>
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>

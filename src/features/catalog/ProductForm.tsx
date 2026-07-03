@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { Tag } from 'lucide-react'
@@ -81,8 +81,13 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   // Once the user picks a group by hand, stop auto-filling it from the name.
   const [groupTouched, setGroupTouched] = useState(false)
   // The «отображаемое название» is edited in a separate dialog opened by the
-  // square Tag button to the right of the name.
+  // square Tag button to the right of the name. Edits live in a local draft and
+  // are only committed to `form.display_name` on «Готово» (× / overlay cancels).
   const [displayNameDialogOpen, setDisplayNameDialogOpen] = useState(false)
+  const [displayNameDraft, setDisplayNameDraft] = useState('')
+  // Brief accent flash on the Group select when a name auto-picks a group.
+  const [groupFlash, setGroupFlash] = useState(false)
+  const groupFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -104,9 +109,15 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
       }
       setGroupTouched(false)
       setDisplayNameDialogOpen(false)
+      setGroupFlash(false)
       setError(null)
     }
   }, [open, product, materials, groups])
+
+  // Clear any pending flash timer on unmount.
+  useEffect(() => () => {
+    if (groupFlashTimer.current) clearTimeout(groupFlashTimer.current)
+  }, [])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -116,13 +127,22 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
   /** Auto-assign a group from the name's first word, matching an EXISTING group
    *  (tolerant of singular/plural — see matchGroupByName). Stops once the user
    *  has chosen a group manually. */
+  function flashGroup() {
+    setGroupFlash(true)
+    if (groupFlashTimer.current) clearTimeout(groupFlashTimer.current)
+    groupFlashTimer.current = setTimeout(() => setGroupFlash(false), 900)
+  }
+
   function setName(value: string) {
     setError(null)
-    setForm((prev) => {
-      if (groupTouched) return { ...prev, name: value }
-      const matchId = matchGroupByName(value, groups)
-      return { ...prev, name: value, group_id: matchId ?? prev.group_id }
-    })
+    if (groupTouched) {
+      setForm((prev) => ({ ...prev, name: value }))
+      return
+    }
+    const matchId = matchGroupByName(value, groups)
+    // Flash the Group select when the auto-match actually changes the group.
+    if (matchId != null && matchId !== form.group_id) flashGroup()
+    setForm((prev) => ({ ...prev, name: value, group_id: matchId ?? prev.group_id }))
   }
 
   function setGroup(value: string) {
@@ -212,7 +232,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
               />
               <button
                 type="button"
-                onClick={() => setDisplayNameDialogOpen(true)}
+                onClick={() => { setDisplayNameDraft(form.display_name); setDisplayNameDialogOpen(true) }}
                 aria-label="Отображаемое название"
                 className="flex items-center justify-center rounded-md border flex-shrink-0"
                 style={{
@@ -292,10 +312,12 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
                   height: 44,
                   fontSize: 16,
                   background: 'var(--background)',
-                  borderColor: 'var(--border)',
+                  borderColor: groupFlash ? 'var(--primary)' : 'var(--border)',
                   color: 'var(--foreground)',
                   outline: 'none',
                   appearance: 'auto',
+                  boxShadow: groupFlash ? '0 0 0 2px var(--primary)' : '0 0 0 0 transparent',
+                  transition: 'box-shadow 700ms ease-out, border-color 700ms ease-out',
                 }}
               >
                 <option value="">Выбрать...</option>
@@ -437,7 +459,9 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
         </button>
       </DialogContent>
 
-      {/* Display name — edited in its own dialog. Value already lives in `form`. */}
+      {/* Display name — edited in its own dialog. Edits stay in a local draft;
+          only «Готово» commits them to `form.display_name`. Closing via × or the
+          overlay discards the draft. */}
       <Dialog open={displayNameDialogOpen} onOpenChange={setDisplayNameDialogOpen}>
         <DialogContent showCloseButton>
           <DialogHeader>
@@ -446,8 +470,8 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
           <div className="flex flex-col gap-3">
             <input
               type="text"
-              value={form.display_name}
-              onChange={(e) => set('display_name', e.target.value)}
+              value={displayNameDraft}
+              onChange={(e) => setDisplayNameDraft(e.target.value)}
               onFocus={caretToEnd}
               placeholder="Отображаемое название"
               className="rounded-md border px-3 text-base"
@@ -466,7 +490,7 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
             <button
               className="btn-primary w-full rounded-md font-semibold text-base"
               style={{ height: 52 }}
-              onClick={() => setDisplayNameDialogOpen(false)}
+              onClick={() => { set('display_name', displayNameDraft.trim()); setDisplayNameDialogOpen(false) }}
             >
               Готово
             </button>

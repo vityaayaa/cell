@@ -7,6 +7,20 @@ const groups = [
   { id: 'g3', name: 'Брус' },
 ]
 
+describe('matchGroupByName — explicit match_word', () => {
+  const withWord = [
+    { id: 'g1', name: 'Бруски', match_word: 'брусок' },
+    { id: 'g2', name: 'Доски' },
+  ]
+  it('matches the group whose match_word equals the first word', () => {
+    expect(matchGroupByName('Брусок 40×50', withWord)).toBe('g1')
+  })
+  it('match_word takes priority over stem matching', () => {
+    // «доска» would stem-match «Доски», but «брусок» explicitly points to g1.
+    expect(matchGroupByName('брусок сухой', withWord)).toBe('g1')
+  })
+})
+
 describe('matchGroupByName', () => {
   it('matches singular name to plural group (труба → Трубы)', () => {
     expect(matchGroupByName('труба ПВХ 110', groups)).toBe('g1')

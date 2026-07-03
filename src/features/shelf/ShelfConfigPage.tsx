@@ -39,7 +39,10 @@ export default function ShelfConfigPage() {
   const setShelfTransform = useAppStore((s) => s.setShelfTransform)
   const initialTransformRef = useRef(useAppStore.getState().shelfTransform)
 
-  useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true) })
+  const flaggedCount = cells.filter(
+    l => !cells.some(x => x.parent_id === l.id) && l.needs_review === true,
+  ).length
+  useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true), badge: flaggedCount })
 
   useEffect(() => {
     const channel = subscribeToTable('cells', async (payload) => {
@@ -164,22 +167,6 @@ export default function ShelfConfigPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div
-        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-xs border-b flex-shrink-0"
-        style={{ color: 'var(--muted-foreground)', background: 'var(--card)', borderColor: 'var(--border)' }}
-      >
-        <span>Ячеек: <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{leaves.length}</span></span>
-        <span aria-hidden>·</span>
-        <span>С товаром: <span style={{ color: '#10B981', fontWeight: 600 }}>{withProduct}</span></span>
-        <span aria-hidden>·</span>
-        <span>Пустых: <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{empty}</span></span>
-        <span aria-hidden>·</span>
-        <span>
-          <span aria-hidden>⚠</span>{' '}
-          <span style={{ color: flagged > 0 ? '#F59E0B' : 'var(--muted-foreground)', fontWeight: 600 }}>{flagged}</span>
-        </span>
-      </div>
-
       <ShelfGrid
         mode="edit"
         shelf={shelf}
@@ -232,6 +219,40 @@ export default function ShelfConfigPage() {
           <DialogHeader>
             <DialogTitle>Управление стеллажом</DialogTitle>
           </DialogHeader>
+          <div
+            className="grid grid-cols-2 gap-2 mb-1"
+          >
+            <div
+              className="flex items-baseline justify-between rounded-md px-3 py-2"
+              style={{ background: 'var(--muted)' }}
+            >
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Ячеек</span>
+              <span className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{leaves.length}</span>
+            </div>
+            <div
+              className="flex items-baseline justify-between rounded-md px-3 py-2"
+              style={{ background: 'var(--muted)' }}
+            >
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>С товаром</span>
+              <span className="text-base font-semibold" style={{ color: '#10B981' }}>{withProduct}</span>
+            </div>
+            <div
+              className="flex items-baseline justify-between rounded-md px-3 py-2"
+              style={{ background: 'var(--muted)' }}
+            >
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Пустых</span>
+              <span className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{empty}</span>
+            </div>
+            <div
+              className="flex items-baseline justify-between rounded-md px-3 py-2"
+              style={{ background: flagged > 0 ? 'color-mix(in oklab, #F59E0B 14%, transparent)' : 'var(--muted)' }}
+            >
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                <span aria-hidden>⚠</span> Проверить
+              </span>
+              <span className="text-base font-semibold" style={{ color: flagged > 0 ? '#F59E0B' : 'var(--muted-foreground)' }}>{flagged}</span>
+            </div>
+          </div>
           <div className="flex flex-col gap-3">
             <Button
               variant="outline"

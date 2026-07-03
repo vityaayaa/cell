@@ -184,6 +184,8 @@ export function CellActionsSheet({
       pickerSections.push({ id: g.id, name: g.name, items })
     }
   }
+  // «Я-А» flips the order of NAMED groups; «Без группы» stays last.
+  if (pickerSort === 'alpha-desc') pickerSections.reverse()
   const pickerOrphan = pickerByGroup.get('__none__')
   if (pickerOrphan && pickerOrphan.length > 0) {
     pickerOrphan.sort((a, b) => compareByDimensions(a, b, pickerLengthMode))
@@ -509,15 +511,6 @@ export function CellActionsSheet({
 
           <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto px-4 py-3">
             {pickerSections.map(section => {
-              // Single-product group: render the choose button directly,
-              // without an accordion header (matches the catalog).
-              if (section.items.length === 1) {
-                return (
-                  <div key={section.id} className="flex-shrink-0">
-                    {renderPickerButton(section.items[0])}
-                  </div>
-                )
-              }
               const isOpen = pickerOpenGroups.has(section.id)
               return (
                 <div

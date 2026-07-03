@@ -148,8 +148,8 @@ export function ShelfGrid({
     // Let the grid lay out and the dialog finish opening, then centre on that
     // section (zoomToElement needs the element measured).
     const t = setTimeout(() => {
-      transformRef.current?.zoomToElement(`cellwrap-${centerBaseId}`, 1)
-    }, 80)
+      transformRef.current?.zoomToElement(`cellwrap-${centerBaseId}`, 1, 200)
+    }, 40)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

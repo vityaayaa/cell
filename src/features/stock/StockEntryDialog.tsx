@@ -16,20 +16,19 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { motion } from 'motion/react'
 
+/** Address of the BASE cell (e.g. «A1») — compartments of a subdivided cell
+ *  all share their base cell's address; the (1,1)(1,3) suffixes are dropped. */
 export function buildCellAddress(cell: Cell, allCells: Cell[]): string {
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  if (!cell.parent_id) {
-    const row = cell.row_index != null ? (LETTERS[cell.row_index - 1] ?? String(cell.row_index)) : '?'
-    const col = cell.col_index ?? '?'
-    return `${row}${col}`
+  let base = cell
+  while (base.parent_id) {
+    const parent = allCells.find((c) => c.id === base.parent_id)
+    if (!parent) break
+    base = parent
   }
-  const parent = allCells.find((c) => c.id === cell.parent_id)
-  if (!parent) return '?'
-  const parentAddr = buildCellAddress(parent, allCells)
-  const n = (cell.child_index ?? 0) + 1
-  if (parent.split_direction === 'V') return `${parentAddr}(1,${n})`
-  if (parent.split_direction === 'H') return `${parentAddr}(${n},1)`
-  return parentAddr
+  const row = base.row_index != null ? (LETTERS[base.row_index - 1] ?? String(base.row_index)) : '?'
+  const col = base.col_index ?? '?'
+  return `${row}${col}`
 }
 
 export function getCapacity(cell: Cell, product: Product): number {

@@ -17,30 +17,7 @@ import type { ProductDimensions } from '@/domain/capacity'
 import { getProductShortName } from '@/features/shelf/cellUtils'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
-
-function buildCellAddress(cell: Cell, allCells: Cell[]): string {
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  if (!cell.parent_id) {
-    const row = cell.row_index != null ? (LETTERS[cell.row_index - 1] ?? String(cell.row_index)) : '?'
-    const col = cell.col_index ?? '?'
-    return `${row}${col}`
-  }
-  const parent = allCells.find((c) => c.id === cell.parent_id)
-  if (!parent) {
-    const row = cell.row_index != null ? (LETTERS[cell.row_index - 1] ?? String(cell.row_index)) : '?'
-    const col = cell.col_index ?? '?'
-    return `${row}${col}`
-  }
-  const parentAddr = buildCellAddress(parent, allCells)
-  const n = (cell.child_index ?? 0) + 1
-  if (parent.split_direction === 'V') {
-    return `${parentAddr}(1,${n})`
-  }
-  if (parent.split_direction === 'H') {
-    return `${parentAddr}(${n},1)`
-  }
-  return parentAddr
-}
+import { buildCellAddress } from './StockEntryDialog'
 
 function getCapacity(cell: Cell, product: Product): number {
   const productDims: ProductDimensions =
