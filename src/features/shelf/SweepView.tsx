@@ -464,6 +464,10 @@ function RadarStrip({
   )
 }
 
+/** Height of the info card on pieces cells. Bulk reuses it to place its
+ *  prev/next arrows at the exact same vertical position. */
+const CARD_H = 104
+
 function CurrentCellCard({
   cell,
   cells,
@@ -515,8 +519,8 @@ function CurrentCellCard({
         </button>
 
         <div
-          className="flex-1 rounded-lg p-4"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+          className="flex-1 rounded-lg p-4 flex flex-col justify-center"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', minHeight: CARD_H }}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
@@ -620,11 +624,11 @@ function BulkFillMeter({
         className="absolute bottom-0 left-0 right-0"
         style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
       />
-      {/* Pack tick marks along the right edge — shows this is a scale to fill. */}
-      {capacity > 0 && capacity <= 20 && (
-        <div className="absolute top-0 bottom-0 right-0 flex flex-col justify-between py-1 pointer-events-none">
+      {/* Subtle pack tick marks along the right edge — a quiet hint of a scale. */}
+      {capacity > 1 && capacity <= 20 && (
+        <div className="absolute top-0 bottom-0 right-1 flex flex-col justify-between py-2 pointer-events-none">
           {Array.from({ length: capacity + 1 }, (_, i) => (
-            <div key={i} style={{ width: 10, height: 2, background: 'var(--muted-foreground)', opacity: 0.5 }} />
+            <div key={i} style={{ width: 5, height: 1, background: 'var(--muted-foreground)', opacity: 0.3 }} />
           ))}
         </div>
       )}
@@ -767,15 +771,19 @@ function InputZone({
            value live inside it; prev/next arrows flank it. Fixed height so the
            radar above keeps the same size as on pieces cells. */
         <div className="flex items-start gap-2" style={{ height: 240 }}>
-          <button
-            onClick={onPrev}
-            disabled={!canPrev}
-            aria-label="Предыдущая ячейка"
-            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, height: 44, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border)' }}
-          >
-            <ChevronLeft size={24} />
-          </button>
+          {/* Arrows centred over a CARD_H-tall slot — the exact vertical spot
+              they sit at on pieces cells (where they centre over the info card). */}
+          <div className="flex items-center flex-shrink-0" style={{ height: CARD_H }}>
+            <button
+              onClick={onPrev}
+              disabled={!canPrev}
+              aria-label="Предыдущая ячейка"
+              className="flex items-center justify-center rounded-md disabled:opacity-30"
+              style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            >
+              <ChevronLeft size={24} />
+            </button>
+          </div>
           <div className="flex-1 min-w-0 h-full">
             <BulkFillMeter
               value={value}
@@ -787,15 +795,17 @@ function InputZone({
               total={total}
             />
           </div>
-          <button
-            onClick={onNext}
-            disabled={!canNext}
-            aria-label="Следующая ячейка"
-            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, height: 44, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border)' }}
-          >
-            <ChevronRight size={24} />
-          </button>
+          <div className="flex items-center flex-shrink-0" style={{ height: CARD_H }}>
+            <button
+              onClick={onNext}
+              disabled={!canNext}
+              aria-label="Следующая ячейка"
+              className="flex items-center justify-center rounded-md disabled:opacity-30"
+              style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
         </div>
       ) : (
         /* Pieces / round: big numeric readout */
