@@ -68,6 +68,9 @@ export function SweepView({
     ? order.findIndex((c) => c.id === currentCell.id)
     : -1
 
+  const currentIsBulk =
+    products.find((p) => p.id === currentCell?.product_id)?.type === 'bulk'
+
   const allVisited = order.length > 0 && order.every((c) => visitedCellIds.has(c.id))
 
   // 1-based position of the next unvisited cell (for "вернуться к обходу → №N").
@@ -147,7 +150,10 @@ export function SweepView({
         </div>
       )}
 
-      {currentCell && (
+      {/* Pieces/round: info card above the numeric input. Bulk: the card is
+          hidden — its info lives inside the fill meter, freeing space for the
+          radar and letting the meter grow. */}
+      {currentCell && !currentIsBulk && (
         <div className="flex-shrink-0">
           <CurrentCellCard
             cell={currentCell}
@@ -165,13 +171,24 @@ export function SweepView({
       )}
 
       {currentCell && (
-        <div className="flex-shrink-0">
+        <div className={currentIsBulk ? 'flex-1 min-h-0 flex flex-col' : 'flex-shrink-0'}>
           <InputZone
             key={currentCell.id}
             cell={currentCell}
             products={products}
             sessionId={sessionId}
             userId={userId}
+            address={buildCellAddress(currentCell, cells)}
+            productName={(() => {
+              const p = products.find((pr) => pr.id === currentCell.product_id)
+              return p ? getProductShortName(p) : '—'
+            })()}
+            positionNo={currentIndex + 1}
+            total={order.length}
+            onPrev={() => step(-1)}
+            onNext={() => step(1)}
+            canPrev={currentIndex > 0}
+            canNext={currentIndex < order.length - 1}
             alreadyVisited={visitedCellIds.has(currentCell.id)}
             onSaved={(cellId) => advanceAfterSave(cellId)}
             onSkip={() => step(1)}
@@ -552,10 +569,18 @@ function BulkFillMeter({
   value,
   capacity,
   onChange,
+  address,
+  productName,
+  positionNo,
+  total,
 }: {
   value: number
   capacity: number
   onChange: (v: number) => void
+  address: string
+  productName: string
+  positionNo: number
+  total: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -578,11 +603,11 @@ function BulkFillMeter({
   return (
     <div
       ref={containerRef}
-      className="w-full rounded-xl border overflow-hidden relative select-none"
+      className="w-full h-full rounded-xl border overflow-hidden relative select-none"
       style={{
-        height: 220,
         touchAction: 'none',
         cursor: 'ns-resize',
+        background: 'var(--card)',
         borderColor: 'var(--border)',
       }}
       onPointerDown={(e) => {
@@ -592,32 +617,40 @@ function BulkFillMeter({
       onPointerMove={handlePointer}
     >
       <div
-        className="absolute top-0 left-0 right-0"
-        style={{ height: `${100 - percent}%`, background: 'var(--muted)' }}
-      />
-      <div
         className="absolute bottom-0 left-0 right-0"
         style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
       />
-      {percent > 2 && percent < 98 && (
+      {percent > 1 && percent < 99 && (
         <div
           className="absolute left-0 right-0"
-          style={{ top: `${100 - percent}%`, height: 2, background: 'var(--primary)' }}
+          style={{ bottom: `${percent}%`, height: 2, background: 'var(--primary)' }}
         />
       )}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3 pointer-events-none text-center">
-        <span
-          className="font-bold leading-none"
-          style={{ fontSize: 40, color: light ? 'white' : 'var(--foreground)' }}
-        >
-          {packs(value)}
+      {/* Cell info at the top, the fill value centred below it. */}
+      <div className="absolute inset-0 flex flex-col items-center px-3 pt-4 pb-4 pointer-events-none text-center">
+        <span className="text-xs" style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}>
+          №{positionNo} из {total}
         </span>
         <span
-          className="text-sm"
-          style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}
+          className="text-base font-semibold leading-tight mt-0.5"
+          style={{ color: light ? 'white' : 'var(--foreground)' }}
         >
-          из {packs(capacity)}
+          {address} · {productName}
         </span>
+        <div className="flex-1 flex flex-col items-center justify-center gap-1">
+          <span
+            className="font-bold leading-none"
+            style={{ fontSize: 44, color: light ? 'white' : 'var(--foreground)' }}
+          >
+            {packs(value)}
+          </span>
+          <span
+            className="text-sm"
+            style={{ color: light ? 'rgba(255,255,255,0.85)' : 'var(--muted-foreground)' }}
+          >
+            из {packs(capacity)}
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -628,6 +661,14 @@ function InputZone({
   products,
   sessionId,
   userId,
+  address,
+  productName,
+  positionNo,
+  total,
+  onPrev,
+  onNext,
+  canPrev,
+  canNext,
   alreadyVisited,
   onSaved,
   onSkip,
@@ -636,6 +677,14 @@ function InputZone({
   products: Product[]
   sessionId: string
   userId: string | null
+  address: string
+  productName: string
+  positionNo: number
+  total: number
+  onPrev: () => void
+  onNext: () => void
+  canPrev: boolean
+  canNext: boolean
   alreadyVisited: boolean
   onSaved: (cellId: string) => void
   onSkip: () => void
@@ -697,11 +746,41 @@ function InputZone({
   const bumpStyle = { height: 46, background: 'var(--card)', border: '1px solid var(--border)' }
 
   return (
-    <div className="px-4 pt-3 pb-4 mt-auto flex flex-col min-h-0">
+    <div className={`px-4 pt-3 pb-4 flex flex-col min-h-0 ${isBulk ? 'flex-1' : 'mt-auto'}`}>
       {isBulk ? (
-        /* Bulk: vertical beaker meter in place of the numeric readout. The cell
-           card above (address, product, arrows) is identical to pieces cells. */
-        <BulkFillMeter value={value} capacity={capacity} onChange={setClamped} />
+        /* Bulk: the meter is the whole thing — cell info + value live inside it,
+           prev/next arrows flank it (no separate card). Grows to fill space. */
+        <div className="flex-1 min-h-0 flex items-stretch gap-2">
+          <button
+            onClick={onPrev}
+            disabled={!canPrev}
+            aria-label="Предыдущая ячейка"
+            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+            style={{ width: 40, background: 'var(--card)', border: '1px solid var(--border)' }}
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="flex-1 min-h-0">
+            <BulkFillMeter
+              value={value}
+              capacity={capacity}
+              onChange={setClamped}
+              address={address}
+              productName={productName}
+              positionNo={positionNo}
+              total={total}
+            />
+          </div>
+          <button
+            onClick={onNext}
+            disabled={!canNext}
+            aria-label="Следующая ячейка"
+            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+            style={{ width: 40, background: 'var(--card)', border: '1px solid var(--border)' }}
+          >
+            <ChevronRight size={22} />
+          </button>
+        </div>
       ) : (
         /* Pieces / round: big numeric readout */
         <div
