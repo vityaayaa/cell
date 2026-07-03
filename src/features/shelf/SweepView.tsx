@@ -624,11 +624,16 @@ function BulkFillMeter({
         className="absolute bottom-0 left-0 right-0"
         style={{ height: `${percent}%`, background: 'var(--primary)', opacity: 0.85 }}
       />
-      {/* Subtle pack tick marks along the right edge — a quiet hint of a scale. */}
+      {/* Subtle tick at each pack boundary (k/capacity), so a mark sits exactly
+          where the fill line lands. capacity−1 internal ticks (4 packs → 3). */}
       {capacity > 1 && capacity <= 20 && (
-        <div className="absolute top-0 bottom-0 right-1 flex flex-col justify-between py-2 pointer-events-none">
-          {Array.from({ length: capacity + 1 }, (_, i) => (
-            <div key={i} style={{ width: 5, height: 1, background: 'var(--muted-foreground)', opacity: 0.3 }} />
+        <div className="absolute inset-0 pointer-events-none">
+          {Array.from({ length: capacity - 1 }, (_, i) => (
+            <div
+              key={i}
+              className="absolute right-1"
+              style={{ bottom: `${((i + 1) / capacity) * 100}%`, width: 6, height: 1, background: 'var(--muted-foreground)', opacity: 0.3 }}
+            />
           ))}
         </div>
       )}
@@ -770,20 +775,16 @@ function InputZone({
         /* Bulk: fill meter in place of the card + numeric input. Cell info +
            value live inside it; prev/next arrows flank it. Fixed height so the
            radar above keeps the same size as on pieces cells. */
-        <div className="flex items-start gap-2" style={{ height: 240 }}>
-          {/* Arrows centred over a CARD_H-tall slot — the exact vertical spot
-              they sit at on pieces cells (where they centre over the info card). */}
-          <div className="flex items-center flex-shrink-0" style={{ height: CARD_H }}>
-            <button
-              onClick={onPrev}
-              disabled={!canPrev}
-              aria-label="Предыдущая ячейка"
-              className="flex items-center justify-center rounded-md disabled:opacity-30"
-              style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
-            >
-              <ChevronLeft size={24} />
-            </button>
-          </div>
+        <div className="flex items-stretch gap-2" style={{ height: 240 }}>
+          <button
+            onClick={onPrev}
+            disabled={!canPrev}
+            aria-label="Предыдущая ячейка"
+            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+            style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+          >
+            <ChevronLeft size={24} />
+          </button>
           <div className="flex-1 min-w-0 h-full">
             <BulkFillMeter
               value={value}
@@ -795,17 +796,15 @@ function InputZone({
               total={total}
             />
           </div>
-          <div className="flex items-center flex-shrink-0" style={{ height: CARD_H }}>
-            <button
-              onClick={onNext}
-              disabled={!canNext}
-              aria-label="Следующая ячейка"
-              className="flex items-center justify-center rounded-md disabled:opacity-30"
-              style={{ width: 44, height: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
-            >
-              <ChevronRight size={24} />
-            </button>
-          </div>
+          <button
+            onClick={onNext}
+            disabled={!canNext}
+            aria-label="Следующая ячейка"
+            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
+            style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
+          >
+            <ChevronRight size={24} />
+          </button>
         </div>
       ) : (
         /* Pieces / round: big numeric readout */
