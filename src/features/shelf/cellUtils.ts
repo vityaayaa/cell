@@ -26,6 +26,35 @@ export function getRootAddress(cell: Cell): string {
   return `${row}${col}`
 }
 
+/** Address of the BASE cell (e.g. «A1») — compartments of a subdivided cell
+ *  all share their base cell's address; the (1,1)(1,3) suffixes are dropped. */
+export function buildCellAddress(cell: Cell, allCells: Cell[]): string {
+  let base = cell
+  while (base.parent_id) {
+    const parent = allCells.find((c) => c.id === base.parent_id)
+    if (!parent) break
+    base = parent
+  }
+  const row =
+    base.row_index != null ? (ROW_LETTERS[base.row_index - 1] ?? String(base.row_index)) : '?'
+  const col = base.col_index ?? '?'
+  return `${row}${col}`
+}
+
+export function getCapacity(cell: Cell, product: Product): number {
+  const dims: ProductDimensions =
+    product.type === 'unit'
+      ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
+      : product.type === 'round'
+        ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
+        : { type: 'bulk' }
+  return getEffectiveCapacity(
+    { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
+    dims,
+    { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
+  )
+}
+
 export function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace('#', '')
   const r = parseInt(clean.substring(0, 2), 16)

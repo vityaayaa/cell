@@ -7,14 +7,12 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  buildCellAddress,
-} from '@/features/stock/StockEntryDialog'
 import { ShelfGrid } from './ShelfGrid'
 import { SweepProgressBar } from './SweepProgressBar'
 import { buildSweepOrder } from './sweepOrder'
 import {
   getProductShortName,
+  buildCellAddress,
 } from './cellUtils'
 import { RadarStrip } from './sweep/RadarStrip'
 import { CurrentCellCard } from './sweep/CurrentCellCard'

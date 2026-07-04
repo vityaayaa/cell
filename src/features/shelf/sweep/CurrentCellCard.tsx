@@ -1,8 +1,13 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Cell, Material, Product } from '@/data/db'
 import { packs } from '@/lib/plural'
-import { buildCellAddress, getCapacity } from '@/features/stock/StockEntryDialog'
-import { getProductShortName, getMaterialForProduct, productUnitLabel } from '../cellUtils'
+import {
+  getProductShortName,
+  getMaterialForProduct,
+  productUnitLabel,
+  buildCellAddress,
+  getCapacity,
+} from '../cellUtils'
 
 /** Height of the info card on pieces cells. Bulk reuses it to place its
  *  prev/next arrows at the exact same vertical position. */

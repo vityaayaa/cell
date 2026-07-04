@@ -6,9 +6,8 @@ import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Cell, Product } from '@/data/db'
 import { toastSuccess } from '@/lib/toast'
-import { getCapacity } from '@/features/stock/StockEntryDialog'
 import { saveStockEntry } from '@/features/stock/saveStockEntry'
-import { isPiecesInput, productUnitLabel } from '../cellUtils'
+import { isPiecesInput, productUnitLabel, getCapacity } from '../cellUtils'
 import { BulkFillMeter } from './BulkFillMeter'
 
 export function InputZone({

@@ -7,33 +7,13 @@ import { ChevronLeft } from 'lucide-react'
 import { toastSuccess } from '@/lib/toast'
 import { packs } from '@/lib/plural'
 import { db } from '@/data/db'
-import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
 import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
-import { getEffectiveCapacity } from '@/domain/capacity'
-import type { ProductDimensions } from '@/domain/capacity'
-import { getProductShortName } from '@/features/shelf/cellUtils'
+import { getProductShortName, buildCellAddress, getCapacity } from '@/features/shelf/cellUtils'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
-import { buildCellAddress } from './StockEntryDialog'
-
-function getCapacity(cell: Cell, product: Product): number {
-  const productDims: ProductDimensions =
-    product.type === 'unit'
-      ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
-      : product.type === 'round'
-        ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
-        : { type: 'bulk' }
-
-  return getEffectiveCapacity(
-    { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
-    productDims,
-    { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
-  )
-}
-
 
 export default function StockEntryPage() {
   const { cellId } = useParams<{ cellId: string }>()

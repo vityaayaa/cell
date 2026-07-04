@@ -3,47 +3,21 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
 import { toastSuccess } from '@/lib/toast'
 import { db } from '@/data/db'
-import type { Cell, Product } from '@/data/db'
 import { supabase } from '@/data/supabase'
 import { subscribeToTable } from '@/data/sync'
 import { saveStockEntry } from './saveStockEntry'
 import { useAppStore } from '@/data/store'
-import { getEffectiveCapacity } from '@/domain/capacity'
-import type { ProductDimensions } from '@/domain/capacity'
-import { getProductShortName, isPiecesInput, productUnitLabel } from '@/features/shelf/cellUtils'
+import {
+  getProductShortName,
+  isPiecesInput,
+  productUnitLabel,
+  buildCellAddress,
+  getCapacity,
+} from '@/features/shelf/cellUtils'
 import { packs } from '@/lib/plural'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { motion } from 'motion/react'
-
-/** Address of the BASE cell (e.g. «A1») — compartments of a subdivided cell
- *  all share their base cell's address; the (1,1)(1,3) suffixes are dropped. */
-export function buildCellAddress(cell: Cell, allCells: Cell[]): string {
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  let base = cell
-  while (base.parent_id) {
-    const parent = allCells.find((c) => c.id === base.parent_id)
-    if (!parent) break
-    base = parent
-  }
-  const row = base.row_index != null ? (LETTERS[base.row_index - 1] ?? String(base.row_index)) : '?'
-  const col = base.col_index ?? '?'
-  return `${row}${col}`
-}
-
-export function getCapacity(cell: Cell, product: Product): number {
-  const dims: ProductDimensions =
-    product.type === 'unit'
-      ? { type: 'unit', width_mm: product.width_mm ?? 0, height_mm: product.height_mm ?? 0 }
-      : product.type === 'round'
-        ? { type: 'round', diameter_mm: product.diameter_mm ?? 0 }
-        : { type: 'bulk' }
-  return getEffectiveCapacity(
-    { computed_width_mm: cell.computed_width_mm, computed_height_mm: cell.computed_height_mm },
-    dims,
-    { rotation_allowed: cell.rotation_allowed, capacity_override: cell.capacity_override },
-  )
-}
 
 function BulkFillMeter({
   percent,
