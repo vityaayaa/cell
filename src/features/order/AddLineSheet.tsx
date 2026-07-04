@@ -262,7 +262,7 @@ export function AddLineSheet({
               onSortMode={setSortMode}
             />
 
-            <div className="flex flex-col gap-2 max-h-[45dvh] overflow-y-auto">
+            <div className="flex flex-col gap-2 h-[45dvh] overflow-y-auto">
               {sections.length === 0 ? (
                 <p
                   className="text-sm py-6 text-center"

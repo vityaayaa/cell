@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronRight } from 'lucide-react'
 import { db } from '@/data/db'
 import type { Order, OrderLine, Product, Material } from '@/data/db'
 import { mutateInsertMany, mutateUpdate } from '@/data/mutate'
@@ -181,26 +181,35 @@ export default function OrderDraftPage() {
             {mainLines.map((line) => (
               <button
                 key={line.id}
-                className="w-full rounded-lg border text-left px-3 py-2.5"
+                className="w-full rounded-lg border text-left px-3 py-2.5 flex items-center gap-2"
                 style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
                 onClick={() => openEditLine(line)}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                    {line.product_name}
-                  </span>
-                  {line.is_manual && (
-                    <span
-                      className="text-xs rounded-full px-1.5 py-0.5 flex-shrink-0"
-                      style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}
-                    >
-                      вручную
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                      {line.product_name}
                     </span>
-                  )}
+                    {line.is_manual && (
+                      <span
+                        className="text-xs rounded-full px-1.5 py-0.5 flex-shrink-0"
+                        style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}
+                      >
+                        вручную
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                    {packs(line.quantity_packs)} · {line.quantity_units} шт
+                  </div>
                 </div>
-                <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                  {packs(line.quantity_packs)} · {line.quantity_units} шт
-                </div>
+                <ChevronRight
+                  size={20}
+                  strokeWidth={1.5}
+                  className="flex-shrink-0"
+                  style={{ color: 'var(--muted-foreground)' }}
+                  aria-hidden
+                />
               </button>
             ))}
           </div>
@@ -215,17 +224,22 @@ export default function OrderDraftPage() {
         {/* Boundary lines — cards, visually separated with an amber accent */}
         {boundaryLines.length > 0 && (
           <>
-            <div className="flex items-center gap-2 px-4 mt-4 mb-2">
-              <span aria-hidden style={{ color: '#F59E0B', fontSize: 16 }}>⚠</span>
-              <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                Пограничные позиции
-              </h2>
+            <div className="px-4 mt-4 mb-2">
+              <div className="flex items-center gap-2">
+                <span aria-hidden style={{ color: '#F59E0B', fontSize: 16 }}>⚠</span>
+                <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                  Пограничные позиции
+                </h2>
+              </div>
+              <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                Дефицит меньше одной пачки. Не попадают в заявку автоматически — нажмите, чтобы добавить, если всё же нужно везти.
+              </p>
             </div>
             <div className="flex flex-col gap-2 px-4">
               {boundaryLines.map((line) => (
                 <button
                   key={line.id}
-                  className="w-full rounded-lg border text-left px-3 py-2.5"
+                  className="w-full rounded-lg border text-left px-3 py-2.5 flex items-center gap-2"
                   style={{
                     background: 'color-mix(in oklab, #F59E0B 8%, var(--card))',
                     borderColor: 'var(--border)',
@@ -233,12 +247,21 @@ export default function OrderDraftPage() {
                   }}
                   onClick={() => openBoundaryLine(line)}
                 >
-                  <div className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                    {line.product_name}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                      {line.product_name}
+                    </div>
+                    <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                      дефицит {line.deficit_units} шт &lt; одной пачки
+                    </div>
                   </div>
-                  <div className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                    дефицит {line.deficit_units} шт &lt; пачки
-                  </div>
+                  <ChevronRight
+                    size={20}
+                    strokeWidth={1.5}
+                    className="flex-shrink-0"
+                    style={{ color: 'var(--muted-foreground)' }}
+                    aria-hidden
+                  />
                 </button>
               ))}
             </div>

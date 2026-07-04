@@ -493,7 +493,7 @@ export function CellActionsSheet({
             onSortMode={setPickerSort}
           />
 
-          <div className="flex flex-col gap-2 max-h-[50dvh] overflow-y-auto px-4 py-3">
+          <div className="flex flex-col gap-2 h-[50dvh] overflow-y-auto px-4 py-3">
             {pickerSections.map(section => {
               const isOpen = pickerOpenGroups.has(section.id)
               return (
