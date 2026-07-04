@@ -734,6 +734,9 @@ function InputZone({
   }, [entered])
 
   const isOverCapacity = product?.type === 'unit' && value > capacity
+  // Capacity not computed (no dimensions / no manual override): the remaining
+  // can't be worked out, so block saving instead of recording a bogus 0.
+  const capacityMissing = product != null && capacity === 0
 
   function setClamped(v: number) {
     let next = Math.max(0, v)
@@ -851,6 +854,12 @@ function InputZone({
         </p>
       )}
 
+      {capacityMissing && (
+        <p className="text-xs text-center mt-1" style={{ color: 'var(--destructive)' }}>
+          Вместимость не задана — укажите её в настройках ячейки
+        </p>
+      )}
+
       {/* ± buttons — pieces / round only; bulk uses the slider to set packs. */}
       {!isBulk && (
         <div className="flex gap-2 mt-2">
@@ -864,9 +873,9 @@ function InputZone({
       <motion.button
         className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-40 flex-shrink-0"
         style={{ height: 52 }}
-        whileTap={!saving ? { scale: 0.97 } : undefined}
+        whileTap={!saving && !capacityMissing ? { scale: 0.97 } : undefined}
         onClick={handleSaveAndNext}
-        disabled={saving}
+        disabled={saving || capacityMissing}
       >
         {saving ? '…' : alreadyVisited ? 'Перезаписать и дальше' : 'Записать и дальше'}
       </motion.button>

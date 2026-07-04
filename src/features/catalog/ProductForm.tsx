@@ -112,7 +112,11 @@ export function ProductForm({ open, onOpenChange, product, materials, groups, ac
       setGroupFlash(false)
       setError(null)
     }
-  }, [open, product, materials, groups])
+    // Re-seed the form ONLY when it opens or the edited product changes — NOT
+    // when materials/groups live-update (a sync mid-edit would wipe the form).
+    // materials[0] for the default is read at open time, when it's already loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, product])
 
   // Clear any pending flash timer on unmount.
   useEffect(() => () => {

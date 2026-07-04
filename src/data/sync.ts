@@ -75,21 +75,53 @@ export function subscribeToTable(
     .subscribe()
 }
 
+// Parent-before-child order so a queued child never hits a missing-FK error
+// (e.g. order_lines before their order). Lower number = flushed first.
+const TABLE_FLUSH_PRIORITY: Record<string, number> = {
+  materials: 0,
+  groups: 0,
+  products: 1,
+  shelves: 0,
+  cells: 1,
+  sessions: 0,
+  orders: 1,
+  order_lines: 2,
+  checklist_entries: 3,
+  stock_entries: 1,
+}
+
+// A delete that keeps failing is safe to drop (re-deleting a row is a no-op),
+// but an upsert carries user data — dropping it loses that data forever. So we
+// only ever give up on deletes; upserts stay queued and retry indefinitely.
+const MAX_DELETE_RETRIES = 10
+
+// Guard against overlapping runs (a flappy connection fires `online` repeatedly).
+let flushing = false
+
 export async function flushQueue(): Promise<void> {
+  if (flushing) return
+  flushing = true
   const store = useAppStore.getState()
-  const items = await db.sync_queue.orderBy('created_at').toArray()
-
-  if (items.length === 0) return
-
-  store.setSyncing(true)
-
   try {
+    const items = await db.sync_queue.orderBy('created_at').toArray()
+    if (items.length === 0) return
+
+    // Stable sort: parent tables before child tables, then by created_at, so
+    // FK-dependent rows are sent after what they reference.
+    items.sort((a, b) => {
+      const pa = TABLE_FLUSH_PRIORITY[a.table_name] ?? 9
+      const pb = TABLE_FLUSH_PRIORITY[b.table_name] ?? 9
+      if (pa !== pb) return pa - pb
+      return a.created_at.localeCompare(b.created_at)
+    })
+
+    store.setSyncing(true)
+
     for (const item of items) {
-      // Лимит ретраев: запись, которая 5 раз не прошла (например RLS-запрет или
-      // битые данные), удаляется из очереди — иначе «ядовитый» мусор копился бы
-      // вечно и проверялся при каждом flush. Логируем, чтобы факт не потерялся.
-      if (item.retry_count >= 5) {
-        console.warn('[sync] удаляем запись очереди после 5 неудачных попыток', item.table_name, item.record_id, item.payload)
+      // Give up only on repeatedly-failing DELETES (safe — re-delete is a no-op).
+      // Upserts hold data, so they are never dropped; they keep retrying.
+      if (item.operation === 'delete' && item.retry_count >= MAX_DELETE_RETRIES) {
+        console.warn('[sync] drop delete after retries', item.table_name, item.record_id)
         await db.sync_queue.delete(item.id)
         continue
       }
@@ -114,6 +146,7 @@ export async function flushQueue(): Promise<void> {
     const remaining = await db.sync_queue.count()
     store.setSyncQueueLength(remaining)
     store.setSyncing(false)
+    flushing = false
   }
 }
 
