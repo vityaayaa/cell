@@ -52,5 +52,14 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Фейковые Supabase-креды для тестов: некоторые модули (data/sync.ts →
+    // data/supabase.ts) создают клиент через createClient() на верхнем уровне
+    // при импорте. Без переменных createClient кидает «supabaseUrl is required»
+    // — локально спасал .env, а на CI (env только в build-шаге) тест падал.
+    // Клиент в юнит-тестах реально не ходит в сеть, поэтому значения-заглушки.
+    env: {
+      VITE_SUPABASE_URL: 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+    },
   },
 })
