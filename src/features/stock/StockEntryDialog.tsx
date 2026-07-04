@@ -45,7 +45,7 @@ export function getCapacity(cell: Cell, product: Product): number {
   )
 }
 
-export function BulkFillMeter({
+function BulkFillMeter({
   percent,
   onChange,
   capacity,

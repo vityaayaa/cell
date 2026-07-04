@@ -34,7 +34,7 @@ export function calculateDeficitPacks(stock: CellStock): {
   return { deficit, full_packs, is_boundary }
 }
 
-export function aggregateByProduct(cells: CellStock[]): Map<string, CellStock[]> {
+function aggregateByProduct(cells: CellStock[]): Map<string, CellStock[]> {
   const map = new Map<string, CellStock[]>()
   for (const cell of cells) {
     const group = map.get(cell.product_id) ?? []
@@ -61,7 +61,6 @@ export function buildOrderLines(cells: CellStock[]): OrderLineInput[] {
     if (totalDeficit <= 0) continue
 
     if (isBulk) {
-      if (totalDeficit === 0) continue
       nonBoundary.push({
         product_id: productId,
         quantity_packs: totalDeficit,

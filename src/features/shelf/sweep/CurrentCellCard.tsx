@@ -6,7 +6,7 @@ import { getProductShortName, getMaterialForProduct, productUnitLabel } from '..
 
 /** Height of the info card on pieces cells. Bulk reuses it to place its
  *  prev/next arrows at the exact same vertical position. */
-export const CARD_H = 104
+const CARD_H = 104
 
 export function CurrentCellCard({
   cell,

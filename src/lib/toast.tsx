@@ -47,20 +47,6 @@ export function toastSuccess(message: string, duration = 4000) {
   )
 }
 
-export function toastError(message: string, duration = 5000) {
-  toast.custom(
-    id => (
-      <ProgressToast
-        message={message}
-        color="#EF4444"
-        duration={duration}
-        onDismiss={() => toast.dismiss(id)}
-      />
-    ),
-    { duration },
-  )
-}
-
 export function toastInfo(message: string, duration = 4000) {
   toast.custom(
     id => (
