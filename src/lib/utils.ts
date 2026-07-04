@@ -50,11 +50,14 @@ export function matchGroupByName(
     if (gname.length < 4) continue
     let i = 0
     while (i < word.length && i < gname.length && word[i] === gname[i]) i++
-    // Long-enough stem AND covering most of the shorter word — «труба»/«трубы»,
-    // «наличник»/«наличники», «брус»/«брусок» match; a 4-letter coincidence
-    // with a long unrelated word doesn't.
-    const shorter = Math.min(word.length, gname.length)
-    if (i >= 4 && i >= shorter - 2) return g.id
+    // Treat as the same word only if they share a 4+ letter stem AND differ by
+    // no more than 2 letters overall (a plural/singular ending). This matches
+    // «труба»/«трубы», «наличник»/«наличники», «брус»/«брусок», but NOT
+    // «налив»/«наличник» or «брус»/«брусника» (too different — use match_word
+    // for those). The stem must also reach into the longer word, not just the
+    // short one, i.e. i must be close to the longer length.
+    const longer = Math.max(word.length, gname.length)
+    if (i >= 4 && longer - i <= 2) return g.id
   }
   return null
 }

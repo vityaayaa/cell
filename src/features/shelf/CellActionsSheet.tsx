@@ -12,24 +12,9 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { ProductSortBar, compareByDimensions, type SortMode, type LengthMode } from '@/features/catalog/ProductSortBar'
 import { accordionDuration } from '@/lib/utils'
+import { getProductShortName } from './cellUtils'
 import type { Cell, Product, Material } from '@/data/db'
 
-// Full dimensions for the product picker (admin assigns a product and needs the
-// exact sizes). Shows whatever is set for ALL types, incl. bulk and partials.
-function getProductParts(p: Product): { name: string; dims: string | null } {
-  if (p.type === 'round') {
-    const parts = [
-      p.diameter_mm != null ? `⌀${p.diameter_mm}` : null,
-      p.length_mm != null ? String(p.length_mm) : null,
-    ].filter((v): v is string => v != null)
-    return { name: p.name, dims: parts.length ? parts.join('×') : null }
-  }
-  // unit & bulk: height×width×length, skipping any that are not set.
-  const dims = [p.height_mm, p.width_mm, p.length_mm].filter(
-    (v): v is number => v != null,
-  )
-  return { name: p.name, dims: dims.length ? dims.join('×') : null }
-}
 import { db } from '@/data/db'
 import { mutateUpsertMany, mutateUpdate, mutateDelete } from '@/data/mutate'
 import { isLeaf } from '@/domain/bsp'
@@ -162,7 +147,7 @@ export function CellActionsSheet({
   const filteredPickerProducts = products.filter(p => {
     if (pickerMaterialId && p.material_id !== pickerMaterialId) return false
     const q = pickerSearch.trim().toLowerCase()
-    return q === '' || p.name.toLowerCase().includes(q)
+    return q === '' || getProductShortName(p).toLowerCase().includes(q)
   })
   const groupMap = new Map(groups.map(g => [g.id, g]))
   const pickerByGroup = new Map<string, Product[]>()
@@ -252,7 +237,7 @@ export function CellActionsSheet({
   }
 
   function renderPickerButton(p: Product) {
-    const { name, dims } = getProductParts(p)
+    const name = getProductShortName(p)
     const material = materials.find(m => m.id === p.material_id)
     const inShelf = assignedProductIds.has(p.id)
     return (
@@ -277,7 +262,6 @@ export function CellActionsSheet({
             </span>
           )}
         </span>
-        {dims && <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>{dims}</span>}
       </button>
     )
   }

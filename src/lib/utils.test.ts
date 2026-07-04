@@ -40,6 +40,12 @@ describe('matchGroupByName', () => {
   it('returns null for empty name', () => {
     expect(matchGroupByName('', groups)).toBeNull()
   })
+  it('does NOT falsely match on a 4-letter prefix of a much longer group', () => {
+    // «налив…» shares «нали» with «Наличник» but they're too different.
+    expect(matchGroupByName('наливной пол', [{ id: 'g', name: 'Наличник' }])).toBeNull()
+    // «брус» vs «Брусника» — 4-letter prefix but 4-letter difference.
+    expect(matchGroupByName('брусника', [{ id: 'g', name: 'Брус' }])).toBeNull()
+  })
 })
 
 describe('accordionDuration', () => {
