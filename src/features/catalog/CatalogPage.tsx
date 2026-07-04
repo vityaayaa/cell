@@ -221,14 +221,16 @@ export default function CatalogPage() {
 
   return (
     <div className="flex flex-col pb-6">
-      {/* Sort bar */}
-      <ProductSortBar
-        materials={materials}
-        materialId={materialId}
-        sortMode={sortMode}
-        onMaterialId={setMaterialId}
-        onSortMode={setSortMode}
-      />
+      {/* Sort bar — sticky so it stays visible while the list scrolls */}
+      <div className="sticky top-0 z-10" style={{ background: 'var(--background)' }}>
+        <ProductSortBar
+          materials={materials}
+          materialId={materialId}
+          sortMode={sortMode}
+          onMaterialId={setMaterialId}
+          onSortMode={setSortMode}
+        />
+      </div>
 
       {/* Add button */}
       <div className="px-4 pt-3">

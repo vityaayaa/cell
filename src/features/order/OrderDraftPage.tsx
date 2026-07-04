@@ -147,30 +147,33 @@ export default function OrderDraftPage() {
         className="flex flex-col h-full overflow-y-auto"
         style={{ background: 'var(--background)' }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h1 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
-            Заявка
-          </h1>
-          <button
-            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium"
-            style={{ color: 'var(--primary)', background: 'transparent' }}
-            onClick={() => setAddLineOpen(true)}
-            aria-label="Добавить позицию вручную"
-          >
-            <Plus size={18} strokeWidth={2} />
-            Добавить
-          </button>
-        </div>
+        {/* Sticky header + sort bar — stay visible while the list scrolls */}
+        <div className="sticky top-0 z-10" style={{ background: 'var(--background)' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <h1 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+              Заявка
+            </h1>
+            <button
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium"
+              style={{ color: 'var(--primary)', background: 'transparent' }}
+              onClick={() => setAddLineOpen(true)}
+              aria-label="Добавить позицию вручную"
+            >
+              <Plus size={18} strokeWidth={2} />
+              Добавить
+            </button>
+          </div>
 
-        {/* Sort bar */}
-        <ProductSortBar
-          materials={materials ?? []}
-          materialId={materialId}
-          sortMode={sortMode}
-          onMaterialId={setMaterialId}
-          onSortMode={setSortMode}
-        />
+          {/* Sort bar */}
+          <ProductSortBar
+            materials={materials ?? []}
+            materialId={materialId}
+            sortMode={sortMode}
+            onMaterialId={setMaterialId}
+            onSortMode={setSortMode}
+          />
+        </div>
 
         {/* Main lines — cards */}
         {mainLines.length > 0 ? (

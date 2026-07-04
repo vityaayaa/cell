@@ -9,7 +9,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <AppRouter />
-      <Toaster position="top-center" richColors />
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+        duration={2000}
+        swipeDirections={['top', 'left', 'right']}
+      />
     </ThemeProvider>
   </StrictMode>,
 )
