@@ -11,9 +11,17 @@ const CARD = 'var(--card)'
 
 /* ─────────────────────────────────────────────────────────
    a) Process flow: Обход → Заявка → Чеклист
-   Horizontal on wide, wraps to vertical on narrow via flex-wrap.
-   Drawn with HTML boxes + inline SVG arrows so it reflows cleanly.
+   Vertical stepper by default (stable on narrow phones): equal-size
+   cards stacked, a down-arrow centred between each. No flex-wrap, so
+   nothing can reflow or drift. Rendered as a single inline SVG so the
+   arrows always sit exactly between the cards.
    ───────────────────────────────────────────────────────── */
+
+const FLOW_STEPS: { icon: LucideIcon; title: string; sub: string }[] = [
+  { icon: Footprints, title: 'Обход', sub: 'вносим остатки' },
+  { icon: ClipboardList, title: 'Заявка', sub: 'считаем нехватку' },
+  { icon: CheckSquare, title: 'Чеклист', sub: 'собираем на складе' },
+]
 
 function FlowNode({
   icon: Icon,
@@ -26,16 +34,15 @@ function FlowNode({
 }) {
   return (
     <div
-      className="flex flex-col items-center text-center rounded-xl flex-shrink-0"
+      className="flex items-center gap-3 rounded-xl w-full"
       style={{
-        width: 96,
-        padding: '12px 8px',
+        padding: '12px 14px',
         background: CARD,
         border: `1px solid ${BORDER}`,
       }}
     >
       <span
-        className="flex items-center justify-center rounded-full"
+        className="flex items-center justify-center rounded-full flex-shrink-0"
         style={{
           width: 40,
           height: 40,
@@ -44,32 +51,35 @@ function FlowNode({
       >
         <Icon size={20} strokeWidth={1.5} style={{ color: PRIMARY }} />
       </span>
-      <span className="text-xs font-semibold mt-2" style={{ color: FG }}>
-        {title}
-      </span>
-      <span className="text-[10px] mt-0.5" style={{ color: MUTED_FG, lineHeight: 1.3 }}>
-        {sub}
+      <span className="flex flex-col min-w-0">
+        <span className="text-sm font-semibold" style={{ color: FG, lineHeight: 1.2 }}>
+          {title}
+        </span>
+        <span className="text-xs mt-0.5" style={{ color: MUTED_FG, lineHeight: 1.3 }}>
+          {sub}
+        </span>
       </span>
     </div>
   )
 }
 
-function FlowArrow() {
+function FlowDownArrow() {
   return (
     <span
-      className="docs-flow-arrow flex items-center justify-center flex-shrink-0"
-      style={{ color: PRIMARY }}
+      className="flex items-center justify-center"
+      style={{ color: PRIMARY, height: 20 }}
       aria-hidden
     >
-      {/* right arrow (horizontal layout) */}
-      <svg className="docs-arrow-h" width="24" height="16" viewBox="0 0 24 16" fill="none">
-        <path d="M2 8 H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M15 3 L21 8 L15 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      </svg>
-      {/* down arrow (vertical layout) */}
-      <svg className="docs-arrow-v" width="16" height="24" viewBox="0 0 16 24" fill="none">
-        <path d="M8 2 V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M3 15 L8 21 L13 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <svg width="16" height="20" viewBox="0 0 16 20" fill="none">
+        <path d="M8 2 V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path
+          d="M3 11 L8 17 L13 11"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
       </svg>
     </span>
   )
@@ -78,22 +88,17 @@ function FlowArrow() {
 export function ProcessFlowSchema() {
   return (
     <>
-      <style>{`
-        .docs-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
-        .docs-arrow-v { display: none; }
-        @media (max-width: 380px) {
-          .docs-flow { flex-direction: column; }
-          .docs-arrow-h { display: none; }
-          .docs-arrow-v { display: block; }
-        }
-      `}</style>
       <SchemaFrame>
-        <div className="docs-flow">
-          <FlowNode icon={Footprints} title="Обход" sub="вносим остатки" />
-          <FlowArrow />
-          <FlowNode icon={ClipboardList} title="Заявка" sub="считаем нехватку" />
-          <FlowArrow />
-          <FlowNode icon={CheckSquare} title="Чеклист" sub="собираем на складе" />
+        <div
+          className="flex flex-col items-center"
+          style={{ gap: 4, maxWidth: 320, margin: '0 auto' }}
+        >
+          {FLOW_STEPS.map((step, i) => (
+            <div key={step.title} className="w-full flex flex-col items-center" style={{ gap: 4 }}>
+              <FlowNode icon={step.icon} title={step.title} sub={step.sub} />
+              {i < FLOW_STEPS.length - 1 && <FlowDownArrow />}
+            </div>
+          ))}
         </div>
       </SchemaFrame>
       <SchemaCaption>Три шага работы: обход стеллажа, заявка на склад, сборка по чеклисту.</SchemaCaption>
@@ -213,16 +218,21 @@ export function CapacitySchema() {
             по ширине × по высоте
           </text>
 
-          {/* Rotation arrow */}
+          {/* Rotation arrow — clean 90° quarter turn.
+              Centre (170,58), radius 22. Arc goes from the top point
+              (170,36) clockwise to the right point (192,58); the
+              arrowhead sits at that end, pointing down (tangent). */}
           <path
-            d="M150 44 a22 22 0 1 1 -6 -15"
+            d="M170 36 A22 22 0 0 1 192 58"
             fill="none"
             stroke={PRIMARY}
             strokeWidth="2"
             strokeLinecap="round"
           />
+          {/* Arrowhead: tip at the arc end (192,58) pointing down,
+              wings back up-and-out */}
           <path
-            d="M144 29 l1 -12 l10 6"
+            d="M186 52 L192 58 L198 52"
             fill="none"
             stroke={PRIMARY}
             strokeWidth="2"

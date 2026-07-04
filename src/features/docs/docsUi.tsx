@@ -117,6 +117,60 @@ export function Callout({
   )
 }
 
+/* ───────── Tutorial headings ───────── */
+
+/** Big block heading that opens a tutorial ("С чего начать" etc.). */
+export function BlockHeading({
+  title,
+  subtitle,
+  id,
+}: {
+  title: string
+  subtitle?: string
+  id?: string
+}) {
+  return (
+    <div id={id} style={{ scrollMarginTop: 12 }}>
+      <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)', lineHeight: 1.25 }}>
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="text-sm mt-1.5" style={{ color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
+          {subtitle}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Smaller chapter heading inside a tutorial ("Шаг 1. Обход стеллажа"). */
+export function ChapterHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3
+      className="text-base font-bold mt-6"
+      style={{ color: 'var(--foreground)', lineHeight: 1.3 }}
+    >
+      {children}
+    </h3>
+  )
+}
+
+/** Labelled full-width divider between major page regions. */
+export function SectionDivider({ label }: { label: string }) {
+  return (
+    <div
+      className="flex items-center gap-3"
+      style={{ color: 'var(--muted-foreground)' }}
+    >
+      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+      <span className="text-xs font-semibold uppercase" style={{ letterSpacing: '0.08em' }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+    </div>
+  )
+}
+
 /* ───────── Schema caption ───────── */
 
 export function SchemaCaption({ children }: { children: React.ReactNode }) {

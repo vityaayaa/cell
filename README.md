@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/assets/banner.png" alt="CELL — умный стеллаж для строительного магазина" width="100%">
+</p>
+
 # CELL — Учёт остатков для строймагазина
 
 > PWA-приложение для сотрудников строительного магазина: обход стеллажа, генерация заявки на склад, чеклист при получении товара.
@@ -60,7 +64,7 @@ CELL решает это:
 | Локальное хранилище | Dexie.js 4 (IndexedDB) |
 | Бэкенд | Supabase (Postgres, Auth, Realtime, Edge Functions) |
 | Сборка | Vite 8, vite-plugin-pwa |
-| Тесты | Vitest 4 + Testing Library |
+| Тесты | Vitest 4 (63 юнит-теста: домен, синхронизация, потоки данных) |
 | Деплой | Vercel + Supabase |
 
 ---
@@ -78,6 +82,9 @@ CELL решает это:
 
 **Три темы**
 Светлая / тёмная / OLED. Без белых вспышек при переходах.
+
+**Встроенная документация**
+Иллюстрированная справка прямо в приложении (тап по логотипу): пошаговый туториал «с чего начать» для новичка и справочник по всем функциям. Контент разделён по роли — сотрудник не видит админских разделов.
 
 ---
 
@@ -98,14 +105,14 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Примени миграции в Supabase Dashboard (SQL Editor) из папки `supabase/migrations/` по порядку:
-`001_initial_schema.sql` → `002_sessions.sql` → `003_rls.sql` → `004_triggers.sql`
+Примени миграции в Supabase Dashboard (SQL Editor) из папки `supabase/migrations/` по порядку — от `001_initial_schema.sql` до последней по номеру.
 
 Задеплой Edge Functions:
 
 ```bash
 supabase functions deploy create-first-admin
 supabase functions deploy create-user
+supabase functions deploy delete-user
 ```
 
 Запусти:

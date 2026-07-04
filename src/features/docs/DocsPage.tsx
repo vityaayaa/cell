@@ -18,13 +18,18 @@ import {
   ArrowUp,
 } from 'lucide-react'
 import { useAppStore } from '@/data/store'
-import { P, List, Li, Steps, Step, Callout, FaqItem } from './docsUi'
+import { P, List, Li, Steps, Step, Callout, FaqItem, SectionDivider } from './docsUi'
 import {
-  ProcessFlowSchema,
   ShelfGridSchema,
   CapacitySchema,
   BorderlineSchema,
 } from './docsSchemas'
+import {
+  AdminTutorial,
+  EmployeeTutorial,
+  TUTORIAL_ADMIN_ID,
+  TUTORIAL_EMPLOYEE_ID,
+} from './docsTutorials'
 import { SectionsDrawer, type DrawerSection } from './SectionsDrawer'
 
 interface DocsSection {
@@ -50,7 +55,6 @@ const EMPLOYEE_SECTIONS: DocsSection[] = [
           хранит историю. Приложение работает как обычный сайт, но ставится на
           телефон как приложение (иконка на экране).
         </P>
-        <ProcessFlowSchema />
       </>
     ),
   },
@@ -421,13 +425,36 @@ export default function DocsPage() {
     [isAdmin],
   )
 
+  // Tutorial anchors that come BEFORE the reference. Admin sees their setup
+  // tutorial first, then the employee tutorial; employee sees only their own.
+  const tutorialEntries: DrawerSection[] = useMemo(
+    () =>
+      isAdmin
+        ? [
+            { id: TUTORIAL_ADMIN_ID, title: 'С чего начать (администратор)' },
+            { id: TUTORIAL_EMPLOYEE_ID, title: 'Как работают сотрудники' },
+          ]
+        : [{ id: TUTORIAL_EMPLOYEE_ID, title: 'С чего начать' }],
+    [isAdmin],
+  )
+
+  // Drawer list: tutorial anchors first, then the reference sections.
   const drawerSections: DrawerSection[] = useMemo(
-    () => sections.map((s) => ({ id: s.id, title: s.title, admin: s.admin })),
-    [sections],
+    () => [
+      ...tutorialEntries,
+      ...sections.map((s) => ({ id: s.id, title: s.title, admin: s.admin })),
+    ],
+    [tutorialEntries, sections],
+  )
+
+  // Scroll-spy order = every tracked anchor top-to-bottom (tutorials + reference).
+  const spyIds = useMemo(
+    () => [...tutorialEntries.map((t) => t.id), ...sections.map((s) => s.id)],
+    [tutorialEntries, sections],
   )
 
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [activeId, setActiveId] = useState<string | null>(sections[0]?.id ?? null)
+  const [activeId, setActiveId] = useState<string | null>(spyIds[0] ?? null)
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollParentRef = useRef<HTMLElement | null>(null)
 
@@ -442,11 +469,11 @@ export default function DocsPage() {
       const scRect = scroller.getBoundingClientRect()
       // Anchor line ~120px below the top of the viewport.
       const anchor = scRect.top + 120
-      let current: string | null = sections[0]?.id ?? null
-      for (const s of sections) {
-        const el = document.getElementById(s.id)
+      let current: string | null = spyIds[0] ?? null
+      for (const id of spyIds) {
+        const el = document.getElementById(id)
         if (!el) continue
-        if (el.getBoundingClientRect().top <= anchor) current = s.id
+        if (el.getBoundingClientRect().top <= anchor) current = id
         else break
       }
       setActiveId((prev) => (prev === current ? prev : current))
@@ -455,7 +482,7 @@ export default function DocsPage() {
     spy()
     scroller.addEventListener('scroll', spy, { passive: true })
     return () => scroller.removeEventListener('scroll', spy)
-  }, [sections])
+  }, [spyIds])
 
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id)
@@ -516,6 +543,56 @@ export default function DocsPage() {
                   {t.label}
                 </span>
               </div>
+            )
+          })}
+        </div>
+
+        {/* ── Tutorial: «С чего начать» (role-gated, airy, no heavy cards) ── */}
+        <div className="flex flex-col gap-8 mt-8">
+          {isAdmin && <AdminTutorial />}
+          {/* Admin also sees the employee path, framed as a subsection. */}
+          <EmployeeTutorial asSubsection={isAdmin} />
+        </div>
+
+        {/* ── Reference divider ── */}
+        <div className="mt-10">
+          <SectionDivider label="Справочник" />
+          <p
+            className="text-sm mt-3"
+            style={{ color: 'var(--muted-foreground)', lineHeight: 1.5 }}
+          >
+            Подробно о каждой части приложения — если нужно уточнить деталь.
+          </p>
+        </div>
+
+        {/* ── Reference table of contents (jump tiles) ── */}
+        <div className="grid grid-cols-2 gap-2.5 mt-4">
+          {sections.map((s) => {
+            const Icon = s.icon
+            return (
+              <button
+                key={s.id}
+                onClick={() => scrollToSection(s.id)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left"
+                style={{ border: '1px solid var(--border)', background: 'var(--card)' }}
+              >
+                <span
+                  className="flex items-center justify-center rounded-lg flex-shrink-0"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+                  }}
+                >
+                  <Icon size={16} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
+                </span>
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: 'var(--foreground)', lineHeight: 1.2 }}
+                >
+                  {s.title}
+                </span>
+              </button>
             )
           })}
         </div>

@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# local scratch (banner source kept in .github/assets)
+photos/
