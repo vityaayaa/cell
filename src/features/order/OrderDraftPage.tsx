@@ -154,29 +154,11 @@ export default function OrderDraftPage() {
 
   return (
     <>
-      <div
-        className="flex flex-col h-full overflow-y-auto"
-        style={{ background: 'var(--background)' }}
-      >
-        {/* Sticky header + sort bar — stay visible while the list scrolls */}
+      <div className="flex flex-col pb-6" style={{ background: 'var(--background)' }}>
+        {/* Sort bar — sticky, identical to the catalog. Scrolling happens on the
+            outer <main>, so sticky works only because this page has no own
+            overflow container. */}
         <div className="sticky top-0 z-10" style={{ background: 'var(--background)' }}>
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <h1 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
-              Заявка
-            </h1>
-            <button
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium"
-              style={{ color: 'var(--primary)', background: 'transparent' }}
-              onClick={() => setAddLineOpen(true)}
-              aria-label="Добавить позицию вручную"
-            >
-              <Plus size={18} strokeWidth={2} />
-              Добавить
-            </button>
-          </div>
-
-          {/* Sort bar */}
           <ProductSortBar
             materials={materials ?? []}
             materialId={materialId}
@@ -186,9 +168,26 @@ export default function OrderDraftPage() {
           />
         </div>
 
+        {/* Add button — full width, like the catalog */}
+        <div className="px-4 pt-3">
+          <button
+            className="w-full flex items-center justify-center gap-2 rounded-md font-medium text-sm border"
+            style={{
+              height: 44,
+              color: 'var(--primary)',
+              borderColor: 'var(--primary)',
+              background: 'transparent',
+            }}
+            onClick={() => setAddLineOpen(true)}
+          >
+            <Plus size={16} strokeWidth={1.5} />
+            Добавить товар
+          </button>
+        </div>
+
         {/* Main lines — cards */}
         {mainLines.length > 0 ? (
-          <div className="flex flex-col gap-2 px-4 pt-1">
+          <div className="flex flex-col gap-2 px-4 pt-3">
             {mainLines.map((line) => (
               <button
                 key={line.id}
@@ -280,8 +279,7 @@ export default function OrderDraftPage() {
         )}
 
         {/* Finalize */}
-        <div className="flex-1" />
-        <div className="mx-4 border-t mb-4" style={{ borderColor: 'var(--border)' }} />
+        <div className="mx-4 border-t mt-6 mb-4" style={{ borderColor: 'var(--border)' }} />
         <div className="px-4 pb-6">
           <button
             className="btn-primary w-full rounded-md font-medium text-sm disabled:opacity-40"
