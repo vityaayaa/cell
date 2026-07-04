@@ -107,7 +107,7 @@ describe('generateOrder — orchestration', () => {
 
     await generateOrder('s1')
 
-    const lines = h.mutateInsertMany.mock.calls[0][2] as Array<Record<string, unknown>>
+    const lines = (h.mutateInsertMany.mock.calls[0] as unknown[])[2] as Array<Record<string, unknown>>
     expect(lines).toHaveLength(1)
     expect(lines[0].quantity_packs).toBe(5) // deficit 50 / pack 10
   })
@@ -123,7 +123,7 @@ describe('generateOrder — orchestration', () => {
 
     await generateOrder('s1')
 
-    const lines = h.mutateInsertMany.mock.calls[0][2] as Array<Record<string, unknown>>
+    const lines = (h.mutateInsertMany.mock.calls[0] as unknown[])[2] as Array<Record<string, unknown>>
     expect(lines).toHaveLength(1)
     expect(lines[0].product_id).toBe('prod-1')
   })
@@ -139,7 +139,7 @@ describe('generateOrder — orchestration', () => {
 
     await generateOrder('s1')
 
-    const lines = h.mutateInsertMany.mock.calls[0][2] as Array<Record<string, unknown>>
+    const lines = (h.mutateInsertMany.mock.calls[0] as unknown[])[2] as Array<Record<string, unknown>>
     expect(lines).toHaveLength(1)
     expect(lines[0].product_id).toBe('prod-1')
   })
@@ -154,10 +154,10 @@ describe('generateOrder — orchestration', () => {
 
     const orderId = await generateOrder('s1')
 
-    const order = h.mutateInsert.mock.calls[0][2] as Record<string, unknown>
+    const order = (h.mutateInsert.mock.calls[0] as unknown[])[2] as Record<string, unknown>
     expect(order.id).toBe(orderId)
 
-    const lines = h.mutateInsertMany.mock.calls[0][2] as Array<Record<string, unknown>>
+    const lines = (h.mutateInsertMany.mock.calls[0] as unknown[])[2] as Array<Record<string, unknown>>
     expect(lines).toHaveLength(1)
     expect(lines[0].is_manual).toBe(false)
     expect(lines[0].order_id).toBe(orderId)
@@ -174,7 +174,7 @@ describe('generateOrder — orchestration', () => {
     const orderId = await generateOrder('s1')
 
     expect(h.updateSessionStatus).toHaveBeenCalledWith('s1', 'ordering')
-    const order = h.mutateInsert.mock.calls[0][2] as Record<string, unknown>
+    const order = (h.mutateInsert.mock.calls[0] as unknown[])[2] as Record<string, unknown>
     expect(order.id).toBe(orderId)
     expect(typeof orderId).toBe('string')
     expect(orderId.length).toBeGreaterThan(0)

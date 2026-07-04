@@ -45,7 +45,7 @@ describe('saveStockEntry — orchestration', () => {
     await saveStockEntry({ cellId: 'c1', sessionId: 's1', userId: 'u1', value: 7 })
 
     expect(h.mutateUpsert).toHaveBeenCalledTimes(1)
-    const entry = h.mutateUpsert.mock.calls[0][2] as Record<string, unknown>
+    const entry = (h.mutateUpsert.mock.calls[0] as unknown[])[2] as Record<string, unknown>
     expect(entry.cell_id).toBe('c1')
     expect(entry.session_id).toBe('s1')
     expect(entry.user_id).toBe('u1')
@@ -66,7 +66,7 @@ describe('saveStockEntry — orchestration', () => {
     await saveStockEntry({ cellId: 'c1', sessionId: 's1', userId: 'u1', value: 3 })
 
     expect(h.mutateUpsert).toHaveBeenCalledTimes(1)
-    const entry = h.mutateUpsert.mock.calls[0][2] as Record<string, unknown>
+    const entry = (h.mutateUpsert.mock.calls[0] as unknown[])[2] as Record<string, unknown>
     expect(entry.id).toBe('existing-123')
   })
 
@@ -75,7 +75,7 @@ describe('saveStockEntry — orchestration', () => {
 
     await saveStockEntry({ cellId: 'c1', sessionId: 's1', userId: 'u1', value: 0 })
 
-    const entry = h.mutateUpsert.mock.calls[0][2] as Record<string, unknown>
+    const entry = (h.mutateUpsert.mock.calls[0] as unknown[])[2] as Record<string, unknown>
     expect(entry.value).toBe(0)
   })
 
