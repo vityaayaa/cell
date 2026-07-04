@@ -5,6 +5,30 @@ import { useAppStore } from './store'
 
 export type { RealtimeChannel }
 
+/**
+ * Apply a realtime change to a Dexie table safely. DELETE removes the row;
+ * an insert/update writes payload.new ONLY if it's not older than the local
+ * row — so a realtime echo (which carries the server's updated_at) can't
+ * clobber a fresher local edit that hasn't synced yet.
+ */
+export async function applyRealtimeChange(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  table: { get: (id: string) => Promise<any>; put: (v: any) => Promise<any>; delete: (id: string) => Promise<any> },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload: any,
+): Promise<void> {
+  if (payload.eventType === 'DELETE') {
+    if (payload.old?.id) await table.delete(payload.old.id)
+    return
+  }
+  const incoming = payload.new
+  if (!incoming?.id) return
+  const local = await table.get(incoming.id)
+  // Keep the local row if it's strictly newer than the echo.
+  if (local?.updated_at && incoming.updated_at && local.updated_at > incoming.updated_at) return
+  await table.put(incoming)
+}
+
 export async function initialLoad(): Promise<void> {
   const store = useAppStore.getState()
   store.setSyncing(true)

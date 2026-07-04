@@ -6,8 +6,7 @@ import { toast } from 'sonner'
 import { db } from '@/data/db'
 import type { Product, Material } from '@/data/db'
 import { useAppStore } from '@/data/store'
-import { supabase } from '@/data/supabase'
-import { mutateDelete, mutateInsert } from '@/data/mutate'
+import { mutateDelete, mutateInsert, mutateUpdate } from '@/data/mutate'
 import { ProductForm } from './ProductForm'
 import { MaterialsSection } from './MaterialsSection'
 import { GroupsSection } from './GroupsSection'
@@ -181,54 +180,43 @@ export default function CatalogPage() {
   async function handleDelete() {
     if (!deleteTarget) return
     setDeleting(true)
+    try {
+      // Unassign the product from every cell that used it, flag them for review.
+      // Done through Dexie + mutate (not a raw online-only query) so it survives
+      // offline — otherwise the product would delete but the cells keep a
+      // dangling product_id.
+      const now = new Date().toISOString()
+      const assignedCells = await db.cells.where('product_id').equals(deleteTarget.id).toArray()
+      for (const cell of assignedCells) {
+        const updated = { ...cell, product_id: null, needs_review: true, updated_at: now }
+        await mutateUpdate('cells', db.cells, updated)
+      }
 
-    // Отвязать товар от ячеек + пометить needs_review. Это серверная операция
-    // (нужно найти ячейки по product_id), выполняется best-effort только онлайн.
-    const { data: assignedCells } = await supabase
-      .from('cells')
-      .select('id')
-      .eq('product_id', deleteTarget.id)
+      // Удаление товара — через очередь: при офлайне не теряется, дошлётся позже.
+      const outcome = await mutateDelete('products', db.products, deleteTarget.id)
 
-    if (assignedCells && assignedCells.length > 0) {
-      await supabase
-        .from('cells')
-        .update({ product_id: null, needs_review: true })
-        .in('id', assignedCells.map((c) => c.id))
-
-      // Sync affected cells locally
-      const { data: updatedCells } = await supabase
-        .from('cells')
-        .select('*')
-        .in('id', assignedCells.map((c) => c.id))
-      if (updatedCells) {
-        for (const cell of updatedCells) {
-          await db.cells.put(cell)
+      if (userId) {
+        const logEntry = {
+          id: crypto.randomUUID(),
+          actor_id: userId,
+          event_type: 'product_deleted',
+          entity_type: 'product',
+          entity_id: deleteTarget.id,
+          old_value: { name: deleteTarget.name },
+          new_value: null,
+          created_at: new Date().toISOString(),
         }
+        await mutateInsert('audit_log', db.audit_log, logEntry)
       }
+
+      toast.success(outcome === 'queued' ? 'Удалено офлайн — синхронизируется позже' : 'Товар удалён')
+      setDeleteConfirmOpen(false)
+      setDeleteTarget(null)
+    } catch {
+      toast.error('Не удалось удалить. Попробуйте ещё раз.')
+    } finally {
+      setDeleting(false)
     }
-
-    // Удаление товара — через очередь: при офлайне не теряется, дошлётся позже.
-    const outcome = await mutateDelete('products', db.products, deleteTarget.id)
-
-    // Audit log
-    if (userId) {
-      const logEntry = {
-        id: crypto.randomUUID(),
-        actor_id: userId,
-        event_type: 'product_deleted',
-        entity_type: 'product',
-        entity_id: deleteTarget.id,
-        old_value: { name: deleteTarget.name },
-        new_value: null,
-        created_at: new Date().toISOString(),
-      }
-      await mutateInsert('audit_log', db.audit_log, logEntry)
-    }
-
-    toast.success(outcome === 'queued' ? 'Удалено офлайн — синхронизируется позже' : 'Товар удалён')
-    setDeleting(false)
-    setDeleteConfirmOpen(false)
-    setDeleteTarget(null)
   }
 
   return (

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
-import { subscribeToTable } from '@/data/sync'
+import { subscribeToTable, applyRealtimeChange } from '@/data/sync'
 import { mutateUpdate, mutateInsertMany, mutateDelete } from '@/data/mutate'
 import { useRegisterHeaderAction } from '@/app/HeaderActionContext'
 import { useShelfData } from './useShelfData'
@@ -50,13 +50,9 @@ export default function ShelfConfigPage() {
   useRegisterHeaderAction({ label: 'Управление', icon: SlidersHorizontal, onClick: () => setShelfActionsOpen(true), badge: flaggedCount })
 
   useEffect(() => {
-    const channel = subscribeToTable('cells', async (payload) => {
-      if (payload.eventType === 'DELETE') {
-        await db.cells.delete(payload.old.id)
-      } else {
-        await db.cells.put(payload.new)
-      }
-    })
+    const channel = subscribeToTable('cells', (payload) =>
+      applyRealtimeChange(db.cells, payload),
+    )
     return () => { supabase.removeChannel(channel) }
   }, [])
 

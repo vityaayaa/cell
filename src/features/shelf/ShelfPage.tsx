@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import type { Cell } from '@/data/db'
 import { db } from '@/data/db'
 import { supabase } from '@/data/supabase'
-import { subscribeToTable } from '@/data/sync'
+import { subscribeToTable, applyRealtimeChange } from '@/data/sync'
 import { useAppStore } from '@/data/store'
 import { useShelfData } from './useShelfData'
 import { ShelfGrid } from './ShelfGrid'
@@ -48,13 +48,9 @@ export default function ShelfPage() {
   }, [])
 
   useEffect(() => {
-    const channel = subscribeToTable('cells', async (payload) => {
-      if (payload.eventType === 'DELETE') {
-        await db.cells.delete(payload.old.id)
-      } else {
-        await db.cells.put(payload.new)
-      }
-    })
+    const channel = subscribeToTable('cells', (payload) =>
+      applyRealtimeChange(db.cells, payload),
+    )
     return () => { supabase.removeChannel(channel) }
   }, [])
 

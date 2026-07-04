@@ -90,7 +90,11 @@ export default function OrderDraftPage() {
 
   async function handleFinalize() {
     if (!order || !activeSessionId || !userId) return
-    const lines = await db.order_lines.where('order_id').equals(order.id).toArray()
+    // Only the real (non-boundary) lines go to the checklist. Boundary lines
+    // are «под вопросом» — the user didn't include them, so they must not spawn
+    // checklist entries.
+    const lines = (await db.order_lines.where('order_id').equals(order.id).toArray())
+      .filter((l) => !l.is_boundary)
     const now = new Date().toISOString()
 
     // Пишем через mutate: и офлайн-надёжность, и проверка ошибок разом (раньше
