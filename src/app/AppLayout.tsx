@@ -40,12 +40,14 @@ function AppLayoutInner() {
           paddingTop: 'env(safe-area-inset-top)',
         }}
       >
-        <span
+        <button
+          onClick={() => navigate('/app/docs')}
           className="text-lg font-bold tracking-tight"
-          style={{ color: 'var(--foreground)' }}
+          style={{ color: 'var(--foreground)', cursor: 'pointer' }}
+          aria-label="Документация"
         >
           CELL
-        </span>
+        </button>
         <div className="flex items-center gap-1">
           <OfflineIndicator />
           {headerAction && (

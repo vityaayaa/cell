@@ -18,6 +18,7 @@ import UsersPage from '@/features/admin/UsersPage'
 import AuditPage from '@/features/admin/AuditPage'
 import AggregatesPage from '@/features/admin/AggregatesPage'
 import StockEntryPage from '@/features/stock/StockEntryPage'
+import DocsPage from '@/features/docs/DocsPage'
 import { useAppStore } from '@/data/store'
 
 function RouteErrorBoundary() {
@@ -155,6 +156,7 @@ const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: 'home', element: <HomePage /> },
+          { path: 'docs', element: <DocsPage /> },
           { path: 'shelf', element: <ShelfPage /> },
           { path: 'order', element: <OrderDraftPage /> },
           { path: 'checklist/:sessionId', element: <ChecklistPage /> },
