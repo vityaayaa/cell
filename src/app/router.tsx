@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from 'react-router'
 import { supabase } from '@/data/supabase'
 import { AppShell } from './AppShell'
@@ -18,7 +18,9 @@ import UsersPage from '@/features/admin/UsersPage'
 import AuditPage from '@/features/admin/AuditPage'
 import AggregatesPage from '@/features/admin/AggregatesPage'
 import StockEntryPage from '@/features/stock/StockEntryPage'
-import DocsPage from '@/features/docs/DocsPage'
+// Docs is a rarely-visited, graphics-heavy route — lazy-load it so its
+// bundle (inline SVG schemas etc.) splits out of the main precached chunk.
+const DocsPage = lazy(() => import('@/features/docs/DocsPage'))
 import { useAppStore } from '@/data/store'
 
 function RouteErrorBoundary() {
@@ -156,7 +158,14 @@ const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: 'home', element: <HomePage /> },
-          { path: 'docs', element: <DocsPage /> },
+          {
+            path: 'docs',
+            element: (
+              <Suspense fallback={null}>
+                <DocsPage />
+              </Suspense>
+            ),
+          },
           { path: 'shelf', element: <ShelfPage /> },
           { path: 'order', element: <OrderDraftPage /> },
           { path: 'checklist/:sessionId', element: <ChecklistPage /> },
