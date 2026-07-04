@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 interface AppStore {
   isOnline: boolean
@@ -33,7 +34,9 @@ interface AppStore {
   setShelfTransform: (t: { scale: number; positionX: number; positionY: number }) => void
 }
 
-export const useAppStore = create<AppStore>((set) => ({
+export const useAppStore = create<AppStore>()(
+  persist(
+    (set) => ({
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   isSyncing: false,
   syncQueueLength: 0,
@@ -66,4 +69,19 @@ export const useAppStore = create<AppStore>((set) => ({
       return { expandedGroupIds: next }
     }),
   setShelfTransform: (t) => set({ shelfTransform: t }),
-}))
+    }),
+    {
+      name: 'cell-app-store',
+      storage: createJSONStorage(() => localStorage),
+      // Persist ТОЛЬКО активную сессию и режим сессии — чтобы после
+      // перезагрузки страницы заявка/чеклист знали, какая сессия открыта
+      // (иначе activeSessionId=null → вечный кружок загрузки). Всё остальное
+      // (userId из Supabase-сессии, онлайн-статус, аккордеон, зум) НЕ
+      // сохраняем: оно либо восстанавливается иначе, либо живёт только в сессии.
+      partialize: (s) => ({
+        activeSessionId: s.activeSessionId,
+        isSessionMode: s.isSessionMode,
+      }),
+    },
+  ),
+)

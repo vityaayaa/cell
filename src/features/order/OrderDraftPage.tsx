@@ -122,10 +122,18 @@ export default function OrderDraftPage() {
 
   if (order === undefined) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div
+        className="flex items-center justify-center"
+        style={{ minHeight: '70dvh' }}
+      >
         <div
-          className="w-6 h-6 rounded-full border-2 animate-spin"
-          style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }}
+          className="rounded-full border-2 animate-spin"
+          style={{
+            width: 32,
+            height: 32,
+            borderColor: 'var(--border)',
+            borderTopColor: 'var(--primary)',
+          }}
         />
       </div>
     )
@@ -133,7 +141,10 @@ export default function OrderDraftPage() {
 
   if (!order) {
     return (
-      <div className="flex items-center justify-center h-full p-6">
+      <div
+        className="flex items-center justify-center p-6"
+        style={{ minHeight: '70dvh' }}
+      >
         <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>
           Нет активной заявки. Перейдите к стеллажу и нажмите «→ К заявке».
         </p>
