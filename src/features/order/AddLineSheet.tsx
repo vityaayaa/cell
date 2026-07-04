@@ -186,22 +186,25 @@ export function AddLineSheet({
 
         {selected ? (
           /* Step 2: pack count */
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+          <div className="flex flex-col gap-5">
+            {/* What — product name + pack size, centred */}
+            <div className="text-center">
+              <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
                 {getProductShortName(selected)}
               </p>
               <p className="ui-hint mt-0.5">
-                {selected.pack_size} шт/пачка
+                {selected.pack_size} шт в пачке
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* How many — big centred stepper: [ − ]  42  [ + ] */}
+            <div className="flex items-center justify-center gap-5">
               <button
-                className="w-11 h-11 rounded-md border text-lg font-medium flex items-center justify-center flex-shrink-0"
-                style={{ borderColor: 'var(--border)' }}
+                className="rounded-full border flex items-center justify-center flex-shrink-0 text-2xl font-light disabled:opacity-30"
+                style={{ width: 56, height: 56, borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 onClick={() => setPackCount((p) => Math.max(1, p - 1))}
                 disabled={packCount <= 1}
+                aria-label="Меньше"
               >
                 −
               </button>
@@ -213,20 +216,28 @@ export function AddLineSheet({
                   const v = parseInt(e.target.value, 10)
                   if (!isNaN(v) && v >= 1) setPackCount(v)
                 }}
-                className="w-20 text-center text-base"
-                style={{ fontSize: '16px' }}
+                className="text-center font-bold tabular-nums p-0"
+                style={{ width: 88, height: 64, fontSize: 32, borderColor: 'var(--border)' }}
+                aria-label="Количество пачек"
               />
               <button
-                className="w-11 h-11 rounded-md border text-lg font-medium flex items-center justify-center flex-shrink-0"
-                style={{ borderColor: 'var(--border)' }}
+                className="rounded-full border flex items-center justify-center flex-shrink-0 text-2xl font-light"
+                style={{ width: 56, height: 56, borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 onClick={() => setPackCount((p) => p + 1)}
+                aria-label="Больше"
               >
                 +
               </button>
-              <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                {packsWord(packCount)} · {packCount * selected.pack_size} шт
-              </span>
             </div>
+
+            {/* Result — the total, centred and prominent below the stepper */}
+            <p className="text-center text-base" style={{ color: 'var(--muted-foreground)' }}>
+              <span className="font-semibold" style={{ color: 'var(--foreground)' }}>
+                {packCount} {packsWord(packCount)}
+              </span>
+              {' · '}
+              {packCount * selected.pack_size} шт
+            </p>
 
             <Button className="btn-primary w-full h-14" onClick={handleAdd} disabled={saving}>
               {saving ? '…' : 'Добавить в заявку'}
