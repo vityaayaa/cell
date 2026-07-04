@@ -38,10 +38,15 @@ export function matchGroupByName(
   const word = name.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
   if (!word) return null
   // 1) Explicit match word wins: group «Бруски» with match_word «брусок» claims
-  //    a product whose first word is exactly «брусок».
+  //    a product whose first word is exactly «брусок». match_word may list
+  //    several forms separated by commas («уголок, угол») — a match against ANY
+  //    of them claims the product.
   for (const g of groups) {
-    const mw = g.match_word?.trim().toLowerCase()
-    if (mw && mw === word) return g.id
+    const forms = (g.match_word ?? '')
+      .split(',')
+      .map((f) => f.trim().toLowerCase())
+      .filter(Boolean)
+    if (forms.includes(word)) return g.id
   }
   // 2) Otherwise a shared stem with the group NAME (RU plural quirks).
   if (word.length < 4) return null

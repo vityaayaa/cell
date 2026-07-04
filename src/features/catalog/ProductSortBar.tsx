@@ -30,17 +30,22 @@ export function sortByMode<T>(
 export type LengthMode = false | 'asc' | 'desc'
 
 /**
- * Sort products WITHIN a group by cross-section: height ascending, then width
- * ascending (e.g. 20×28, 20×40, 30×28, 30×40). Length is IGNORED by default.
- * Only when `lengthMode` is 'asc'/'desc' (the «Длина» toggle is on) does length
- * become the outermost layer, in that direction. For round products diameter
- * stands in for width and there's no height. Missing dims sort as 0.
+ * Sort products WITHIN a group. NAME is always the top level (А-Я), so products
+ * with the same name stay together as a sub-group — even when the «Длина» toggle
+ * is on. Below name: cross-section (height ascending, then width ascending, e.g.
+ * 20×28, 20×40, 30×28, 30×40). Length is a final tie-breaker (ascending, always),
+ * which keeps same-section pipes of different length in a stable order. When
+ * `lengthMode` is 'asc'/'desc' (the «Длина» toggle is on) length is lifted ABOVE
+ * the cross-section (but still below name), in that direction. For round products
+ * diameter stands in for width and there's no height. Missing dims sort as 0.
  */
 export function compareByDimensions(
   a: Product,
   b: Product,
   lengthMode: LengthMode = false,
 ): number {
+  const nameCmp = a.name.localeCompare(b.name, 'ru')
+  if (nameCmp !== 0) return nameCmp
   if (lengthMode) {
     const la = a.length_mm ?? 0
     const lb = b.length_mm ?? 0
@@ -51,7 +56,8 @@ export function compareByDimensions(
   if (ha !== hb) return ha - hb
   const wa = a.width_mm ?? a.diameter_mm ?? 0
   const wb = b.width_mm ?? b.diameter_mm ?? 0
-  return wa - wb
+  if (wa !== wb) return wa - wb
+  return (a.length_mm ?? 0) - (b.length_mm ?? 0)
 }
 
 interface ProductSortBarProps {

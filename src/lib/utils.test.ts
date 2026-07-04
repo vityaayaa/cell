@@ -19,6 +19,17 @@ describe('matchGroupByName — explicit match_word', () => {
     // «доска» would stem-match «Доски», but «брусок» explicitly points to g1.
     expect(matchGroupByName('брусок сухой', withWord)).toBe('g1')
   })
+
+  it('match_word may list several forms via comma — any of them matches', () => {
+    // Group name «Профиль» won't stem-match either product, so this isolates
+    // the explicit comma-list behaviour.
+    const multi = [{ id: 'g1', name: 'Профиль', match_word: 'уголок, угол' }]
+    expect(matchGroupByName('Уголок 40×40', multi)).toBe('g1')
+    expect(matchGroupByName('Угол 50', multi)).toBe('g1')
+    // «Уголь» matches neither «уголок» nor «угол» as a whole word (and doesn't
+    // stem-match «Профиль» either), so it stays unassigned.
+    expect(matchGroupByName('Уголь древесный', multi)).toBeNull()
+  })
 })
 
 describe('matchGroupByName', () => {

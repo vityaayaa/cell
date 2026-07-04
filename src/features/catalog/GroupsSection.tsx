@@ -114,7 +114,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
               value={matchWord}
               onChange={(e) => { setMatchWord(e.target.value); setError('') }}
               onFocus={caretToEnd}
-              placeholder="брусок"
+              placeholder="уголок, угол"
               className="rounded-md border px-3 text-base"
               style={{
                 height: 48,
@@ -126,7 +126,7 @@ function GroupFormSheet({ open, onOpenChange, group }: GroupFormSheetProps) {
               }}
             />
             <p className="ui-hint">
-              Если название группы во множественном числе (Бруски), впишите форму товара (брусок) — так товар сам попадёт в группу.
+              Если название группы во множественном числе (Бруски), впишите форму товара (брусок) — так товар сам попадёт в группу. Можно указать несколько форм через запятую: группа «Уголки» с формами «уголок, угол» поймает и «Уголок», и «Угол».
             </p>
           </div>
           {error && <p className="text-sm" style={{ color: '#EF4444' }}>{error}</p>}
