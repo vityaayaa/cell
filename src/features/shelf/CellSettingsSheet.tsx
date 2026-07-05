@@ -151,14 +151,9 @@ export function CellSettingsSheet({
               }}
               aria-pressed={rotationAllowed}
             >
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                  Поворот товара
-                </p>
-                <p className="ui-hint" style={{ marginTop: 2 }}>
-                  {rotationAllowed ? 'Разрешён (повёрнутые на 90° в счёт)' : 'Выключен'}
-                </p>
-              </div>
+              <p className="flex-1 min-w-0 text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                Поворот товара
+              </p>
               {/* Большой переключатель */}
               <div
                 className="relative rounded-full transition-colors flex-shrink-0"
@@ -241,8 +236,8 @@ export function CellSettingsSheet({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="btn-primary w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
-          style={{ height: 52 }}
+          className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-50"
+          style={{ height: 48 }}
         >
           {saving ? 'Сохранение...' : 'Сохранить'}
         </button>
@@ -250,9 +245,9 @@ export function CellSettingsSheet({
         <button
           onClick={() => setConfirmReset(true)}
           disabled={saving}
-          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
+          className="w-full rounded-md font-semibold text-base mt-1.5 disabled:opacity-50"
           style={{
-            height: 48,
+            height: 44,
             color: 'var(--destructive)',
             border: '1px solid var(--destructive)',
             background: 'transparent',
