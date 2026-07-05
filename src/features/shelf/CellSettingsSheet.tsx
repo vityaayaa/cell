@@ -132,12 +132,12 @@ export function CellSettingsSheet({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent preventOutsideClose showCloseButton className="flex flex-col max-h-[88dvh]">
+      <DialogContent preventOutsideClose showCloseButton className="flex flex-col max-h-[92dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Настройки {address}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-3">
           {/* Поворот — заметная строка, только для поворачиваемого товара */}
           {showRotation && (
             <button
