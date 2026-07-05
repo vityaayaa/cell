@@ -34,18 +34,23 @@ function FlagArea({
   onFlagTap,
   capacityMissing,
   capacityUnit,
+  rotationOn,
 }: {
   cell: Cell
   onFlagTap?: () => void
   capacityMissing?: boolean
   capacityUnit?: string
+  /** Rotation flag shows ONLY when the cell has a rotatable product AND rotation
+   *  is turned on. Computed by CellCard (needs product info). */
+  rotationOn?: boolean
 }) {
-  // Each flag is a 32x32 tap target (padding) with a compensating negative
-  // margin so the compact cell layout doesn't grow.
+  // Each flag is a 34x34 tap target (padding) with a compensating negative
+  // margin so the compact cell layout doesn't grow. gap spaces them apart so
+  // two adjacent flags aren't hard to hit.
   const flagBtnClass =
     'flex items-center justify-center -m-[9px] p-[9px]'
   return (
-    <div className="flex items-center gap-0.5 flex-shrink-0" style={{ minWidth: 18, minHeight: 18 }}>
+    <div className="flex items-center gap-1.5 flex-shrink-0" style={{ minWidth: 18, minHeight: 18 }}>
       {cell.needs_review && (
         <button
           type="button"
@@ -53,7 +58,7 @@ function FlagArea({
           onClick={e => { e.stopPropagation(); onFlagTap?.() }}
           aria-label="Нужна проверка"
         >
-          <AlertTriangle size={14} color="#F59E0B" />
+          <AlertTriangle size={16} color="#F59E0B" />
         </button>
       )}
       {capacityMissing && (
@@ -63,17 +68,17 @@ function FlagArea({
           onClick={e => { e.stopPropagation(); toastInfo(`Вместимость не задана${capacityUnit ? ` (${capacityUnit})` : ''}. Откройте настройки ячейки и укажите вручную.`) }}
           aria-label="Вместимость не задана"
         >
-          <AlertTriangle size={14} color="#EF4444" />
+          <AlertTriangle size={16} color="#EF4444" />
         </button>
       )}
-      {cell.rotation_allowed && (
+      {rotationOn && (
         <button
           type="button"
           className={flagBtnClass}
-          onClick={e => { e.stopPropagation(); toastInfo('Поворот товара разрешён для этой ячейки — повёрнутые на 90° добавляются к вместимости.') }}
+          onClick={e => { e.stopPropagation(); toastInfo('Поворот товара разрешён — повёрнутые на 90° добавляются к вместимости.') }}
           aria-label="Поворот разрешён"
         >
-          <RotateCcwSquare size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <RotateCcwSquare size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
         </button>
       )}
       {cell.capacity_override != null && (
@@ -83,7 +88,7 @@ function FlagArea({
           onClick={e => { e.stopPropagation(); toastInfo(`Вместимость задана вручную: ${capacityUnit === 'пачки' ? packs(cell.capacity_override!) : `${cell.capacity_override} шт`}.`) }}
           aria-label="Вместимость переопределена"
         >
-          <Pencil size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+          <Pencil size={15} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
         </button>
       )}
     </div>
@@ -145,6 +150,16 @@ export function CellCard({
 
   const capacityMissing = isCapacityMissing(cell, product)
 
+  // Rotation flag only when the cell actually has a rotatable product (unit with
+  // different width/height) AND rotation is turned on. Without a product — or
+  // for a square/round/bulk product — the flag never shows.
+  const rotationOn =
+    cell.rotation_allowed &&
+    product?.type === 'unit' &&
+    product.width_mm != null &&
+    product.height_mm != null &&
+    product.width_mm !== product.height_mm
+
   const capacityUnit = product
     ? product.type === 'unit'
       ? 'шт'
@@ -178,7 +193,7 @@ export function CellCard({
         <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
           {displayAddress}
         </span>
-        <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} />
+        <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} rotationOn={rotationOn} />
       </div>
 
       <span

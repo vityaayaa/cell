@@ -33,7 +33,7 @@ function ProgressToast({ message, color, duration, onDismiss }: ProgressToastPro
   )
 }
 
-export function toastSuccess(message: string, duration = 4000) {
+export function toastSuccess(message: string, duration = 2000) {
   toast.custom(
     id => (
       <ProgressToast
@@ -47,7 +47,7 @@ export function toastSuccess(message: string, duration = 4000) {
   )
 }
 
-export function toastInfo(message: string, duration = 4000) {
+export function toastInfo(message: string, duration = 2000) {
   toast.custom(
     id => (
       <ProgressToast

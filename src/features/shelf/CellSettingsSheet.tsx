@@ -132,17 +132,17 @@ export function CellSettingsSheet({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent preventOutsideClose showCloseButton>
+      <DialogContent preventOutsideClose showCloseButton className="flex flex-col max-h-[88dvh]">
         <DialogHeader>
           <DialogTitle>Настройки {address}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 max-h-[60dvh] overflow-y-auto pr-1">
-          {/* Поворот — крупная заметная строка, только для поворачиваемого товара */}
+        <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1">
+          {/* Поворот — заметная строка, только для поворачиваемого товара */}
           {showRotation && (
             <button
               onClick={() => setRotationAllowed(v => !v)}
-              className="flex items-center gap-3 rounded-lg p-4 w-full text-left"
+              className="flex items-center gap-3 rounded-lg px-4 py-3 w-full text-left"
               style={{
                 background: rotationAllowed
                   ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
@@ -151,27 +151,25 @@ export function CellSettingsSheet({
               }}
               aria-pressed={rotationAllowed}
             >
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                   Поворот товара
                 </p>
                 <p className="ui-hint" style={{ marginTop: 2 }}>
-                  {rotationAllowed
-                    ? 'Разрешён: повёрнутые на 90° добавляются к вместимости.'
-                    : 'Выключен: товар укладывается только как есть.'}
+                  {rotationAllowed ? 'Разрешён (повёрнутые на 90° в счёт)' : 'Выключен'}
                 </p>
               </div>
               {/* Большой переключатель */}
               <div
                 className="relative rounded-full transition-colors flex-shrink-0"
-                style={{ width: 56, height: 32, background: rotationAllowed ? 'var(--primary)' : 'var(--border)' }}
+                style={{ width: 52, height: 30, background: rotationAllowed ? 'var(--primary)' : 'var(--border)' }}
                 aria-hidden
               >
                 <div
                   className="absolute rounded-full transition-transform"
                   style={{
-                    top: 3, left: 3, width: 26, height: 26, background: 'white',
-                    transform: rotationAllowed ? 'translateX(24px)' : 'translateX(0)',
+                    top: 3, left: 3, width: 24, height: 24, background: 'white',
+                    transform: rotationAllowed ? 'translateX(22px)' : 'translateX(0)',
                   }}
                 />
               </div>
