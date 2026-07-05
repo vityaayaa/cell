@@ -66,14 +66,14 @@ function FlagArea({
           <AlertTriangle size={14} color="#EF4444" />
         </button>
       )}
-      {!cell.rotation_allowed && (
+      {cell.rotation_allowed && (
         <button
           type="button"
           className={flagBtnClass}
-          onClick={e => { e.stopPropagation(); toastInfo('Поворот товара запрещён для этой ячейки.') }}
-          aria-label="Поворот запрещён"
+          onClick={e => { e.stopPropagation(); toastInfo('Поворот товара разрешён для этой ячейки — повёрнутые на 90° добавляются к вместимости.') }}
+          aria-label="Поворот разрешён"
         >
-          <RotateCcwSquare size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+          <RotateCcwSquare size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
         </button>
       )}
       {cell.capacity_override != null && (

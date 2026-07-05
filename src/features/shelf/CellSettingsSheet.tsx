@@ -31,7 +31,7 @@ export function CellSettingsSheet({
   onClose,
 }: CellSettingsSheetProps) {
   const [overrideInput, setOverrideInput] = useState('')
-  const [rotationAllowed, setRotationAllowed] = useState(true)
+  const [rotationAllowed, setRotationAllowed] = useState(false)
   const [widthInput, setWidthInput] = useState('')
   const [heightInput, setHeightInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -118,7 +118,7 @@ export function CellSettingsSheet({
       width_mm: null,
       height_mm: null,
       capacity_override: null,
-      rotation_allowed: true,
+      rotation_allowed: false,
       updated_at: now,
     }
     if (!hasChildren) updates.product_id = null
@@ -134,33 +134,50 @@ export function CellSettingsSheet({
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent preventOutsideClose showCloseButton>
         <DialogHeader>
-          <div className="flex items-center gap-5" style={{ paddingRight: 36 }}>
-            <DialogTitle>Настройки {address}</DialogTitle>
-            {showRotation && (
-              <button
-                onClick={() => setRotationAllowed(v => !v)}
-                className="flex flex-col items-center gap-0.5 flex-shrink-0"
-                aria-label="Поворот товара"
-              >
-                <div
-                  className="relative rounded-full transition-colors"
-                  style={{ width: 40, height: 22, background: rotationAllowed ? 'var(--primary)' : 'var(--border)' }}
-                >
-                  <div
-                    className="absolute rounded-full transition-transform"
-                    style={{
-                      top: 2, width: 18, height: 18, background: 'white',
-                      transform: rotationAllowed ? 'translateX(20px)' : 'translateX(2px)',
-                    }}
-                  />
-                </div>
-                <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>поворот</span>
-              </button>
-            )}
-          </div>
+          <DialogTitle>Настройки {address}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 max-h-[60dvh] overflow-y-auto pr-1">
+          {/* Поворот — крупная заметная строка, только для поворачиваемого товара */}
+          {showRotation && (
+            <button
+              onClick={() => setRotationAllowed(v => !v)}
+              className="flex items-center gap-3 rounded-lg p-4 w-full text-left"
+              style={{
+                background: rotationAllowed
+                  ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
+                  : 'var(--muted)',
+                border: `1px solid ${rotationAllowed ? 'var(--primary)' : 'var(--border)'}`,
+              }}
+              aria-pressed={rotationAllowed}
+            >
+              <div className="flex-1">
+                <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                  Поворот товара
+                </p>
+                <p className="ui-hint" style={{ marginTop: 2 }}>
+                  {rotationAllowed
+                    ? 'Разрешён: повёрнутые на 90° добавляются к вместимости.'
+                    : 'Выключен: товар укладывается только как есть.'}
+                </p>
+              </div>
+              {/* Большой переключатель */}
+              <div
+                className="relative rounded-full transition-colors flex-shrink-0"
+                style={{ width: 56, height: 32, background: rotationAllowed ? 'var(--primary)' : 'var(--border)' }}
+                aria-hidden
+              >
+                <div
+                  className="absolute rounded-full transition-transform"
+                  style={{
+                    top: 3, left: 3, width: 26, height: 26, background: 'white',
+                    transform: rotationAllowed ? 'translateX(24px)' : 'translateX(0)',
+                  }}
+                />
+              </div>
+            </button>
+          )}
+
           {/* Размеры ячейки — приоритетная секция, карточка */}
           <div
             className="flex flex-col gap-3 rounded-lg p-4"
