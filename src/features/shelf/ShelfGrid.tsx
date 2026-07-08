@@ -204,14 +204,19 @@ export function ShelfGrid({
   })
 
   const overhead = 120 + subheaderHeight // app header (56) + bottom nav (64)
+  // Минимум трека с UNITS отсеками в ряд = units×MIN + межотсековые gap'ы
+  // ((units−1)×GAP). БЕЗ учёта gap правый отсек делённой ячейки вылезал за
+  // колонку и налезал на соседнюю (а «чинилось» это лишь пересчётом соседа).
+  const minColPx = (u: number) => MIN_CELL_W * u + GAP * (u - 1)
+  const minRowPx = (u: number) => MIN_CELL_H * u + GAP * (u - 1)
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    // Каждая footprint-единица — не уже MIN_CELL_W и не ниже MIN_CELL_H, так
-    // что при делении отсеки остаются читаемыми (текст влезает), а стеллаж
-    // растёт за экран (скролл) вместо ужимания ячеек в полоски.
-    gridTemplateColumns: colUnits.map(u => `max(calc(40vw * ${u}), ${MIN_CELL_W * u}px)`).join(' '),
+    // Каждый трек — не уже суммы минимумов его отсеков (с их gap'ами) и не ниже
+    // базовых 40vw / (высота/3.5). Отсеки остаются читаемыми, а стеллаж растёт
+    // за экран (скролл) вместо ужимания ячеек в полоски.
+    gridTemplateColumns: colUnits.map(u => `max(calc(40vw * ${u}), ${minColPx(u)}px)`).join(' '),
     gridTemplateRows: rowUnits
-      .map(u => `max(calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u}), ${MIN_CELL_H * u}px)`)
+      .map(u => `max(calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u}), ${minRowPx(u)}px)`)
       .join(' '),
     gap: GAP,
     padding: GAP,
