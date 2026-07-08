@@ -10,6 +10,12 @@ import { getRootAddress } from './cellUtils'
 // the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
 
+// Минимальный читаемый размер листовой ячейки в px. Ширина рассчитана так,
+// чтобы надпись «Не вносилось» влезала целиком; высота — чтобы поместились
+// адрес, название и дата. Отсеки внутри разделённой ячейки не ужимаются ниже.
+const MIN_CELL_W = 116
+const MIN_CELL_H = 92
+
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
   shelf: Shelf
@@ -101,7 +107,18 @@ function Subtree(props: SubtreeProps) {
       }}
     >
       {children.map(child => (
-        <div key={child.id} style={{ flex: 1, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+        <div
+          key={child.id}
+          style={{
+            flex: 1,
+            flexBasis: 0,
+            // Минимум по оси деления, чтобы отсек не ужимался в нечитаемую
+            // полоску (надпись «Не вносилось» должна влезать). По другой оси
+            // отсек тянется на 100%, минимум не нужен.
+            minWidth: isV ? MIN_CELL_W : 0,
+            minHeight: isV ? 0 : MIN_CELL_H,
+          }}
+        >
           <Subtree {...props} cell={child} />
         </div>
       ))}
@@ -189,9 +206,12 @@ export function ShelfGrid({
   const overhead = 120 + subheaderHeight // app header (56) + bottom nav (64)
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: colUnits.map(u => `calc(40vw * ${u})`).join(' '),
+    // Каждая footprint-единица — не уже MIN_CELL_W и не ниже MIN_CELL_H, так
+    // что при делении отсеки остаются читаемыми (текст влезает), а стеллаж
+    // растёт за экран (скролл) вместо ужимания ячеек в полоски.
+    gridTemplateColumns: colUnits.map(u => `max(calc(40vw * ${u}), ${MIN_CELL_W * u}px)`).join(' '),
     gridTemplateRows: rowUnits
-      .map(u => `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u})`)
+      .map(u => `max(calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u}), ${MIN_CELL_H * u}px)`)
       .join(' '),
     gap: GAP,
     padding: GAP,

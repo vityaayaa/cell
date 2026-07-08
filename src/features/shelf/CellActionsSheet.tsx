@@ -40,6 +40,15 @@ interface CellActionsSheetProps {
 async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
   const now = new Date().toISOString()
 
+  // Одна ось сохраняется от родителя, вторую пользователь задаёт сам:
+  // • V (делим на СТОЛБЦЫ вертикальной линией) — высота у всех остаётся
+  //   родительской, ширину каждой ячейки вводят вручную.
+  // • H (делим на РЯДЫ горизонтальной линией) — ширина остаётся родительской,
+  //   высоту вводят вручную.
+  const inheritHeight = direction === 'V'
+  const parentHeight = cell.computed_height_mm > 0 ? cell.computed_height_mm : null
+  const parentWidth = cell.computed_width_mm > 0 ? cell.computed_width_mm : null
+
   const children: Cell[] = Array.from({ length: count }, (_, i) => ({
     id: crypto.randomUUID(),
     shelf_id: cell.shelf_id,
@@ -48,10 +57,10 @@ async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
     col_index: cell.col_index,
     split_direction: null,
     child_index: i,
-    width_mm: null,
-    height_mm: null,
-    computed_width_mm: 0,
-    computed_height_mm: 0,
+    width_mm: inheritHeight ? null : parentWidth,
+    height_mm: inheritHeight ? parentHeight : null,
+    computed_width_mm: inheritHeight ? 0 : (parentWidth ?? 0),
+    computed_height_mm: inheritHeight ? (parentHeight ?? 0) : 0,
     product_id: null,
     capacity_override: null,
     rotation_allowed: false,
