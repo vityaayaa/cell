@@ -176,6 +176,10 @@ export function CellCard({
       ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0 ? 'Назначьте товар' : 'Задайте размеры')
       : '—'
 
+  // Буферная (деактивированная) ячейка: приглушена, без флажков, остаётся
+  // кликабельной — чтобы снять деактивацию из настроек.
+  const disabled = cell.is_disabled
+
   return (
     <div
       role="button"
@@ -187,13 +191,16 @@ export function CellCard({
         background: bgColor,
         borderColor: bare ? 'rgba(148,163,184,0.25)' : 'var(--border)',
         boxShadow: highlighted ? 'inset 0 0 0 2px var(--primary)' : undefined,
+        opacity: disabled ? 0.45 : undefined,
       }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
           {displayAddress}
         </span>
-        <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} rotationOn={rotationOn} />
+        {!disabled && (
+          <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} rotationOn={rotationOn} />
+        )}
       </div>
 
       <span
@@ -203,12 +210,18 @@ export function CellCard({
         {leafLabel}
       </span>
 
-      <DateLabel
-        cell={cell}
-        sessionId={sessionId}
-        visitedCellIds={visitedCellIds}
-        lastEntryDate={lastEntryDate}
-      />
+      {disabled ? (
+        <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          Не учитывается
+        </span>
+      ) : (
+        <DateLabel
+          cell={cell}
+          sessionId={sessionId}
+          visitedCellIds={visitedCellIds}
+          lastEntryDate={lastEntryDate}
+        />
+      )}
     </div>
   )
 }

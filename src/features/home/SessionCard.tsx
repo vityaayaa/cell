@@ -76,7 +76,7 @@ export function SessionCard({ session, profiles, userId, userRole }: SessionCard
       db.stock_entries.where('session_id').equals(session.id).toArray(),
       db.cells.toArray(),
     ])
-    const leafCells = cells.filter((c) => c.product_id != null)
+    const leafCells = cells.filter((c) => c.product_id != null && !c.is_disabled)
     const visitedIds = new Set(entries.map((e) => e.cell_id))
     return { visited: visitedIds.size, total: leafCells.length }
   }, [session.id, session.status])

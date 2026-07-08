@@ -32,6 +32,7 @@ export function CellSettingsSheet({
 }: CellSettingsSheetProps) {
   const [overrideInput, setOverrideInput] = useState('')
   const [rotationAllowed, setRotationAllowed] = useState(false)
+  const [disabled, setDisabled] = useState(false)
   const [widthInput, setWidthInput] = useState('')
   const [heightInput, setHeightInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -41,6 +42,7 @@ export function CellSettingsSheet({
     if (!cell) return
     setOverrideInput(cell.capacity_override != null ? String(cell.capacity_override) : '')
     setRotationAllowed(cell.rotation_allowed)
+    setDisabled(cell.is_disabled)
     setWidthInput(cell.width_mm != null ? String(cell.width_mm) : '')
     setHeightInput(cell.height_mm != null ? String(cell.height_mm) : '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,6 +80,7 @@ export function CellSettingsSheet({
     const cellUpdates: Partial<Cell> = {
       rotation_allowed: rotationAllowed,
       capacity_override: isNaN(override as number) ? null : override,
+      is_disabled: disabled,
       updated_at: now,
     }
 
@@ -119,6 +122,7 @@ export function CellSettingsSheet({
       height_mm: null,
       capacity_override: null,
       rotation_allowed: false,
+      is_disabled: false,
       updated_at: now,
     }
     if (!hasChildren) updates.product_id = null
@@ -231,6 +235,39 @@ export function CellSettingsSheet({
               className="text-base"
             />
           </div>
+
+          {/* Буферная ячейка — не участвует в обходе, заявке и чеклисте */}
+          <button
+            onClick={() => setDisabled(v => !v)}
+            className="flex items-center gap-3 rounded-lg px-4 py-3 w-full text-left"
+            style={{
+              background: disabled
+                ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
+                : 'var(--muted)',
+              border: `1px solid ${disabled ? 'var(--primary)' : 'var(--border)'}`,
+            }}
+            aria-pressed={disabled}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                Не учитывать ячейку
+              </p>
+              <p className="ui-hint">Буферная — не попадёт в обход, заявку и чеклист</p>
+            </div>
+            <div
+              className="relative rounded-full transition-colors flex-shrink-0"
+              style={{ width: 52, height: 30, background: disabled ? 'var(--primary)' : 'var(--border)' }}
+              aria-hidden
+            >
+              <div
+                className="absolute rounded-full transition-transform"
+                style={{
+                  top: 3, left: 3, width: 24, height: 24, background: 'white',
+                  transform: disabled ? 'translateX(22px)' : 'translateX(0)',
+                }}
+              />
+            </div>
+          </button>
         </div>
 
         <button

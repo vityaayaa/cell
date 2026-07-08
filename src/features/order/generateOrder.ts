@@ -34,7 +34,7 @@ export async function generateOrder(sessionId: string): Promise<string> {
   const cellStocks: CellStock[] = []
   for (const [cellId, entry] of latestByCell) {
     const cell = await db.cells.get(cellId)
-    if (!cell?.product_id) continue
+    if (!cell?.product_id || cell.is_disabled) continue
     const product = await db.products.get(cell.product_id)
     if (!product) continue
     const capacity = getEffectiveCapacity(

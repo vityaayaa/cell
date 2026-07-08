@@ -65,6 +65,7 @@ async function splitCell(cell: Cell, direction: 'H' | 'V', count: number) {
     capacity_override: null,
     rotation_allowed: false,
     needs_review: false,
+    is_disabled: false,
     created_at: now,
     updated_at: now,
   }))

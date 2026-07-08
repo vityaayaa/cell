@@ -44,6 +44,7 @@ export default function ShelfConfigPage() {
   const productById = new Map(products.map(p => [p.id, p]))
   function leafHasWarning(l: Cell): boolean {
     if (cells.some(x => x.parent_id === l.id)) return false // not a leaf
+    if (l.is_disabled) return false // буферная ячейка — не участвует в предупреждениях
     return l.needs_review === true || isCapacityMissing(l, productById.get(l.product_id ?? ''))
   }
   const flaggedCount = cells.filter(leafHasWarning).length
@@ -85,6 +86,7 @@ export default function ShelfConfigPage() {
       capacity_override: null as null,
       rotation_allowed: false,
       needs_review: false,
+      is_disabled: false,
       created_at: now,
       updated_at: now,
     }))
@@ -120,6 +122,7 @@ export default function ShelfConfigPage() {
       capacity_override: null as null,
       rotation_allowed: false,
       needs_review: false,
+      is_disabled: false,
       created_at: now,
       updated_at: now,
     }))

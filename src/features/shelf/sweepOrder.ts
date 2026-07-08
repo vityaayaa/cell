@@ -25,7 +25,7 @@ export function buildSweepOrder(cells: Cell[]): Cell[] {
       return (a.col_index ?? 0) - (b.col_index ?? 0)
     })
 
-  return baseCells.flatMap(collectLeaves).filter((c) => c.product_id)
+  return baseCells.flatMap(collectLeaves).filter((c) => c.product_id && !c.is_disabled)
 }
 
 /** The base-cell ancestor of a leaf (the node with parent_id === null). */

@@ -18,7 +18,7 @@ export function useSweepProgress(sessionId: string | null): SweepProgress {
 
     const allCells: Cell[] = await db.cells.toArray()
     const leafCells = allCells.filter(
-      (c) => isLeaf(c.id, allCells as unknown as BspNode[]) && c.product_id,
+      (c) => isLeaf(c.id, allCells as unknown as BspNode[]) && c.product_id && !c.is_disabled,
     )
     const total = leafCells.length
 

@@ -65,6 +65,7 @@ export type Database = {
           created_at: string
           height_mm: number | null
           id: string
+          is_disabled: boolean
           needs_review: boolean
           parent_id: string | null
           product_id: string | null
@@ -86,6 +87,7 @@ export type Database = {
           created_at?: string
           height_mm?: number | null
           id?: string
+          is_disabled?: boolean
           needs_review?: boolean
           parent_id?: string | null
           product_id?: string | null
@@ -107,6 +109,7 @@ export type Database = {
           created_at?: string
           height_mm?: number | null
           id?: string
+          is_disabled?: boolean
           needs_review?: boolean
           parent_id?: string | null
           product_id?: string | null

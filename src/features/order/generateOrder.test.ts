@@ -128,6 +128,23 @@ describe('generateOrder — orchestration', () => {
     expect(lines[0].product_id).toBe('prod-1')
   })
 
+  it('skips disabled (buffer) cells even when they have a product', async () => {
+    h.state.cells.set('cell-A', makeUnitCell('cell-A', 'prod-1'))
+    h.state.cells.set('cell-B', { ...makeUnitCell('cell-B', 'prod-1'), is_disabled: true })
+    h.state.products.set('prod-1', makeUnitProduct('prod-1'))
+    h.state.stockEntries = [
+      { id: 'a', session_id: 's1', cell_id: 'cell-A', value: 50, created_at: '2026-01-01T00:00:00Z' },
+      { id: 'b', session_id: 's1', cell_id: 'cell-B', value: 0, created_at: '2026-01-01T00:00:00Z' },
+    ]
+
+    await generateOrder('s1')
+
+    const lines = (h.mutateInsertMany.mock.calls[0] as unknown[])[2] as Array<Record<string, unknown>>
+    // Both cells hold prod-1; the disabled one must not add to the deficit.
+    expect(lines).toHaveLength(1)
+    expect(lines[0].quantity_packs).toBe(5) // only cell-A's deficit 50 / pack 10
+  })
+
   it('skips a cell whose product is missing from products table', async () => {
     h.state.cells.set('cell-A', makeUnitCell('cell-A', 'prod-1'))
     h.state.cells.set('cell-B', makeUnitCell('cell-B', 'ghost')) // product not in map
