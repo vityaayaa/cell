@@ -1,4 +1,4 @@
-import { AlertTriangle, RotateCcwSquare, Pencil } from 'lucide-react'
+import { AlertTriangle, RotateCcwSquare, Pencil, XCircle } from 'lucide-react'
 import type { Cell, Material, Product } from '@/data/db'
 import { toastInfo } from '@/lib/toast'
 import { packs } from '@/lib/plural'
@@ -176,8 +176,8 @@ export function CellCard({
       ? (cell.computed_width_mm > 0 && cell.computed_height_mm > 0 ? 'Назначьте товар' : 'Задайте размеры')
       : '—'
 
-  // Буферная (деактивированная) ячейка: приглушена, без флажков, остаётся
-  // кликабельной — чтобы снять деактивацию из настроек.
+  // Буферная (деактивированная) ячейка: помечена флагом-крестиком, без других
+  // флажков, остаётся кликабельной — чтобы снять деактивацию из настроек.
   const disabled = cell.is_disabled
 
   return (
@@ -191,21 +191,31 @@ export function CellCard({
         background: bgColor,
         borderColor: bare ? 'rgba(148,163,184,0.25)' : 'var(--border)',
         boxShadow: highlighted ? 'inset 0 0 0 2px var(--primary)' : undefined,
-        opacity: disabled ? 0.45 : undefined,
       }}
     >
-      <div className="flex items-start justify-between gap-1">
+      {/* Верхний ряд фиксированной высоты, чтобы название не «уползало» когда
+          флажков нет (напр. у деактивированной ячейки). */}
+      <div className="flex items-start justify-between gap-1" style={{ minHeight: 18 }}>
         <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
           {displayAddress}
         </span>
-        {!disabled && (
+        {disabled ? (
+          <span
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ minWidth: 18, minHeight: 18 }}
+            aria-label="Ячейка не учитывается"
+            title="Не учитывается"
+          >
+            <XCircle size={16} style={{ color: 'var(--muted-foreground)' }} />
+          </span>
+        ) : (
           <FlagArea cell={cell} onFlagTap={() => onFlagTap?.(cell)} capacityMissing={capacityMissing} capacityUnit={capacityUnit} rotationOn={rotationOn} />
         )}
       </div>
 
       <span
         className="text-sm font-medium text-center block px-1 leading-tight"
-        style={{ color: product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
+        style={{ color: disabled ? 'var(--muted-foreground)' : product ? 'var(--foreground)' : 'var(--muted-foreground)' }}
       >
         {leafLabel}
       </span>

@@ -142,38 +142,68 @@ export function CellSettingsSheet({
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
-          {/* Поворот — заметная строка, только для поворачиваемого товара */}
-          {showRotation && (
+          {/* Поворот + Деактивация — две кнопки в один ряд. Поворот неактивен,
+              если товар неповорачиваемый (не unit или квадратный/круглый). */}
+          <div className="flex gap-3">
             <button
-              onClick={() => setRotationAllowed(v => !v)}
-              className="flex items-center gap-3 rounded-lg px-4 py-3 w-full text-left"
+              onClick={() => showRotation && setRotationAllowed(v => !v)}
+              disabled={!showRotation}
+              className="flex-1 flex items-center justify-between gap-2 rounded-lg px-3 py-3 text-left disabled:opacity-40"
               style={{
-                background: rotationAllowed
+                background: rotationAllowed && showRotation
                   ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
                   : 'var(--muted)',
-                border: `1px solid ${rotationAllowed ? 'var(--primary)' : 'var(--border)'}`,
+                border: `1px solid ${rotationAllowed && showRotation ? 'var(--primary)' : 'var(--border)'}`,
               }}
               aria-pressed={rotationAllowed}
             >
-              <p className="flex-1 min-w-0 text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                Поворот товара
-              </p>
-              {/* Большой переключатель */}
+              <span className="min-w-0 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                Поворот
+              </span>
               <div
                 className="relative rounded-full transition-colors flex-shrink-0"
-                style={{ width: 52, height: 30, background: rotationAllowed ? 'var(--primary)' : 'var(--border)' }}
+                style={{ width: 44, height: 26, background: rotationAllowed && showRotation ? 'var(--primary)' : 'var(--border)' }}
                 aria-hidden
               >
                 <div
                   className="absolute rounded-full transition-transform"
                   style={{
-                    top: 3, left: 3, width: 24, height: 24, background: 'white',
-                    transform: rotationAllowed ? 'translateX(22px)' : 'translateX(0)',
+                    top: 3, left: 3, width: 20, height: 20, background: 'white',
+                    transform: rotationAllowed && showRotation ? 'translateX(18px)' : 'translateX(0)',
                   }}
                 />
               </div>
             </button>
-          )}
+
+            <button
+              onClick={() => setDisabled(v => !v)}
+              className="flex-1 flex items-center justify-between gap-2 rounded-lg px-3 py-3 text-left"
+              style={{
+                background: disabled
+                  ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
+                  : 'var(--muted)',
+                border: `1px solid ${disabled ? 'var(--primary)' : 'var(--border)'}`,
+              }}
+              aria-pressed={disabled}
+            >
+              <span className="min-w-0 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                Не учитывать
+              </span>
+              <div
+                className="relative rounded-full transition-colors flex-shrink-0"
+                style={{ width: 44, height: 26, background: disabled ? 'var(--primary)' : 'var(--border)' }}
+                aria-hidden
+              >
+                <div
+                  className="absolute rounded-full transition-transform"
+                  style={{
+                    top: 3, left: 3, width: 20, height: 20, background: 'white',
+                    transform: disabled ? 'translateX(18px)' : 'translateX(0)',
+                  }}
+                />
+              </div>
+            </button>
+          </div>
 
           {/* Размеры ячейки — приоритетная секция, карточка */}
           <div
@@ -236,45 +266,13 @@ export function CellSettingsSheet({
             />
           </div>
 
-          {/* Буферная ячейка — не участвует в обходе, заявке и чеклисте */}
-          <button
-            onClick={() => setDisabled(v => !v)}
-            className="flex items-center gap-3 rounded-lg px-4 py-3 w-full text-left"
-            style={{
-              background: disabled
-                ? 'color-mix(in srgb, var(--primary) 12%, var(--muted))'
-                : 'var(--muted)',
-              border: `1px solid ${disabled ? 'var(--primary)' : 'var(--border)'}`,
-            }}
-            aria-pressed={disabled}
-          >
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                Не учитывать ячейку
-              </p>
-              <p className="ui-hint">Буферная — не попадёт в обход, заявку и чеклист</p>
-            </div>
-            <div
-              className="relative rounded-full transition-colors flex-shrink-0"
-              style={{ width: 52, height: 30, background: disabled ? 'var(--primary)' : 'var(--border)' }}
-              aria-hidden
-            >
-              <div
-                className="absolute rounded-full transition-transform"
-                style={{
-                  top: 3, left: 3, width: 24, height: 24, background: 'white',
-                  transform: disabled ? 'translateX(22px)' : 'translateX(0)',
-                }}
-              />
-            </div>
-          </button>
         </div>
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="btn-primary w-full rounded-md font-semibold text-base mt-3 disabled:opacity-50"
-          style={{ height: 48 }}
+          className="btn-primary w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
+          style={{ height: 52 }}
         >
           {saving ? 'Сохранение...' : 'Сохранить'}
         </button>
@@ -282,9 +280,9 @@ export function CellSettingsSheet({
         <button
           onClick={() => setConfirmReset(true)}
           disabled={saving}
-          className="w-full rounded-md font-semibold text-base mt-1.5 disabled:opacity-50"
+          className="w-full rounded-md font-semibold text-base mt-2 disabled:opacity-50"
           style={{
-            height: 44,
+            height: 48,
             color: 'var(--destructive)',
             border: '1px solid var(--destructive)',
             background: 'transparent',
