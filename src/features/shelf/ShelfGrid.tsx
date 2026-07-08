@@ -106,22 +106,28 @@ function Subtree(props: SubtreeProps) {
         height: '100%',
       }}
     >
-      {children.map(child => (
-        <div
-          key={child.id}
-          style={{
-            flex: 1,
-            flexBasis: 0,
-            // Минимум по оси деления, чтобы отсек не ужимался в нечитаемую
-            // полоску (надпись «Не вносилось» должна влезать). По другой оси
-            // отсек тянется на 100%, минимум не нужен.
-            minWidth: isV ? MIN_CELL_W : 0,
-            minHeight: isV ? 0 : MIN_CELL_H,
-          }}
-        >
-          <Subtree {...props} cell={child} />
-        </div>
-      ))}
+      {children.map(child => {
+        // Ребёнок занимает место ПРОПОРЦИОНАЛЬНО своему footprint по оси деления,
+        // а не поровну: столбец, сам поделённый на 2, вдвое шире простого. Иначе
+        // (при flex:1) его под-отсеки не влезали в равную долю и вылезали на
+        // соседнюю ячейку. Минимум тоже под реальное число под-отсеков (+ их gap).
+        const fp = footprint(child, allCells)
+        const units = isV ? fp.cols : fp.rows
+        return (
+          <div
+            key={child.id}
+            style={{
+              flexGrow: units,
+              flexShrink: units,
+              flexBasis: 0,
+              minWidth: isV ? MIN_CELL_W * units + GAP * (units - 1) : 0,
+              minHeight: isV ? 0 : MIN_CELL_H * units + GAP * (units - 1),
+            }}
+          >
+            <Subtree {...props} cell={child} />
+          </div>
+        )
+      })}
     </div>
   )
 }
