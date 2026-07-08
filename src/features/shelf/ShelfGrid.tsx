@@ -10,12 +10,6 @@ import { getRootAddress } from './cellUtils'
 // the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
 
-// Минимальный читаемый размер листовой ячейки в px. Ширина рассчитана так,
-// чтобы надпись «Не вносилось» влезала целиком; высота — чтобы поместились
-// адрес, название и дата. Отсеки внутри разделённой ячейки не ужимаются ниже.
-const MIN_CELL_W = 116
-const MIN_CELL_H = 92
-
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
   shelf: Shelf
@@ -106,28 +100,11 @@ function Subtree(props: SubtreeProps) {
         height: '100%',
       }}
     >
-      {children.map(child => {
-        // Ребёнок занимает место ПРОПОРЦИОНАЛЬНО своему footprint по оси деления,
-        // а не поровну: столбец, сам поделённый на 2, вдвое шире простого. Иначе
-        // (при flex:1) его под-отсеки не влезали в равную долю и вылезали на
-        // соседнюю ячейку. Минимум тоже под реальное число под-отсеков (+ их gap).
-        const fp = footprint(child, allCells)
-        const units = isV ? fp.cols : fp.rows
-        return (
-          <div
-            key={child.id}
-            style={{
-              flexGrow: units,
-              flexShrink: units,
-              flexBasis: 0,
-              minWidth: isV ? MIN_CELL_W * units + GAP * (units - 1) : 0,
-              minHeight: isV ? 0 : MIN_CELL_H * units + GAP * (units - 1),
-            }}
-          >
-            <Subtree {...props} cell={child} />
-          </div>
-        )
-      })}
+      {children.map(child => (
+        <div key={child.id} style={{ flex: 1, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+          <Subtree {...props} cell={child} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -210,19 +187,11 @@ export function ShelfGrid({
   })
 
   const overhead = 120 + subheaderHeight // app header (56) + bottom nav (64)
-  // Минимум трека с UNITS отсеками в ряд = units×MIN + межотсековые gap'ы
-  // ((units−1)×GAP). БЕЗ учёта gap правый отсек делённой ячейки вылезал за
-  // колонку и налезал на соседнюю (а «чинилось» это лишь пересчётом соседа).
-  const minColPx = (u: number) => MIN_CELL_W * u + GAP * (u - 1)
-  const minRowPx = (u: number) => MIN_CELL_H * u + GAP * (u - 1)
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    // Каждый трек — не уже суммы минимумов его отсеков (с их gap'ами) и не ниже
-    // базовых 40vw / (высота/3.5). Отсеки остаются читаемыми, а стеллаж растёт
-    // за экран (скролл) вместо ужимания ячеек в полоски.
-    gridTemplateColumns: colUnits.map(u => `max(calc(40vw * ${u}), ${minColPx(u)}px)`).join(' '),
+    gridTemplateColumns: colUnits.map(u => `calc(40vw * ${u})`).join(' '),
     gridTemplateRows: rowUnits
-      .map(u => `max(calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u}), ${minRowPx(u)}px)`)
+      .map(u => `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u})`)
       .join(' '),
     gap: GAP,
     padding: GAP,
