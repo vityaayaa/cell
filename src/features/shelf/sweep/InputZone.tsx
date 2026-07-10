@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/data/db'
@@ -19,10 +18,6 @@ export function InputZone({
   productName,
   positionNo,
   total,
-  onPrev,
-  onNext,
-  canPrev,
-  canNext,
   alreadyVisited,
   onSaved,
   onSkip,
@@ -35,10 +30,6 @@ export function InputZone({
   productName: string
   positionNo: number
   total: number
-  onPrev: () => void
-  onNext: () => void
-  canPrev: boolean
-  canNext: boolean
   alreadyVisited: boolean
   onSaved: (cellId: string) => void
   onSkip: () => void
@@ -108,36 +99,16 @@ export function InputZone({
         /* Bulk: fill meter in place of the card + numeric input. Cell info +
            value live inside it; prev/next arrows flank it. Fixed height so the
            radar above keeps the same size as on pieces cells. */
-        <div className="flex items-stretch gap-2" style={{ height: 240 }}>
-          <button
-            onClick={onPrev}
-            disabled={!canPrev}
-            aria-label="Предыдущая ячейка"
-            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <div className="flex-1 min-w-0 h-full">
-            <BulkFillMeter
-              value={value}
-              capacity={capacity}
-              onChange={setClamped}
-              address={address}
-              productName={productName}
-              positionNo={positionNo}
-              total={total}
-            />
-          </div>
-          <button
-            onClick={onNext}
-            disabled={!canNext}
-            aria-label="Следующая ячейка"
-            className="flex items-center justify-center rounded-md flex-shrink-0 disabled:opacity-30"
-            style={{ width: 44, background: 'var(--card)', border: '1px solid var(--border)' }}
-          >
-            <ChevronRight size={24} />
-          </button>
+        <div style={{ height: 240 }}>
+          <BulkFillMeter
+            value={value}
+            capacity={capacity}
+            onChange={setClamped}
+            address={address}
+            productName={productName}
+            positionNo={positionNo}
+            total={total}
+          />
         </div>
       ) : (
         /* Pieces / round: big numeric readout */

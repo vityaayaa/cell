@@ -77,11 +77,12 @@ export function SweepView({
     if (next) setCurrentCellId(next.id)
   }
 
-  function step(delta: number) {
+  // "Пропустить" — к следующей ячейке по порядку (без сохранения), с переносом
+  // в начало на последней, чтобы обход можно было завершить из любой точки.
+  function skipToNextCell() {
     if (currentIndex < 0) return
-    const next = currentIndex + delta
-    if (next < 0 || next >= order.length) return
-    setCurrentCellId(order[next].id)
+    const next = order[currentIndex + 1] ?? order[0]
+    if (next) setCurrentCellId(next.id)
   }
 
   // After a save, advance to the next cell not yet visited (recomputed against a
@@ -151,10 +152,6 @@ export function SweepView({
             materials={materials}
             positionNo={currentIndex + 1}
             total={order.length}
-            onPrev={() => step(-1)}
-            onNext={() => step(1)}
-            canPrev={currentIndex > 0}
-            canNext={currentIndex < order.length - 1}
           />
         </div>
       )}
@@ -174,13 +171,9 @@ export function SweepView({
             })()}
             positionNo={currentIndex + 1}
             total={order.length}
-            onPrev={() => step(-1)}
-            onNext={() => step(1)}
-            canPrev={currentIndex > 0}
-            canNext={currentIndex < order.length - 1}
             alreadyVisited={visitedCellIds.has(currentCell.id)}
             onSaved={(cellId) => advanceAfterSave(cellId)}
-            onSkip={() => step(1)}
+            onSkip={skipToNextCell}
           />
         </div>
       )}
