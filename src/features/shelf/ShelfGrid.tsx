@@ -10,16 +10,6 @@ import { getRootAddress } from './cellUtils'
 // the shelf grows past the screen (scroll), instead of shrinking.
 const GAP = 4
 
-// ─── МИНИМАЛЬНЫЙ РАЗМЕР ЛИСТОВОЙ ЯЧЕЙКИ (feature-flag) ───────────────────────
-// Ни один листовой отсек не становится уже/ниже этого (чтобы «Не вносилось» и
-// название влезали). При глубоком делении отсеки не ужимаются — делённая часть
-// раздувается, стеллаж скроллится. Соседи-без-деления НЕ раздуваются под мелкие.
-// ЧТОБЫ ОТКЛЮЧИТЬ ПОЛНОСТЬЮ: поставь оба в 0 (эффект исчезнет) или откати ветку
-// в Subtree к `flex:1, minWidth:0, minHeight:0` (см. пометку там).
-// ЧТОБЫ ПОДКРУТИТЬ: меняй эти числа.
-const MIN_LEAF_W = 120
-const MIN_LEAF_H = 120
-
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
   shelf: Shelf
@@ -59,25 +49,6 @@ function footprint(cell: Cell, allCells: Cell[]): { cols: number; rows: number }
     return { cols: fs.reduce((s, f) => s + f.cols, 0), rows: Math.max(...fs.map(f => f.rows)) }
   }
   return { cols: Math.max(...fs.map(f => f.cols)), rows: fs.reduce((s, f) => s + f.rows, 0) }
-}
-
-/**
- * Минимальный размер поддерева в ПИКСЕЛЯХ. Минимум «всплывает» снизу вверх:
- * лист = MIN_LEAF, а узел не меньше суммы минимумов детей по оси деления (+ их
- * gap'ы), по другой оси — максимум из детей. Так деление первого уровня
- * получается КРУПНЕЕ второго (иерархия видна), а внутри каждого уровня отсеки
- * делятся поровну (flex:1). Соседи одного уровня НЕ равняются между собой —
- * каждый ровно под своё содержимое.
- */
-function minSize(cell: Cell, allCells: Cell[]): { w: number; h: number } {
-  const children = allCells.filter(c => c.parent_id === cell.id)
-  if (children.length === 0) return { w: MIN_LEAF_W, h: MIN_LEAF_H }
-  const ms = children.map(c => minSize(c, allCells))
-  const gaps = GAP * (children.length - 1)
-  if (cell.split_direction === 'V') {
-    return { w: ms.reduce((s, m) => s + m.w, 0) + gaps, h: Math.max(...ms.map(m => m.h)) }
-  }
-  return { w: Math.max(...ms.map(m => m.w)), h: ms.reduce((s, m) => s + m.h, 0) + gaps }
 }
 
 interface SubtreeProps {
@@ -129,31 +100,11 @@ function Subtree(props: SubtreeProps) {
         height: '100%',
       }}
     >
-      {children.map(child => {
-        // ── МИНИМАЛЬНЫЙ РАЗМЕР ЯЧЕЙКИ (иерархия деления) ─────────────────────
-        // На каждом уровне отсеки делят место ПОРОВНУ (flex:1), но каждый не
-        // меньше minSize своего поддерева — минимум всплывает снизу вверх. Так
-        // деление 1-го уровня крупнее 2-го (видно иерархию): подели одну из
-        // двух ячеек на 2 — она станет 2×MIN, и соседняя дотянется до того же.
-        // flexShrink:0 не даёт ужиматься ниже минимума; стеллаж скроллится.
-        // ЧТОБЫ ОТКАТИТЬ: MIN_LEAF_W/H=0 или верни ветку к
-        // `<div style={{ flex:1, flexBasis:0, minWidth:0, minHeight:0 }}>`.
-        const m = minSize(child, allCells)
-        return (
-          <div
-            key={child.id}
-            style={{
-              flexGrow: 1,
-              flexShrink: 0,
-              flexBasis: 0,
-              minWidth: isV ? m.w : undefined,
-              minHeight: isV ? undefined : m.h,
-            }}
-          >
-            <Subtree {...props} cell={child} />
-          </div>
-        )
-      })}
+      {children.map(child => (
+        <div key={child.id} style={{ flex: 1, flexBasis: 0, minWidth: 0, minHeight: 0 }}>
+          <Subtree {...props} cell={child} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -213,8 +164,7 @@ export function ShelfGrid({
     }
   }
 
-  // colUnits[c] = max footprint cols of any base cell in column c (для базового
-  // размера трека 40vw×units).
+  // colUnits[c] = max footprint cols of any base cell in column c.
   const colUnits = Array.from({ length: cols }, (_, ci) => {
     const col = ci + 1
     let max = 1
@@ -236,37 +186,12 @@ export function ShelfGrid({
     return max
   })
 
-  // Пиксельный минимум трека = самый широкий/высокий minSize среди базовых ячеек
-  // колонки/строки. Учитывает иерархию деления (deep split раздувает свой трек).
-  // Иначе flexShrink:0 отсеки переполнили бы фиксированный 40vw-трек.
-  const colMinPx = Array.from({ length: cols }, (_, ci) => {
-    const col = ci + 1
-    let max = MIN_LEAF_W
-    for (let r = 1; r <= rows; r++) {
-      const cell = byPosition.get(`${r}:${col}`)
-      if (cell) max = Math.max(max, minSize(cell, cells).w)
-    }
-    return max
-  })
-  const rowMinPx = Array.from({ length: rows }, (_, ri) => {
-    const row = ri + 1
-    let max = MIN_LEAF_H
-    for (let c = 1; c <= cols; c++) {
-      const cell = byPosition.get(`${row}:${c}`)
-      if (cell) max = Math.max(max, minSize(cell, cells).h)
-    }
-    return max
-  })
-
   const overhead = 120 + subheaderHeight // app header (56) + bottom nav (64)
-  // Трек не уже своего minSize — так делённая ячейка раздувает трек, стеллаж
-  // скроллится. (Фича «минимальный размер», см. пометку у MIN_LEAF_W/H — чтобы
-  // отключить, верни треки к чистому calc(40vw*u) / (высота/3.5)*u.)
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: colUnits.map((u, i) => `max(calc(40vw * ${u}), ${colMinPx[i]}px)`).join(' '),
+    gridTemplateColumns: colUnits.map(u => `calc(40vw * ${u})`).join(' '),
     gridTemplateRows: rowUnits
-      .map((u, i) => `max(calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u}), ${rowMinPx[i]}px)`)
+      .map(u => `calc((100dvh - ${overhead}px - env(safe-area-inset-bottom)) / 3.5 * ${u})`)
       .join(' '),
     gap: GAP,
     padding: GAP,
