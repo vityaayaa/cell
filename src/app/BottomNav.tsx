@@ -145,8 +145,8 @@ export function BottomNav() {
                 style={{
                   background: 'var(--primary)',
                   opacity: 0.12,
-                  top: 2,
-                  bottom: 2,
+                  top: 8,
+                  bottom: 8,
                   left: 12,
                   right: 12,
                 }}
