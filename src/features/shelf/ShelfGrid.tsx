@@ -18,7 +18,7 @@ const GAP = 4
 // в Subtree к `flex:1, minWidth:0, minHeight:0` (см. пометку там).
 // ЧТОБЫ ПОДКРУТИТЬ: меняй эти числа.
 const MIN_LEAF_W = 120
-const MIN_LEAF_H = 92
+const MIN_LEAF_H = 120
 
 export interface ShelfGridProps {
   mode: 'edit' | 'view'
@@ -111,13 +111,13 @@ function Subtree(props: SubtreeProps) {
       }}
     >
       {children.map(child => {
-        // ── МИНИМАЛЬНЫЙ РАЗМЕР ЯЧЕЙКИ (Вариант А) ─────────────────────────────
-        // Каждый лист не уже MIN_LEAF_W и не ниже MIN_LEAF_H по оси деления.
-        // flexShrink:0 => отсеки НЕ ужимаются ниже минимума; если сумма минимумов
-        // больше трека, делённая часть раздувается (стеллаж скроллится), а СОСЕДИ
-        // остаются как есть (их flex-доля не пересчитывается под мелкие).
-        // ЧТОБЫ ОТКАТИТЬ/ИЗМЕНИТЬ: см. MIN_LEAF_W / MIN_LEAF_H ниже; вернуть эту
-        // ветку к `<div style={{ flex:1, flexBasis:0, minWidth:0, minHeight:0 }}>`
+        // ── МИНИМАЛЬНЫЙ РАЗМЕР ЯЧЕЙКИ ────────────────────────────────────────
+        // Все листья равны и не уже MIN_LEAF_W / не ниже MIN_LEAF_H (flexGrow по
+        // footprint делает конечные отсеки равными). Делишь мелкую часть — все
+        // остальные подстраиваются под минимальную, стеллаж раздувается и
+        // скроллится. flexShrink:0 => отсеки не ужимаются ниже минимума.
+        // ЧТОБЫ ОТКАТИТЬ: см. MIN_LEAF_W/H ниже; вернуть эту ветку к
+        // `<div style={{ flex:1, flexBasis:0, minWidth:0, minHeight:0 }}>`
         // — будет старое равное деление без минимума.
         const fp = footprint(child, allCells)
         const units = isV ? fp.cols : fp.rows
