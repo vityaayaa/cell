@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router'
-import { Settings } from 'lucide-react'
+import { Settings, RotateCw } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { OfflineIndicator } from './OfflineIndicator'
 import { SettingsBottomSheet } from './SettingsBottomSheet'
@@ -77,6 +77,20 @@ function AppLayoutInner() {
               )}
             </button>
           )}
+          {/* Обновить приложение: перезагружает страницу (сброс зума/позиции
+              стеллажа + подтягивает свежую версию). В PWA нет кнопки браузера. */}
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center justify-center rounded-md"
+            style={{ minWidth: 44, minHeight: 44 }}
+            aria-label="Обновить"
+          >
+            <RotateCw
+              size={19}
+              strokeWidth={1.5}
+              style={{ color: 'var(--muted-foreground)' }}
+            />
+          </button>
           <button
             onClick={handleSettings}
             className="flex items-center justify-center rounded-md"

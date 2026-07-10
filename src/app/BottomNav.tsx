@@ -99,9 +99,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="flex justify-around items-center border-t"
+      className="flex justify-around items-start border-t"
       style={{
-        height: 64,
+        // 64px — область кнопок; safe-area добавляется НИЖЕ (для home-indicator),
+        // а не внутрь кнопок, поэтому активная плашка не залезает за нижний край.
+        height: 'calc(64px + env(safe-area-inset-bottom))',
         background: 'var(--card)',
         borderColor: 'var(--border)',
         paddingBottom: 'env(safe-area-inset-bottom)',
@@ -126,7 +128,7 @@ export function BottomNav() {
             }
             onClick={() => handleTap(item)}
             disabled={isDisabled}
-            style={{ minHeight: 48, minWidth: 48 }}
+            style={{ height: 64, minWidth: 48 }}
             className="relative flex flex-col items-center justify-center gap-0.5 flex-1 transition-opacity"
             aria-label={item.label}
             aria-current={isActive ? 'page' : undefined}
